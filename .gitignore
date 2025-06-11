@@ -1,0 +1,37 @@
+# Root-level node and Python stuff
+node_modules/
+.env
+.DS_Store
+*.log
+*.sqlite3
+*.pyc
+__pycache__/
+*.pyo
+
+# Expo
+.expo/
+.expo-shared/
+dist/
+web-build/
+android/
+ios/
+
+# VSCode
+.vscode/
+
+# Mac OS files
+Icon?
+*.DS_Store
+
+# Python virtual envs
+venv/
+env/
+ENV/
+.venv/
+.ENV/
+
+# Flask database
+backend-api/database.db
+
+# Python cache
+*.egg-info/
