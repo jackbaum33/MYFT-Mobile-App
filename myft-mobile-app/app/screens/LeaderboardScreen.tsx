@@ -1,7 +1,7 @@
 // screens/LeaderboardScreen.tsx
 import React from 'react';
 import { View, Text, FlatList } from 'react-native';
-import { useTournament } from '../context/TournamentContext';
+import { useTournament } from '../../context/TournamentContext';
 
 export default function LeaderboardScreen() {
   const { teams, userRoster, calculatePoints } = useTournament();

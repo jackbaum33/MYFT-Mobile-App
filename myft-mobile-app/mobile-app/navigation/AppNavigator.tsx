@@ -1,14 +1,14 @@
 import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import HomeScreen from '../screens/HomeScreen';
-import TeamScreen from '../screens/TeamScreen';
-import ScheduleScreen from '../screens/ScheduleScreen';
-import FantasyScreen from '../screens/FantasyScreen';
-import LeaderboardScreen from '../screens/LeaderboardScreen';
-import GlobalLeaderboardScreen from '../screens/GlobalLeaderboardScreen';
-import LoginScreen from '../screens/LoginScreen';
-import ProfileScreen from '../screens/ProfileScreen';
-import { useAuth } from '../context/AuthContext';
+import HomeScreen from '../../app/screens/HomeScreen';
+import TeamScreen from '../../app/screens/TeamScreen';
+import ScheduleScreen from '../../app/screens/ScheduleScreen';
+import FantasyScreen from '../../app/screens/FantasyScreen';
+import LeaderboardScreen from '../../app/screens/LeaderboardScreen';
+import GlobalLeaderboardScreen from '../../app/screens/GlobalLeaderboardScreen';
+import LoginScreen from '../../app/screens/LoginScreen';
+import ProfileScreen from '../../app/screens/ProfileScreen';
+import { useAuth } from '../../context/AuthContext';
 
 const Stack = createNativeStackNavigator();
 

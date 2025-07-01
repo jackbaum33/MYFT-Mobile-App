@@ -1,5 +1,5 @@
 // data/mockData.ts
-import { Team } from '../context/TournamentContext';
+import { Team } from '../../context/TournamentContext';
 
 export const mockTeams: Team[] = [
   {

@@ -1,7 +1,7 @@
 // screens/ScheduleScreen.tsx
 import React from 'react';
 import { View, Text, FlatList, StyleSheet } from 'react-native';
-import { useTournament } from '../context/TournamentContext';
+import { useTournament } from '../../context/TournamentContext';
 
 export default function ScheduleScreen() {
   const { teams } = useTournament();

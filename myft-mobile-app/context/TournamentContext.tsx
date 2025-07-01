@@ -33,7 +33,7 @@ interface TournamentContextType {
   calculatePoints: (player: Player) => number;
 }
 
-import { mockTeams } from '../data/mockData';
+import { mockTeams } from '../mobile-app/data/mockData';
 
 const TournamentContext = createContext<TournamentContextType | undefined>(undefined);
 

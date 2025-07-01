@@ -1,7 +1,7 @@
 // screens/FantasyScreen.tsx
 import React, { useState } from 'react';
 import { View, Text, FlatList, TouchableOpacity, Button } from 'react-native';
-import { useTournament } from '../context/TournamentContext';
+import { useTournament } from '../../context/TournamentContext';
 
 export default function FantasyScreen() {
   const { teams, userRoster, updateRoster, calculatePoints } = useTournament();

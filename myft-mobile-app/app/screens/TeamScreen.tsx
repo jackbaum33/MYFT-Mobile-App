@@ -1,7 +1,7 @@
 // screens/TeamScreen.tsx
 import React from 'react';
 import { View, Text, FlatList, TouchableOpacity, StyleSheet } from 'react-native';
-import { useTournament } from '../context/TournamentContext';
+import { useTournament } from '../../context/TournamentContext';
 
 export default function TeamScreen() {
   const { teams } = useTournament();
