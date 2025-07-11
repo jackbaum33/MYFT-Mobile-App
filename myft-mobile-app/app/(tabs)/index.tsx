@@ -9,7 +9,7 @@ export default function Page() {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Welcome to the Tournament App</Text>
+      <Text style={styles.title}>Welcome to the MYFT APP!!!</Text>
 
       <View style={styles.buttonGroup}>
         <Button title="Rosters" onPress={() => router.push('/(tabs)/team')} />
