@@ -23,6 +23,10 @@ export default function Page() {
   );
 }
 
+export const options = {
+  tabBarLabel: 'Home',
+};
+
 const styles = StyleSheet.create({
   container: {
     padding: 24,
