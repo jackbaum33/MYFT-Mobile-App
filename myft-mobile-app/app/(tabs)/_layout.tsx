@@ -14,6 +14,36 @@ export default function TabLayout() {
           tabBarLabel: 'Home',
         }}
       />
+        <Tabs.Screen
+        name="fantasy"
+        options={{
+          tabBarLabel: 'My Roster',
+        }}
+      />
+        <Tabs.Screen
+        name="leaderboard"
+        options={{
+          tabBarLabel: 'Standings',
+        }}
+      />
+        <Tabs.Screen
+        name="profile"
+        options={{
+          tabBarLabel: 'My Profile',
+        }}
+      />
+        <Tabs.Screen
+        name="schedule"
+        options={{
+          tabBarLabel: 'Team Schedule',
+        }}
+      />
+        <Tabs.Screen
+        name="team"
+        options={{
+          tabBarLabel: 'Rosters',
+        }}
+      />
     </Tabs>
   );
 }
