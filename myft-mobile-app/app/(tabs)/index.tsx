@@ -12,10 +12,10 @@ export default function Page() {
       <Text style={styles.title}>Welcome to the Tournament App</Text>
 
       <View style={styles.buttonGroup}>
-        <Button title="Teams" onPress={() => router.push('/(tabs)/team')} />
+        <Button title="Rosters" onPress={() => router.push('/(tabs)/team')} />
         <Button title="Schedule" onPress={() => router.push('/(tabs)/schedule')} />
         <Button title="Fantasy" onPress={() => router.push('/(tabs)/fantasy')} />
-        <Button title="Leaderboard" onPress={() => router.push('/(tabs)/leaderboard')} />
+        <Button title="Standings" onPress={() => router.push('/(tabs)/leaderboard')} />
         <Button title="Profile" onPress={() => router.push('/(tabs)/profile')} />
         <Button title="Logout" color="red" onPress={logout} />
       </View>
