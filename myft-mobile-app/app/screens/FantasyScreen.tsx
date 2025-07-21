@@ -1,6 +1,6 @@
 // screens/FantasyScreen.tsx
 import React, { useState } from 'react';
-import { View, Text, FlatList, TouchableOpacity, Button } from 'react-native';
+import { View, Text, FlatList, TouchableOpacity, Button, StyleSheet } from 'react-native';
 import { useTournament } from '../../context/TournamentContext';
 
 export default function FantasyScreen() {
@@ -14,21 +14,21 @@ export default function FantasyScreen() {
   const selectedIds = userRoster[selectedDivision];
 
   return (
-    <View style={{ flex: 1, padding: 16 }}>
-      <View style={{ flexDirection: 'row', justifyContent: 'center', marginBottom: 16 }}>
+    <View style={styles.container}>
+      <View style={styles.buttonGroup}>
         <Button
           title="Boys"
           onPress={() => setSelectedDivision('boys')}
-          color={selectedDivision === 'boys' ? '#1E90FF' : '#999'}
+          color={selectedDivision === 'boys' ? '#FFD700' : '#555'}
         />
         <Button
           title="Girls"
           onPress={() => setSelectedDivision('girls')}
-          color={selectedDivision === 'girls' ? '#FF69B4' : '#999'}
+          color={selectedDivision === 'girls' ? '#FFD700' : '#555'}
         />
       </View>
 
-      <Text style={{ fontSize: 18, marginBottom: 8 }}>
+      <Text style={styles.instructions}>
         Select up to 7 players for the {selectedDivision} division
       </Text>
 
@@ -39,19 +39,17 @@ export default function FantasyScreen() {
           const isSelected = selectedIds.includes(item.id);
           return (
             <TouchableOpacity
-              style={{
-                padding: 12,
-                marginBottom: 8,
-                borderRadius: 8,
-                backgroundColor: isSelected ? '#90EE90' : '#f0f0f0',
-              }}
+              style={[
+                styles.playerCard,
+                { backgroundColor: isSelected ? '#2ECC71' : '#003366' },
+              ]}
               onPress={() => updateRoster(selectedDivision, item.id)}
             >
-              <Text style={{ fontSize: 16 }}>{item.name}</Text>
-              <Text style={{ fontSize: 14, color: '#555' }}>
+              <Text style={styles.playerName}>{item.name}</Text>
+              <Text style={styles.playerStats}>
                 TDs: {item.stats.touchdowns}, INTs: {item.stats.interceptions}, Flags: {item.stats.flagsPulled}, MVPs: {item.stats.mvpAwards}
               </Text>
-              <Text style={{ fontWeight: 'bold' }}>Fantasy Pts: {calculatePoints(item)}</Text>
+              <Text style={styles.fantasyPoints}>Fantasy Pts: {calculatePoints(item)}</Text>
             </TouchableOpacity>
           );
         }}
@@ -59,3 +57,41 @@ export default function FantasyScreen() {
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    padding: 16,
+    backgroundColor: '#001F3F', // navy blue
+  },
+  buttonGroup: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    marginBottom: 16,
+    gap: 10,
+  },
+  instructions: {
+    fontSize: 18,
+    marginBottom: 8,
+    color: '#FFD700',
+    textAlign: 'center',
+  },
+  playerCard: {
+    padding: 12,
+    marginBottom: 8,
+    borderRadius: 8,
+  },
+  playerName: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#FFD700',
+  },
+  playerStats: {
+    fontSize: 14,
+    color: '#CCCCCC',
+  },
+  fantasyPoints: {
+    fontWeight: 'bold',
+    color: '#FFD700',
+  },
+});

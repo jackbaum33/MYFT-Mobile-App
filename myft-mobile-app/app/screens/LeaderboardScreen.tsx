@@ -1,6 +1,5 @@
-// screens/LeaderboardScreen.tsx
 import React from 'react';
-import { View, Text, FlatList } from 'react-native';
+import { View, Text, FlatList, StyleSheet } from 'react-native';
 import { useTournament } from '../../context/TournamentContext';
 
 export default function LeaderboardScreen() {
@@ -18,30 +17,23 @@ export default function LeaderboardScreen() {
   const roster = getRosterPlayers();
 
   return (
-    <View style={{ flex: 1, padding: 16 }}>
-      <Text style={{ fontSize: 24, fontWeight: 'bold', marginBottom: 16 }}>My Fantasy Leaderboard</Text>
+    <View style={styles.container}>
+      <Text style={styles.header}>My Fantasy Leaderboard</Text>
       {roster.length === 0 ? (
-        <Text style={{ fontSize: 16 }}>No players selected yet.</Text>
+        <Text style={styles.emptyText}>No players selected yet.</Text>
       ) : (
         <FlatList
           data={roster}
           keyExtractor={(item) => item.id}
           renderItem={({ item, index }) => (
-            <View
-              style={{
-                padding: 12,
-                marginBottom: 8,
-                backgroundColor: '#f9f9f9',
-                borderRadius: 8,
-              }}
-            >
-              <Text style={{ fontSize: 16 }}>
+            <View style={styles.card}>
+              <Text style={styles.name}>
                 {index + 1}. {item.name} ({item.division})
               </Text>
-              <Text style={{ fontSize: 14, color: '#444' }}>
+              <Text style={styles.stats}>
                 TDs: {item.stats.touchdowns}, INTs: {item.stats.interceptions}, Flags: {item.stats.flagsPulled}, MVPs: {item.stats.mvpAwards}
               </Text>
-              <Text style={{ fontWeight: 'bold' }}>Points: {item.fantasyPoints}</Text>
+              <Text style={styles.points}>Points: {item.fantasyPoints}</Text>
             </View>
           )}
         />
@@ -49,3 +41,42 @@ export default function LeaderboardScreen() {
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    padding: 16,
+    backgroundColor: '#001F3F', // Navy
+  },
+  header: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    marginBottom: 16,
+    color: '#FFD700', // Yellow
+    textAlign: 'center',
+  },
+  emptyText: {
+    fontSize: 16,
+    color: '#FFD700',
+    textAlign: 'center',
+  },
+  card: {
+    padding: 12,
+    marginBottom: 8,
+    backgroundColor: '#003366',
+    borderRadius: 8,
+  },
+  name: {
+    fontSize: 16,
+    color: '#FFD700',
+    fontWeight: 'bold',
+  },
+  stats: {
+    fontSize: 14,
+    color: '#CCCCCC',
+  },
+  points: {
+    fontWeight: 'bold',
+    color: '#FFD700',
+  },
+});

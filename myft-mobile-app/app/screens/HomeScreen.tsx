@@ -33,22 +33,23 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     padding: 24,
-    backgroundColor: '#fff',
+    backgroundColor: '#001F3F', // Navy background
   },
   title: {
     fontSize: 28,
     fontWeight: 'bold',
     marginBottom: 32,
     textAlign: 'center',
+    color: '#FFD700', // Yellow title text
   },
   button: {
-    backgroundColor: '#007AFF',
+    backgroundColor: '#003366', // Dark navy button
     padding: 16,
     borderRadius: 8,
     marginBottom: 16,
   },
   buttonText: {
-    color: '#fff',
+    color: '#FFD700', // Yellow button text
     fontSize: 18,
     textAlign: 'center',
   },

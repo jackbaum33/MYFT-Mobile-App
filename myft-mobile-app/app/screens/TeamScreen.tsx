@@ -1,6 +1,5 @@
-// screens/TeamScreen.tsx
 import React from 'react';
-import { View, Text, FlatList, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, FlatList, StyleSheet } from 'react-native';
 import { useTournament } from '../../context/TournamentContext';
 
 export default function TeamScreen() {
@@ -26,14 +25,31 @@ export default function TeamScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 16 },
-  header: { fontSize: 24, fontWeight: 'bold', marginBottom: 16 },
+  container: {
+    flex: 1,
+    padding: 16,
+    backgroundColor: '#001F3F', // navy blue
+  },
+  header: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    marginBottom: 16,
+    color: '#FFD700', // yellow
+    textAlign: 'center',
+  },
   card: {
     padding: 12,
     marginBottom: 12,
-    backgroundColor: '#f0f0f0',
+    backgroundColor: '#003366', // dark navy for cards
     borderRadius: 8,
   },
-  teamName: { fontSize: 18, fontWeight: 'bold' },
-  playerName: { fontSize: 16, color: '#333' },
+  teamName: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#FFD700', // yellow
+  },
+  playerName: {
+    fontSize: 16,
+    color: '#FFFFFF', // white
+  },
 });

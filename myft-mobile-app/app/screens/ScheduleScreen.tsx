@@ -1,4 +1,3 @@
-// screens/ScheduleScreen.tsx
 import React from 'react';
 import { View, Text, FlatList, StyleSheet } from 'react-native';
 import { useTournament } from '../../context/TournamentContext';
@@ -6,7 +5,6 @@ import { useTournament } from '../../context/TournamentContext';
 export default function ScheduleScreen() {
   const { teams } = useTournament();
 
-  // Mock schedule: each team plays the other team in their division once
   const games = teams.flatMap(team => {
     return teams
       .filter(
@@ -41,14 +39,31 @@ export default function ScheduleScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 16 },
-  header: { fontSize: 24, fontWeight: 'bold', marginBottom: 16 },
+  container: {
+    flex: 1,
+    padding: 16,
+    backgroundColor: '#001F3F', // navy blue
+  },
+  header: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    marginBottom: 16,
+    color: '#FFD700', // yellow
+    textAlign: 'center',
+  },
   card: {
-    backgroundColor: '#f9f9f9',
+    backgroundColor: '#003366', // darker navy
     padding: 12,
     borderRadius: 8,
     marginBottom: 12,
   },
-  match: { fontSize: 18, fontWeight: 'bold' },
-  details: { fontSize: 14, color: '#555' },
+  match: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#FFD700', // yellow
+  },
+  details: {
+    fontSize: 14,
+    color: '#FFFFFF', // white for contrast
+  },
 });

@@ -31,13 +31,39 @@ export default function GlobalLeaderboardScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 16 },
-  header: { fontSize: 24, fontWeight: 'bold', marginBottom: 16 },
-  card: {
-    flexDirection: 'row', alignItems: 'center',
-    backgroundColor: '#f0f0f0', padding: 12, borderRadius: 8, marginBottom: 10,
+  container: {
+    flex: 1,
+    padding: 16,
+    backgroundColor: '#001F3F', // navy blue
   },
-  rank: { fontSize: 18, fontWeight: 'bold', width: 30 },
-  name: { fontSize: 16, fontWeight: '500' },
-  points: { fontSize: 14, color: '#555' },
+  header: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    marginBottom: 16,
+    color: '#FFD700', // yellow
+    textAlign: 'center',
+  },
+  card: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#003366', // dark navy
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 10,
+  },
+  rank: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    width: 30,
+    color: '#FFD700',
+  },
+  name: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#FFD700',
+  },
+  points: {
+    fontSize: 14,
+    color: '#CCCCCC',
+  },
 });
