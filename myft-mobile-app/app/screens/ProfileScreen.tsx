@@ -1,13 +1,13 @@
 import React from 'react';
-import { SafeAreaView, View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { useAuth } from '../../context/AuthContext';
 
 export default function ProfileScreen() {
   const { user, logout } = useAuth();
 
   return (
-    <SafeAreaView style={styles.safeContainer}>
-      <View style={styles.containerWithBg}>
+    <View style={styles.outer}>
+      <View style={styles.container}>
         <Text style={styles.title}>Profile</Text>
         <Text style={styles.text}>Username: {user?.username}</Text>
 
@@ -15,21 +15,20 @@ export default function ProfileScreen() {
           <Text style={styles.buttonText}>Log Out</Text>
         </TouchableOpacity>
       </View>
-    </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  safeContainer: {
+  outer: {
     flex: 1,
-    backgroundColor: '#001F3F',
+    backgroundColor: '#001F3F', // Navy background
   },
-  containerWithBg: {
+  container: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
     padding: 24,
-    backgroundColor: '#001F3F', // ✅ Add this
   },
   title: {
     fontSize: 28,
