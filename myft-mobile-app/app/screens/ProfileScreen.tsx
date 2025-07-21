@@ -7,7 +7,7 @@ export default function ProfileScreen() {
 
   return (
     <SafeAreaView style={styles.safeContainer}>
-      <View style={styles.container}>
+      <View style={styles.containerWithBg}>
         <Text style={styles.title}>Profile</Text>
         <Text style={styles.text}>Username: {user?.username}</Text>
 
@@ -22,13 +22,14 @@ export default function ProfileScreen() {
 const styles = StyleSheet.create({
   safeContainer: {
     flex: 1,
-    backgroundColor: '#001F3F', // ← THIS ensures safe area gets the color
+    backgroundColor: '#001F3F',
   },
-  container: {
+  containerWithBg: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
     padding: 24,
+    backgroundColor: '#001F3F', // ✅ Add this
   },
   title: {
     fontSize: 28,
