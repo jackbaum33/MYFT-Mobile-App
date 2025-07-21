@@ -1,12 +1,12 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { SafeAreaView, View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
 
 export default function HomeScreen() {
   const router = useRouter();
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
       <Text style={styles.title}>🏈 Tournament App</Text>
 
       <TouchableOpacity style={styles.button} onPress={() => router.push('/team')}>
@@ -24,7 +24,7 @@ export default function HomeScreen() {
       <TouchableOpacity style={styles.button} onPress={() => router.push('/leaderboard')}>
         <Text style={styles.buttonText}>Leaderboard</Text>
       </TouchableOpacity>
-    </View>
+    </SafeAreaView>
   );
 }
 
