@@ -1,25 +1,27 @@
-// screens/HomeScreen.tsx
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { useRouter } from 'expo-router';
 
-export default function HomeScreen({ navigation }) {
+export default function HomeScreen() {
+  const router = useRouter();
+
   return (
     <View style={styles.container}>
       <Text style={styles.title}>🏈 Tournament App</Text>
 
-      <TouchableOpacity style={styles.button} onPress={() => navigation.navigate('Team')}>
+      <TouchableOpacity style={styles.button} onPress={() => router.push('/team')}>
         <Text style={styles.buttonText}>Teams</Text>
       </TouchableOpacity>
 
-      <TouchableOpacity style={styles.button} onPress={() => navigation.navigate('Schedule')}>
+      <TouchableOpacity style={styles.button} onPress={() => router.push('/schedule')}>
         <Text style={styles.buttonText}>Schedule</Text>
       </TouchableOpacity>
 
-      <TouchableOpacity style={styles.button} onPress={() => navigation.navigate('Fantasy')}>
+      <TouchableOpacity style={styles.button} onPress={() => router.push('/fantasy')}>
         <Text style={styles.buttonText}>My Fantasy Team</Text>
       </TouchableOpacity>
 
-      <TouchableOpacity style={styles.button} onPress={() => navigation.navigate('Leaderboard')}>
+      <TouchableOpacity style={styles.button} onPress={() => router.push('/leaderboard')}>
         <Text style={styles.buttonText}>Leaderboard</Text>
       </TouchableOpacity>
     </View>

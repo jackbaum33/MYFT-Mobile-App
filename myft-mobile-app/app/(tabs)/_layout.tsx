@@ -7,7 +7,12 @@ export default function TabLayout() {
     <Tabs
       screenOptions={({ route }) => ({
         headerShown: false,
-        tabBarActiveTintColor: '#007AFF',
+        tabBarActiveTintColor: '#FFD700', // Yellow for active icon/text
+        tabBarInactiveTintColor: '#ffffff', // Optional: white for inactive
+        tabBarStyle: {
+          backgroundColor: '#001F3F', // Navy blue
+          borderTopWidth: 0,
+        },
         tabBarIcon: ({ color, size }) => {
           switch (route.name) {
             case 'index':

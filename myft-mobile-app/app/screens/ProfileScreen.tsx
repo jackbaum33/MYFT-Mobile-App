@@ -3,14 +3,13 @@ import React from 'react';
 import { View, Text, Button, StyleSheet } from 'react-native';
 import { useAuth } from '../../context/AuthContext';
 
-export default function ProfileScreen({ navigation }) {
+export default function ProfileScreen() {
   const { user, logout } = useAuth();
 
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Profile</Text>
       <Text style={styles.text}>Username: {user?.username}</Text>
-
       <Button title="Log Out" onPress={logout} />
     </View>
   );
