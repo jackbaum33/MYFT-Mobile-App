@@ -21,7 +21,7 @@ export default function TeamDetailScreen() {
           title: team ? `Team View - ${team.name}` : 'Team View',
           headerBackVisible: false,
           headerLeft: () => (
-            <TouchableOpacity onPress={() => router.replace('/(tabs)/team')}>
+            <TouchableOpacity onPress={() => router.replace('/teams')}>
               <Text style={{ color: '#FFD700', fontWeight: '600' }}>Back</Text>
             </TouchableOpacity>
           ),

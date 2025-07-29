@@ -34,7 +34,7 @@ export default function PlayerProfileScreen() {
     <View style={styles.container}>
       <Stack.Screen
         options={{
-          title: player ? `Player Stats for ${player.name}` : 'Player',
+          title: player ? `${player.name}` : 'Player',
           headerBackVisible: false, // we'll render our own back to ensure it goes to the team page
           headerLeft: () => (
             <TouchableOpacity
