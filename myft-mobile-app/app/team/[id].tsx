@@ -1,9 +1,9 @@
 // app/team/[id].tsx
 import React, { useMemo } from 'react';
 import { View, Text, FlatList, StyleSheet, TouchableOpacity, Image } from 'react-native';
-import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
+import { Stack, Link, useLocalSearchParams, useRouter } from 'expo-router';
 import { useTournament } from '../../context/TournamentContext';
-import { getTeamLogo } from '../../assets/team_logos'; // ← logo helper
+import { getTeamLogo } from '../../assets/team_logos';
 
 export default function TeamDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -12,7 +12,7 @@ export default function TeamDetailScreen() {
 
   const team = useMemo(() => teams.find(t => t.id === id), [teams, id]);
   const players = team?.players ?? [];
-  const logoSrc = getTeamLogo(team?.id); // ← per-team logo
+  const logoSrc = getTeamLogo(team?.id); // per-team logo
 
   return (
     <View style={styles.container}>
@@ -43,10 +43,7 @@ export default function TeamDetailScreen() {
           </Text>
         </View>
 
-        {/* Right-side logo */}
-        {logoSrc ? (
-          <Image source={logoSrc} style={styles.logo} resizeMode="contain" />
-        ) : null}
+        {logoSrc ? <Image source={logoSrc} style={styles.logo} resizeMode="contain" /> : null}
       </View>
 
       <FlatList
@@ -57,11 +54,16 @@ export default function TeamDetailScreen() {
         renderItem={({ item }) => {
           const pts = calculatePoints(item);
           return (
-            <View style={styles.playerRow}>
-              <Text style={styles.playerName}>{item.name}</Text>
-              <Text style={styles.playerMeta}>{item.position}</Text>
-              <Text style={styles.playerPts}>{pts} pts</Text>
-            </View>
+            <Link
+              href={{ pathname: '/player/[id]', params: { id: item.id } }}
+              asChild
+            >
+              <TouchableOpacity style={styles.playerRow}>
+                <Text style={styles.playerName}>{item.name}</Text>
+                <Text style={styles.playerMeta}>{item.position}</Text>
+                <Text style={styles.playerPts}>{pts} pts</Text>
+              </TouchableOpacity>
+            </Link>
           );
         }}
       />
