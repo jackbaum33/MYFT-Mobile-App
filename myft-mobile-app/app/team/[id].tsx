@@ -1,8 +1,9 @@
 // app/team/[id].tsx
 import React, { useMemo } from 'react';
-import { View, Text, FlatList, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, FlatList, StyleSheet, TouchableOpacity, Image } from 'react-native';
 import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import { useTournament } from '../../context/TournamentContext';
+import { getTeamLogo } from '../../assets/team_logos'; // ← logo helper
 
 export default function TeamDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -11,34 +12,42 @@ export default function TeamDetailScreen() {
 
   const team = useMemo(() => teams.find(t => t.id === id), [teams, id]);
   const players = team?.players ?? [];
+  const logoSrc = getTeamLogo(team?.id); // ← per-team logo
 
   return (
     <View style={styles.container}>
-      {/* 🔹 Set the header title and custom back in the Stack.Screen for this route */}
       <Stack.Screen
         options={{
           title: team ? `Team View - ${team.name}` : 'Team View',
-          // We’ll provide our own back button that always goes to Rosters
           headerBackVisible: false,
           headerLeft: () => (
             <TouchableOpacity onPress={() => router.replace('/(tabs)/team')}>
               <Text style={{ color: '#FFD700', fontWeight: '600' }}>Back</Text>
             </TouchableOpacity>
           ),
-          // (These match your theme; keep or remove if already set in app/team/_layout.tsx)
           headerStyle: { backgroundColor: '#001F3F' },
           headerTintColor: '#FFD700',
           headerTitleStyle: { color: '#FFD700', fontWeight: 'bold' },
         }}
       />
 
-      <Text style={styles.title}>{team?.name}</Text>
-      <Text style={styles.meta}>
-        Captain: <Text style={styles.metaStrong}>{team?.captain}</Text>
-      </Text>
-      <Text style={styles.meta}>
-        Record: <Text style={styles.metaStrong}>{team?.record.wins}-{team?.record.losses}</Text>
-      </Text>
+      {/* Header block with text on the left and logo on the right */}
+      <View style={styles.headerBlock}>
+        <View style={styles.headerText}>
+          <Text style={styles.title}>{team?.name}</Text>
+          <Text style={styles.meta}>
+            Captain: <Text style={styles.metaStrong}>{team?.captain}</Text>
+          </Text>
+          <Text style={styles.meta}>
+            Record: <Text style={styles.metaStrong}>{team?.record.wins}-{team?.record.losses}</Text>
+          </Text>
+        </View>
+
+        {/* Right-side logo */}
+        {logoSrc ? (
+          <Image source={logoSrc} style={styles.logo} resizeMode="contain" />
+        ) : null}
+      </View>
 
       <FlatList
         style={{ marginTop: 12 }}
@@ -62,10 +71,31 @@ export default function TeamDetailScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#001F3F', padding: 16 },
+
+  // Header block layout
+  headerBlock: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 12,
+  },
+  headerText: {
+    flex: 1, // text takes remaining width, pushes logo to the right
+  },
   title: { color: '#FFD700', fontWeight: 'bold', fontSize: 28, marginBottom: 6 },
   meta: { color: '#D7E3F4', fontSize: 14, marginTop: 2 },
   metaStrong: { color: '#FFD700', fontWeight: '600' },
 
+  // Logo styling
+  logo: {
+    width: 56,
+    height: 56,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(255,215,0,0.25)',
+    backgroundColor: 'rgba(0,0,0,0.08)',
+  },
+
+  // Player rows
   playerRow: {
     backgroundColor: '#07335f',
     padding: 12,
