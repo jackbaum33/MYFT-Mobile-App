@@ -1,9 +1,11 @@
 // context/TournamentContext.tsx
 import React, { createContext, useContext, useState } from 'react';
 
+// context/TournamentContext.tsx (only interfaces shown)
 export interface Player {
   id: string;
   name: string;
+  position: 'QB' | 'WR' | 'RB' | 'DB' | 'LB' | 'OL' | 'DL' | 'Util';
   division: 'boys' | 'girls';
   teamId: string;
   stats: {
@@ -18,8 +20,11 @@ export interface Team {
   id: string;
   name: string;
   division: 'boys' | 'girls';
+  captain: string;                // NEW
+  record: { wins: number; losses: number }; // NEW
   players: Player[];
 }
+
 
 export interface FantasyRoster {
   boys: string[]; // player IDs
