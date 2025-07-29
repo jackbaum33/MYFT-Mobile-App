@@ -1,16 +1,16 @@
-// app/player/[id].tsx
+// app/(tabs)/team/player/[id].tsx
 import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import { useTournament } from '../../context/TournamentContext';
-import { getTeamLogo } from '../../assets/team_logos'; // ← logo helper
+import { useTournament } from '../../../../context/TournamentContext';
+import { getTeamLogo } from '../../../../assets/team_logos';
 
 export default function PlayerProfileScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const { teams, calculatePoints } = useTournament();
 
-  // Find player, teamName, and teamId in one pass
+  // Find player + team info
   const { player, teamName, teamId } = useMemo(() => {
     let foundPlayer: any = null;
     let foundTeamName = '';
@@ -30,28 +30,28 @@ export default function PlayerProfileScreen() {
   const logoSrc = getTeamLogo(teamId || undefined);
   const pts = player ? calculatePoints(player) : 0;
 
+  // Navigate back to the specific team (or list as fallback)
+  const goBackToTeam = () => {
+    if (teamId) {
+      router.replace({ pathname: '/(tabs)/team/[id]', params: { id: teamId } });
+    } else {
+      router.replace('/(tabs)/team');
+    }
+  };
+
   return (
     <View style={styles.container}>
       <Stack.Screen
         options={{
-          title: player ? `${player.name}` : 'Player',
-          headerBackVisible: false, // we'll render our own back to ensure it goes to the team page
-          headerLeft: () => (
-            <TouchableOpacity
-              onPress={() =>
-                teamId
-                  ? router.replace({ pathname: '/team/[id]', params: { id: teamId } })
-                  : router.back()
-              }
-            >
-              <Text style={{ color: '#FFD700', fontWeight: '600' }}>Back</Text>
-            </TouchableOpacity>
-          ),
+          title: player ? `Player Stats - ${player.name}` : 'Player Stats',
+          headerBackVisible: true,
           headerStyle: { backgroundColor: '#001F3F' },
           headerTintColor: '#FFD700',
           headerTitleStyle: { color: '#FFD700', fontWeight: 'bold' },
+          headerTitleAlign: 'center',
         }}
       />
+
 
       {player ? (
         <>

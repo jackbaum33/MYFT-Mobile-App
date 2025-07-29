@@ -45,7 +45,7 @@ export default function TeamScreen() {
             <TouchableOpacity
               style={styles.card}
               onPress={() =>
-                router.push({ pathname: '/team/[id]', params: { id: item.id } })
+                router.push({ pathname: '/(tabs)/team/[id]', params: { id: item.id } })
               }
             >
               <View style={styles.cardText}>

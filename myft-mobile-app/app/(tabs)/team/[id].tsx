@@ -1,9 +1,8 @@
-// app/team/[id].tsx
 import React, { useMemo } from 'react';
 import { View, Text, FlatList, StyleSheet, TouchableOpacity, Image } from 'react-native';
 import { Stack, Link, useLocalSearchParams, useRouter } from 'expo-router';
-import { useTournament } from '../../context/TournamentContext';
-import { getTeamLogo } from '../../assets/team_logos';
+import { useTournament } from '../../../context/TournamentContext';
+import { getTeamLogo } from '../../../assets/team_logos';
 
 export default function TeamDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -12,19 +11,39 @@ export default function TeamDetailScreen() {
 
   const team = useMemo(() => teams.find(t => t.id === id), [teams, id]);
   const players = team?.players ?? [];
-  const logoSrc = getTeamLogo(team?.id); // per-team logo
+  const logoSrc = getTeamLogo(team?.id);
+
+  // ---------- Guard for bad / missing id ----------
+  if (!team) {
+    return (
+      <View style={[styles.container, { justifyContent: 'center' }]}>
+        <Stack.Screen
+          options={{
+            title: 'Team',
+            headerBackVisible: true, // show default chevron
+          }}
+        />
+        <Text style={{ color: '#FFD700', fontSize: 16, marginBottom: 12 }}>
+          Team not found.
+        </Text>
+        <TouchableOpacity
+          onPress={() => router.replace('/(tabs)/team')}
+          style={{ backgroundColor: '#FFD700', padding: 12, borderRadius: 8, alignSelf: 'flex-start' }}
+        >
+          <Text style={{ color: '#001F3F', fontWeight: '700' }}>Go to Rosters</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+  // ------------------------------------------------
 
   return (
     <View style={styles.container}>
       <Stack.Screen
         options={{
-          title: team ? `Team View - ${team.name}` : 'Team View',
-          headerBackVisible: false,
-          headerLeft: () => (
-            <TouchableOpacity onPress={() => router.replace('/teams')}>
-              <Text style={{ color: '#FFD700', fontWeight: '600' }}>Back</Text>
-            </TouchableOpacity>
-          ),
+          title: `Team View - ${team.name}`,
+          headerBackVisible: true,    // ← let the stack pop back to the list
+          // remove custom headerLeft that called replace()
           headerStyle: { backgroundColor: '#001F3F' },
           headerTintColor: '#FFD700',
           headerTitleStyle: { color: '#FFD700', fontWeight: 'bold' },
@@ -34,12 +53,12 @@ export default function TeamDetailScreen() {
       {/* Header block with text on the left and logo on the right */}
       <View style={styles.headerBlock}>
         <View style={styles.headerText}>
-          <Text style={styles.title}>{team?.name}</Text>
+          <Text style={styles.title}>{team.name}</Text>
           <Text style={styles.meta}>
-            Captain: <Text style={styles.metaStrong}>{team?.captain}</Text>
+            Captain: <Text style={styles.metaStrong}>{team.captain}</Text>
           </Text>
           <Text style={styles.meta}>
-            Record: <Text style={styles.metaStrong}>{team?.record.wins}-{team?.record.losses}</Text>
+            Record: <Text style={styles.metaStrong}>{team.record.wins}-{team.record.losses}</Text>
           </Text>
         </View>
 
@@ -55,7 +74,7 @@ export default function TeamDetailScreen() {
           const pts = calculatePoints(item);
           return (
             <Link
-              href={{ pathname: '/player/[id]', params: { id: item.id } }}
+              href={{ pathname: '/(tabs)/team/player/[id]', params: { id: item.id } }}
               asChild
             >
               <TouchableOpacity style={styles.playerRow}>
@@ -74,20 +93,16 @@ export default function TeamDetailScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#001F3F', padding: 16 },
 
-  // Header block layout
   headerBlock: {
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: 12,
   },
-  headerText: {
-    flex: 1, // text takes remaining width, pushes logo to the right
-  },
+  headerText: { flex: 1 },
   title: { color: '#FFD700', fontWeight: 'bold', fontSize: 28, marginBottom: 6 },
   meta: { color: '#D7E3F4', fontSize: 14, marginTop: 2 },
   metaStrong: { color: '#FFD700', fontWeight: '600' },
 
-  // Logo styling
   logo: {
     width: 56,
     height: 56,
@@ -97,7 +112,6 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.08)',
   },
 
-  // Player rows
   playerRow: {
     backgroundColor: '#07335f',
     padding: 12,
