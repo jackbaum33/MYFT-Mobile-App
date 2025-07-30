@@ -42,15 +42,13 @@ export default function TeamDetailScreen() {
       <Stack.Screen
         options={{
           title: `${team.name}`,
-          headerBackVisible: true,    // ← let the stack pop back to the list
-          // remove custom headerLeft that called replace()
+          headerBackVisible: true,
           headerStyle: { backgroundColor: '#001F3F' },
           headerTintColor: '#FFD700',
           headerTitleStyle: { color: '#FFD700', fontWeight: 'bold' },
         }}
       />
 
-      {/* Header block with text on the left and logo on the right */}
       <View style={styles.headerBlock}>
         <View style={styles.headerText}>
           <Text style={styles.title}>{team.name}</Text>
@@ -114,12 +112,12 @@ const styles = StyleSheet.create({
 
   playerRow: {
     backgroundColor: '#07335f',
-    padding: 12,
+    padding: 20,
     borderRadius: 10,
     flexDirection: 'row',
     alignItems: 'center',
   },
-  playerName: { flex: 1, color: '#FFD700', fontSize: 16, fontWeight: '600' },
+  playerName: { flex: 1, color: '#FFD700', fontSize: 20, fontWeight: '600' },
   playerMeta: { width: 60, textAlign: 'right', color: '#D7E3F4' },
   playerPts: { width: 70, textAlign: 'right', color: '#FFD700', fontWeight: '700' },
 });
