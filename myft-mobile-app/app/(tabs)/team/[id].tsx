@@ -41,7 +41,7 @@ export default function TeamDetailScreen() {
     <View style={styles.container}>
       <Stack.Screen
         options={{
-          title: `Team View - ${team.name}`,
+          title: `${team.name}`,
           headerBackVisible: true,    // ← let the stack pop back to the list
           // remove custom headerLeft that called replace()
           headerStyle: { backgroundColor: '#001F3F' },

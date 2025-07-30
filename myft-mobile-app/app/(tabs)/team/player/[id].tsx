@@ -43,7 +43,7 @@ export default function PlayerProfileScreen() {
     <View style={styles.container}>
       <Stack.Screen
         options={{
-          title: player ? `Player Stats - ${player.name}` : 'Player Stats',
+          title: 'Player Stats',
           headerBackVisible: true,
           headerStyle: { backgroundColor: '#001F3F' },
           headerTintColor: '#FFD700',

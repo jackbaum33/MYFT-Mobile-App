@@ -6,7 +6,7 @@ export default function Page() {
   return (
     <>
       {/* This makes the header say “Rosters” instead of “index” */}
-      <Stack.Screen options={{ title: 'Teams' }} />
+      <Stack.Screen options={{ title: 'All Teams' }} />
       <TeamScreen />
     </>
   );

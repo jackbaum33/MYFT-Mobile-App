@@ -17,7 +17,6 @@ export default function TeamScreen() {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.header}>All Teams</Text>
 
       <View style={styles.toggle}>
         <TouchableOpacity
