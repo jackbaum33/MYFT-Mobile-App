@@ -1,9 +1,9 @@
 // Map a team key to its logo image (local require must be static)
 export const teamLogos: Record<string, any> = {
-    falcons:  require('./michigan_logo.png'),
-    wolves:   require('./maryland_logo.png'),
-    panthers: require('./yu_logo.png'),
-    hawks:    require('./binghamton_logo.png'),
+    michigan:  require('./michigan_logo.png'),
+    maryland:   require('./maryland_logo.png'),
+    yeshiva: require('./yu_logo.png'),
+    binghamton:    require('./binghamton_logo.png'),
   };
   
   // Optional fallback when a team has no logo key or file yet

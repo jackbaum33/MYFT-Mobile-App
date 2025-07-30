@@ -3,8 +3,8 @@ import { Team } from '../../context/TournamentContext';
 
 export const mockTeams: Team[] = [
   {
-    id: 'falcons',
-    name: 'Falcons',
+    id: 'michigan',
+    name: 'Michigan',
     division: 'boys',
     captain: 'John Doe',
     record: { wins: 3, losses: 1 },
@@ -28,8 +28,8 @@ export const mockTeams: Team[] = [
     ],
   },
   {
-    id: 'wolves',
-    name: 'Wolves',
+    id: 'maryland',
+    name: 'Maryland',
     division: 'boys',
     captain: 'Alex Smith',
     record: { wins: 2, losses: 2 },
@@ -53,8 +53,8 @@ export const mockTeams: Team[] = [
     ],
   },
   {
-    id: 'panthers',
-    name: 'Panthers',
+    id: 'yeshiva',
+    name: 'YU',
     division: 'girls',
     captain: 'Sarah Lee',
     record: { wins: 4, losses: 0 },
@@ -78,8 +78,8 @@ export const mockTeams: Team[] = [
     ],
   },
   {
-    id: 'hawks',
-    name: 'Hawks',
+    id: 'binghamton',
+    name: 'Binghamton',
     division: 'girls',
     captain: 'Lily Chen',
     record: { wins: 1, losses: 3 },
