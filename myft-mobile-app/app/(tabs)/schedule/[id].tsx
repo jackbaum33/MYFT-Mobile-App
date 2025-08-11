@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { View, Text, StyleSheet, FlatList, Image, TouchableOpacity } from 'react-native';
 import { Stack, useLocalSearchParams } from 'expo-router';
-import { scheduleData, type PlayerGameStat } from '../../data/scheduleData';
+import { scheduleData, type Game, type PlayerGameStat } from '../../data/scheduleData';
 import { useTournament } from '../../../context/TournamentContext';
 import { getTeamLogo } from '../../../assets/team_logos';
 
@@ -20,6 +20,17 @@ const NAVY = '#001F3F';
 const CARD = '#07335f';
 const CARD2 = '#0a3a68';
 const MUTED = '#BFD0E4';
+
+// helpers to derive score from touchdowns
+const touchdownsTotal = (arr?: PlayerGameStat[]) =>
+  (arr ?? []).reduce((sum, l) => sum + (l.touchdowns || 0), 0);
+
+const derivedScore = (g: Game, which: 'team1' | 'team2') => {
+  if (!g.boxScore) return '-';
+  const arr = which === 'team1' ? g.boxScore.team1 : g.boxScore.team2;
+  const pts = touchdownsTotal(arr) * 7;
+  return pts === 0 && g.status === 'Scheduled' ? '-' : String(pts);
+};
 
 export default function GameDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -109,7 +120,7 @@ export default function GameDetail() {
             <Text style={styles.teamName}>{name1}</Text>
             {!!cap1Last && <Text style={styles.captain}>{cap1Last}</Text>}
           </View>
-          <Text style={styles.score}>{game.score1 ?? '-'}</Text>
+          <Text style={styles.score}>{derivedScore(game, 'team1')}</Text>
         </View>
 
         <View style={styles.sepLine} />
@@ -120,14 +131,13 @@ export default function GameDetail() {
             <Text style={styles.teamName}>{name2}</Text>
             {!!cap2Last && <Text style={styles.captain}>{cap2Last}</Text>}
           </View>
-          <Text style={styles.score}>{game.score2 ?? '-'}</Text>
+        <Text style={styles.score}>{derivedScore(game, 'team2')}</Text>
         </View>
 
-      </View>
-
-      <Text style={styles.meta}>
-          {game.status}
+        <Text style={styles.meta}>
+          {dayLabel} • {game.time} • {game.field} • {game.status.toUpperCase()}
         </Text>
+      </View>
 
       {/* toggle which team box score to show */}
       <View style={styles.toggleRow}>
@@ -150,6 +160,7 @@ export default function GameDetail() {
         {/* header row */}
         <View style={[styles.row, styles.headRow]}>
           <Text style={[styles.hCell, styles.pName]}>Player</Text>
+          <Text style={[styles.hCell, styles.pPos]}>Pos</Text>
           <Text style={[styles.hCell, styles.pNum]}>TD</Text>
           <Text style={[styles.hCell, styles.pNum]}>INT</Text>
           <Text style={[styles.hCell, styles.pNum]}>FLG</Text>
@@ -164,6 +175,7 @@ export default function GameDetail() {
             <View style={styles.row}>
               {/* Wider name column so full names fit better */}
               <Text style={[styles.cell, styles.pName]} numberOfLines={1}>{item.name}</Text>
+              <Text style={[styles.cell, styles.pPos]}>{item.position}</Text>
               <Text style={[styles.cell, styles.pNum]}>{item.td}</Text>
               <Text style={[styles.cell, styles.pNum]}>{item.int}</Text>
               <Text style={[styles.cell, styles.pNum]}>{item.flg}</Text>
@@ -183,10 +195,10 @@ const styles = StyleSheet.create({
   teamRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 6 },
   logo: { width: 28, height: 28, borderRadius: 6, backgroundColor: 'rgba(0,0,0,0.15)', borderWidth: 1, borderColor: 'rgba(255,215,0,0.25)' },
   teamName: { color: YELLOW, fontWeight: '800', fontSize: 16 },
-  captain: { color: 'white', fontSize: 12},
+  captain: { color: MUTED, fontSize: 12 },
   score: { color: YELLOW, fontWeight: '900', fontSize: 22, marginLeft: 8 },
   sepLine: { height: 1, backgroundColor: 'rgba(255,255,255,0.12)', marginVertical: 8 },
-  meta: { color: YELLOW, fontSize: 20, fontWeight: '700', marginTop: 4, textAlign: 'right', marginBottom: 20, marginRight: 10},
+  meta: { color: MUTED, fontSize: 12, marginTop: 4, textAlign: 'center' },
 
   toggleRow: { flexDirection: 'row', gap: 8, marginBottom: 10 },
   toggleBtn: { flex: 1, paddingVertical: 8, borderRadius: 8, backgroundColor: '#062a4e', alignItems: 'center' },
@@ -201,7 +213,7 @@ const styles = StyleSheet.create({
   hCell: { color: YELLOW, fontWeight: '800' },
   cell: { color: YELLOW, fontWeight: '700' },
 
-  // column widths (wider name column)
+  // Wider player name column for full names
   pName: { flex: 1.6 },
   pPos:  { width: 52, textAlign: 'center', color: MUTED, fontWeight: '800' },
   pNum:  { width: 54, textAlign: 'center' },

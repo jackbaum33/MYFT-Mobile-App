@@ -17,8 +17,7 @@ export type Game = {
   time: string;
   field: string;
   status: 'Final' | 'Live' | 'Scheduled';
-  score1?: number;
-  score2?: number;
+  // NOTE: no score1/score2 — we derive from boxScore touchdowns
   boxScore?: {
     team1: PlayerGameStat[];
     team2: PlayerGameStat[];
@@ -31,14 +30,13 @@ export type DaySchedule = {
   games: Game[];
 };
 
-// helper to keep ids tidy
 let gid = 1;
 const g = () => `g${gid++}`;
 
-// Some per-game stats referencing your existing mock player IDs:
-// michigan: p1, p2
-// maryland: p3, p4
-// yeshiva:  p5, p6
+// Players in your mockTeams:
+// michigan:   p1, p2
+// maryland:   p3, p4
+// yeshiva:    p5, p6
 // binghamton: p7, p8
 
 export const scheduleData: DaySchedule[] = [
@@ -54,8 +52,6 @@ export const scheduleData: DaySchedule[] = [
         time: '09:00 AM',
         field: 'Field A',
         status: 'Live',
-        score1: 27,
-        score2: 21,
         boxScore: {
           team1: [
             { playerId: 'p1', touchdowns: 3, interceptions: 0, flagsPulled: 1, mvpAwards: 1 },
@@ -63,7 +59,7 @@ export const scheduleData: DaySchedule[] = [
           ],
           team2: [
             { playerId: 'p3', touchdowns: 2, interceptions: 1, flagsPulled: 0, mvpAwards: 0 },
-            { playerId: 'p4', touchdowns: 1, interceptions: 0, flagsPulled: 3, mvpAwards: 0 },
+            { playerId: 'p4', touchdowns: 0, interceptions: 0, flagsPulled: 3, mvpAwards: 0 },
           ],
         },
       },
@@ -75,8 +71,6 @@ export const scheduleData: DaySchedule[] = [
         time: '09:45 AM',
         field: 'Field B',
         status: 'Final',
-        score1: 22,
-        score2: 14,
         boxScore: {
           team1: [
             { playerId: 'p5', touchdowns: 2, interceptions: 0, flagsPulled: 1, mvpAwards: 1 },
@@ -88,14 +82,21 @@ export const scheduleData: DaySchedule[] = [
           ],
         },
       },
-      { id: g(), gender: 'men', team1: 'maryland', team2: 'michigan',   time: '10:30 AM', field: 'Field A', status: 'Final',    score1: 19, score2: 26 },
-      { id: g(), gender: 'women', team1: 'binghamton', team2: 'yeshiva',time: '11:15 AM', field: 'Field B', status: 'Final',    score1: 12, score2: 18 },
-      { id: g(), gender: 'men', team1: 'michigan',   team2: 'maryland', time: '12:00 PM', field: 'Field C', status: 'Scheduled' },
-      { id: g(), gender: 'women', team1: 'yeshiva',  team2: 'binghamton',time:'12:45 PM', field: 'Field A', status: 'Scheduled' },
-      { id: g(), gender: 'men', team1: 'maryland',   team2: 'michigan', time: '01:30 PM', field: 'Field B', status: 'Scheduled' },
-      { id: g(), gender: 'women', team1: 'binghamton',team2:'yeshiva',  time: '02:15 PM', field: 'Field C', status: 'Scheduled' },
-      { id: g(), gender: 'men', team1: 'michigan',   team2: 'maryland', time: '03:00 PM', field: 'Field A', status: 'Scheduled' },
-      { id: g(), gender: 'women', team1: 'yeshiva',  team2: 'binghamton',time:'03:45 PM', field: 'Field B', status: 'Scheduled' },
+
+      // The rest can be scheduled with no boxScore yet (scores will show "-")
+      { id: g(), gender: 'men',   team1: 'maryland',   team2: 'michigan',   time: '10:30 AM', field: 'Field A', status: 'Final',
+        boxScore: { team1: [{ playerId:'p3', touchdowns:3, interceptions:0, flagsPulled:1, mvpAwards:0 }],
+                    team2: [{ playerId:'p1', touchdowns:2, interceptions:0, flagsPulled:2, mvpAwards:0 }] } },
+      { id: g(), gender: 'women', team1: 'binghamton', team2: 'yeshiva',    time: '11:15 AM', field: 'Field B', status: 'Final',
+        boxScore: { team1: [{ playerId:'p7', touchdowns:2, interceptions:0, flagsPulled:2, mvpAwards:0 }],
+                    team2: [{ playerId:'p5', touchdowns:3, interceptions:0, flagsPulled:1, mvpAwards:1 }] } },
+
+      { id: g(), gender: 'men',   team1: 'michigan',   team2: 'maryland',   time: '12:00 PM', field: 'Field C', status: 'Scheduled' },
+      { id: g(), gender: 'women', team1: 'yeshiva',    team2: 'binghamton', time: '12:45 PM', field: 'Field A', status: 'Scheduled' },
+      { id: g(), gender: 'men',   team1: 'maryland',   team2: 'michigan',   time: '01:30 PM', field: 'Field B', status: 'Scheduled' },
+      { id: g(), gender: 'women', team1: 'binghamton', team2: 'yeshiva',    time: '02:15 PM', field: 'Field C', status: 'Scheduled' },
+      { id: g(), gender: 'men',   team1: 'michigan',   team2: 'maryland',   time: '03:00 PM', field: 'Field A', status: 'Scheduled' },
+      { id: g(), gender: 'women', team1: 'yeshiva',    team2: 'binghamton', time: '03:45 PM', field: 'Field B', status: 'Scheduled' },
     ],
   },
   {

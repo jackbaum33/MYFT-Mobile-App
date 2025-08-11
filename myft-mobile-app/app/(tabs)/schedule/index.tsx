@@ -1,16 +1,28 @@
-import React, { useMemo, useState } from 'react';
+import React, { useState } from 'react';
 import { View, Text, StyleSheet, FlatList, Pressable, Image } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
-import { scheduleData } from '../../data/scheduleData';
+import { scheduleData, type Game, type PlayerGameStat } from '../../data/scheduleData';
 import { useTournament } from '../../../context/TournamentContext';
 import { getTeamLogo } from '../../../assets/team_logos';
 
 const NAVY = '#001F3F';
 const CARD = '#07335f';
-const CARD2 = '#0a3a68';
+
 const YELLOW = '#FFD700';
 const MUTED = '#A5B4C3';
 const TEXT = '#E9ECEF';
+
+// helpers to derive score from touchdowns
+const touchdownsTotal = (arr?: PlayerGameStat[]) =>
+  (arr ?? []).reduce((sum, l) => sum + (l.touchdowns || 0), 0);
+
+const derivedScore = (g: Game, which: 'team1' | 'team2') => {
+  if (!g.boxScore) return '-';
+  const arr = which === 'team1' ? g.boxScore.team1 : g.boxScore.team2;
+  const pts = touchdownsTotal(arr) * 7;
+  // If scheduled and no TDs yet, show dash
+  return pts === 0 && g.status === 'Scheduled' ? '-' : String(pts);
+};
 
 export default function ScheduleIndex() {
   const router = useRouter();
@@ -20,16 +32,16 @@ export default function ScheduleIndex() {
   const day = scheduleData[dayIndex];
   const games = day?.games ?? [];
 
-  const teamById = (id: string | undefined) =>
+  const teamById = (id?: string) =>
     teams.find(t => t.id.toLowerCase() === (id ?? '').toLowerCase());
 
   const captainLast = (full?: string) => {
     if (!full) return '';
-    const bits = full.trim().split(/\s+/);
-    return bits.length ? bits[bits.length - 1] : full;
-    };
+    const parts = full.trim().split(/\s+/);
+    return parts[parts.length - 1] || full;
+  };
 
-  const GameCard = ({ item }: { item: (typeof games)[number] }) => {
+  const GameCard = ({ item }: { item: Game }) => {
     const t1 = teamById(item.team1);
     const t2 = teamById(item.team2);
     const logo1 = getTeamLogo(item.team1);
@@ -51,7 +63,7 @@ export default function ScheduleIndex() {
             <Text style={s.teamName} numberOfLines={1}>{t1?.name ?? item.team1}</Text>
             {!!t1?.captain && <Text style={s.captain}>{captainLast(t1.captain)}</Text>}
           </View>
-          <Text style={s.score}>{item.score1 ?? '-'}</Text>
+          <Text style={s.score}>{derivedScore(item, 'team1')}</Text>
         </View>
 
         <View style={s.row}>
@@ -60,15 +72,14 @@ export default function ScheduleIndex() {
             <Text style={s.teamName} numberOfLines={1}>{t2?.name ?? item.team2}</Text>
             {!!t2?.captain && <Text style={s.captain}>{captainLast(t2.captain)}</Text>}
           </View>
-          <Text style={s.score}>{item.score2 ?? '-'}</Text>
+          <Text style={s.score}>{derivedScore(item, 'team2')}</Text>
         </View>
 
-        <Text style={s.meta}> {item.time} • {item.field}</Text>
+        <Text style={s.meta}>{day?.label} • {item.time} • {item.field}</Text>
       </Pressable>
     );
   };
 
-  // Make screen scrollable via FlatList (numColumns grid)
   return (
     <View style={s.container}>
       <Stack.Screen
@@ -94,6 +105,7 @@ export default function ScheduleIndex() {
         ))}
       </View>
 
+      {/* Scrollable grid of games */}
       <FlatList
         data={games}
         keyExtractor={(g) => g.id}
@@ -134,5 +146,5 @@ const s = StyleSheet.create({
   teamName: { color: TEXT, fontWeight: '800' },
   captain: { color: '#cfe0f2', fontSize: 11 },
   score: { color: TEXT, fontWeight: '900', fontSize: 18, marginLeft: 8 },
-  meta: { color: 'white', fontSize: 11, marginTop: 6, textAlign: 'left' },
+  meta: { color: MUTED, fontSize: 11, marginTop: 6, textAlign: 'center' },
 });
