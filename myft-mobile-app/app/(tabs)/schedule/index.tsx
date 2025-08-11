@@ -54,7 +54,7 @@ export default function ScheduleIndex() {
       >
         <View style={s.headerRow}>
           <Text style={s.gender}>{item.gender === 'men' ? "MEN'S" : "WOMEN'S"}</Text>
-          <Text style={s.status}>{item.status.toUpperCase()}</Text>
+          <Text style={s.status}>{item.status}</Text>
         </View>
 
         <View style={s.row}>
@@ -75,7 +75,7 @@ export default function ScheduleIndex() {
           <Text style={s.score}>{derivedScore(item, 'team2')}</Text>
         </View>
 
-        <Text style={s.meta}>{day?.label} • {item.time} • {item.field}</Text>
+        <Text style={s.meta}>{item.time} • {item.field}</Text>
       </Pressable>
     );
   };
@@ -146,5 +146,5 @@ const s = StyleSheet.create({
   teamName: { color: TEXT, fontWeight: '800' },
   captain: { color: '#cfe0f2', fontSize: 11 },
   score: { color: TEXT, fontWeight: '900', fontSize: 18, marginLeft: 8 },
-  meta: { color: MUTED, fontSize: 11, marginTop: 6, textAlign: 'center' },
+  meta: { color: TEXT, fontSize: 11, marginTop: 6, textAlign: 'left' },
 });

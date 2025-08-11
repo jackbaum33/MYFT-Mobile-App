@@ -134,10 +134,11 @@ export default function GameDetail() {
         <Text style={styles.score}>{derivedScore(game, 'team2')}</Text>
         </View>
 
-        <Text style={styles.meta}>
-          {dayLabel} • {game.time} • {game.field} • {game.status.toUpperCase()}
-        </Text>
       </View>
+
+      <Text style={styles.meta}>
+          {game.status}
+        </Text>
 
       {/* toggle which team box score to show */}
       <View style={styles.toggleRow}>
@@ -198,8 +199,7 @@ const styles = StyleSheet.create({
   captain: { color: MUTED, fontSize: 12 },
   score: { color: YELLOW, fontWeight: '900', fontSize: 22, marginLeft: 8 },
   sepLine: { height: 1, backgroundColor: 'rgba(255,255,255,0.12)', marginVertical: 8 },
-  meta: { color: MUTED, fontSize: 12, marginTop: 4, textAlign: 'center' },
-
+  meta: { color: YELLOW, fontSize: 20, fontWeight: '700', marginTop: 4, textAlign: 'right', marginBottom: 20, marginRight: 10},
   toggleRow: { flexDirection: 'row', gap: 8, marginBottom: 10 },
   toggleBtn: { flex: 1, paddingVertical: 8, borderRadius: 8, backgroundColor: '#062a4e', alignItems: 'center' },
   toggleActive: { backgroundColor: '#0b3c70' },
