@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, FlatList, Pressable, Image } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
-import { scheduleData, type Game, type PlayerGameStat } from '../../data/scheduleData';
+import { scheduleData, type Game, type PlayerGameStat, derivedPoints } from '../../data/scheduleData';
 import { useTournament } from '../../../context/TournamentContext';
 import { getTeamLogo } from '../../../assets/team_logos';
 
@@ -12,17 +12,6 @@ const YELLOW = '#FFD700';
 const MUTED = '#A5B4C3';
 const TEXT = '#E9ECEF';
 
-// helpers to derive score from touchdowns
-const touchdownsTotal = (arr?: PlayerGameStat[]) =>
-  (arr ?? []).reduce((sum, l) => sum + (l.touchdowns || 0), 0);
-
-const derivedScore = (g: Game, which: 'team1' | 'team2') => {
-  if (!g.boxScore) return '-';
-  const arr = which === 'team1' ? g.boxScore.team1 : g.boxScore.team2;
-  const pts = touchdownsTotal(arr) * 7;
-  // If scheduled and no TDs yet, show dash
-  return pts === 0 && g.status === 'Scheduled' ? '-' : String(pts);
-};
 
 export default function ScheduleIndex() {
   const router = useRouter();
@@ -42,6 +31,8 @@ export default function ScheduleIndex() {
   };
 
   const GameCard = ({ item }: { item: Game }) => {
+    const score1 = derivedPoints(item, 'team1');
+    const score2 = derivedPoints(item, 'team2');
     const t1 = teamById(item.team1);
     const t2 = teamById(item.team2);
     const logo1 = getTeamLogo(item.team1);
@@ -63,7 +54,7 @@ export default function ScheduleIndex() {
             <Text style={s.teamName} numberOfLines={1}>{t1?.name ?? item.team1}</Text>
             {!!t1?.captain && <Text style={s.captain}>{captainLast(t1.captain)}</Text>}
           </View>
-          <Text style={s.score}>{derivedScore(item, 'team1')}</Text>
+          <Text style={s.score}>{score1}</Text>
         </View>
 
         <View style={s.row}>
@@ -72,7 +63,7 @@ export default function ScheduleIndex() {
             <Text style={s.teamName} numberOfLines={1}>{t2?.name ?? item.team2}</Text>
             {!!t2?.captain && <Text style={s.captain}>{captainLast(t2.captain)}</Text>}
           </View>
-          <Text style={s.score}>{derivedScore(item, 'team2')}</Text>
+          <Text style={s.score}>{score2}</Text>
         </View>
 
         <Text style={s.meta}>{item.time} • {item.field}</Text>

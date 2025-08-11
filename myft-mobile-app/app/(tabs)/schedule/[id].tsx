@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { View, Text, StyleSheet, FlatList, Image, TouchableOpacity } from 'react-native';
 import { Stack, useLocalSearchParams } from 'expo-router';
-import { scheduleData, type Game, type PlayerGameStat } from '../../data/scheduleData';
+import { scheduleData, type Game, type PlayerGameStat, statsForRender, derivedPoints } from '../../data/scheduleData';
 import { useTournament } from '../../../context/TournamentContext';
 import { getTeamLogo } from '../../../assets/team_logos';
 
@@ -24,13 +24,6 @@ const MUTED = '#BFD0E4';
 // helpers to derive score from touchdowns
 const touchdownsTotal = (arr?: PlayerGameStat[]) =>
   (arr ?? []).reduce((sum, l) => sum + (l.touchdowns || 0), 0);
-
-const derivedScore = (g: Game, which: 'team1' | 'team2') => {
-  if (!g.boxScore) return '-';
-  const arr = which === 'team1' ? g.boxScore.team1 : g.boxScore.team2;
-  const pts = touchdownsTotal(arr) * 7;
-  return pts === 0 && g.status === 'Scheduled' ? '-' : String(pts);
-};
 
 export default function GameDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -78,10 +71,10 @@ export default function GameDetail() {
   // merge roster with this game's per-player lines
   const merge = (teamId: string, which: 'team1' | 'team2'): Row[] => {
     const team = teams.find(t => t.id === teamId);
-    const lines: PlayerGameStat[] = which === 'team1'
-      ? (game.boxScore?.team1 ?? [])
-      : (game.boxScore?.team2 ?? []);
-
+    const box = statsForRender(game);
+    const lines: PlayerGameStat[] =
+      which === 'team1' ? (box?.team1 ?? []) : (box?.team2 ?? []);
+  
     const lineById = new Map(lines.map(l => [l.playerId, l]));
     return (team?.players ?? []).map(p => {
       const l = lineById.get(p.id);
@@ -120,7 +113,7 @@ export default function GameDetail() {
             <Text style={styles.teamName}>{name1}</Text>
             {!!cap1Last && <Text style={styles.captain}>{cap1Last}</Text>}
           </View>
-          <Text style={styles.score}>{derivedScore(game, 'team1')}</Text>
+          <Text style={styles.score}>{derivedPoints(game, 'team1')}</Text>
         </View>
 
         <View style={styles.sepLine} />
@@ -131,7 +124,7 @@ export default function GameDetail() {
             <Text style={styles.teamName}>{name2}</Text>
             {!!cap2Last && <Text style={styles.captain}>{cap2Last}</Text>}
           </View>
-        <Text style={styles.score}>{derivedScore(game, 'team2')}</Text>
+          <Text style={styles.score}>{derivedPoints(game, 'team2')}</Text>
         </View>
 
       </View>
