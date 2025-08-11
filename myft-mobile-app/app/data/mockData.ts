@@ -6,12 +6,12 @@ export const mockTeams: Team[] = [
     id: 'michigan',
     name: 'Michigan',
     division: 'boys',
-    captain: 'John Doe',
+    captain: 'Eli Plotkin',
     record: { wins: 3, losses: 1 },
     players: [
       {
         id: 'p1',
-        name: 'John Doe',
+        name: 'Eli Plotkin',
         position: 'QB',
         division: 'boys',
         teamId: 'falcons',
@@ -19,7 +19,7 @@ export const mockTeams: Team[] = [
       },
       {
         id: 'p2',
-        name: 'Mike West',
+        name: 'Boaz Edidin',
         position: 'WR',
         division: 'boys',
         teamId: 'falcons',
@@ -31,12 +31,12 @@ export const mockTeams: Team[] = [
     id: 'maryland',
     name: 'Maryland',
     division: 'boys',
-    captain: 'Alex Smith',
+    captain: 'Lev Blumenfeld',
     record: { wins: 2, losses: 2 },
     players: [
       {
         id: 'p3',
-        name: 'Alex Smith',
+        name: 'Lev Blumenfeld',
         position: 'RB',
         division: 'boys',
         teamId: 'wolves',
@@ -44,7 +44,7 @@ export const mockTeams: Team[] = [
       },
       {
         id: 'p4',
-        name: 'Chris Young',
+        name: 'Elliot Sokol',
         position: 'DB',
         division: 'boys',
         teamId: 'wolves',
@@ -56,12 +56,12 @@ export const mockTeams: Team[] = [
     id: 'yeshiva',
     name: 'Yeshiva',
     division: 'girls',
-    captain: 'Sarah Lee',
+    captain: 'Yoni Arnet',
     record: { wins: 4, losses: 0 },
     players: [
       {
         id: 'p5',
-        name: 'Sarah Lee',
+        name: 'Yoni Arnet',
         position: 'QB',
         division: 'girls',
         teamId: 'panthers',
@@ -69,7 +69,7 @@ export const mockTeams: Team[] = [
       },
       {
         id: 'p6',
-        name: 'Emily Fox',
+        name: 'David Gaffen',
         position: 'WR',
         division: 'girls',
         teamId: 'panthers',
@@ -81,12 +81,12 @@ export const mockTeams: Team[] = [
     id: 'binghamton',
     name: 'Binghamton',
     division: 'girls',
-    captain: 'Lily Chen',
+    captain: 'Jared Moskowitz',
     record: { wins: 1, losses: 3 },
     players: [
       {
         id: 'p7',
-        name: 'Lily Chen',
+        name: 'Jared Moskowitz',
         position: 'RB',
         division: 'girls',
         teamId: 'hawks',
@@ -94,7 +94,7 @@ export const mockTeams: Team[] = [
       },
       {
         id: 'p8',
-        name: 'Ava Johnson',
+        name: 'Joey Bond',
         position: 'DB',
         division: 'girls',
         teamId: 'hawks',
