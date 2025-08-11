@@ -26,11 +26,9 @@ export type Game = {
   field: string;
   status: GameStatus;
 
-  // always editable; UI renders only when Live/Final
-  liveStats?: PerSide;
-
-  // snapshot when game is finalized
-  finalBoxScore?: PerSide;
+  // Always present
+  liveStats: PerSide;
+  finalBoxScore: PerSide;
 };
 
 export type DaySchedule = {
@@ -39,10 +37,15 @@ export type DaySchedule = {
   games: Game[];
 };
 
+const emptyPerSide = (): PerSide => ({ team1: [], team2: [] });
+
 let gid = 1;
 const g = () => `g${gid++}`;
 
-// Seed with some games. (Stats optional while Scheduled)
+// Seed with some games. Every game has liveStats + finalBoxScore.
+// For Scheduled: both empty.
+// For Live: liveStats filled, finalBoxScore empty.
+// For Final: finalBoxScore filled (and liveStats can mirror or be empty).
 export const scheduleData: DaySchedule[] = [
   {
     label: 'APR 4',
@@ -66,6 +69,7 @@ export const scheduleData: DaySchedule[] = [
             { playerId: 'p4', touchdowns: 0, interceptions: 0, flagsPulled: 3, mvpAwards: 0 },
           ],
         },
+        finalBoxScore: emptyPerSide(),
       },
       {
         id: g(),
@@ -75,6 +79,7 @@ export const scheduleData: DaySchedule[] = [
         time: '09:45 AM',
         field: 'Field B',
         status: 'Final',
+        liveStats: emptyPerSide(), // could mirror final if you prefer
         finalBoxScore: {
           team1: [
             { playerId: 'p5', touchdowns: 2, interceptions: 0, flagsPulled: 1, mvpAwards: 1 },
@@ -86,30 +91,46 @@ export const scheduleData: DaySchedule[] = [
           ],
         },
       },
-      { id: g(), gender: 'men',   team1: 'maryland',   team2: 'michigan',   time: '10:30 AM', field: 'Field A', status: 'Scheduled' },
-      { id: g(), gender: 'women', team1: 'binghamton', team2: 'yeshiva',    time: '11:15 AM', field: 'Field B', status: 'Scheduled' },
-      { id: g(), gender: 'men',   team1: 'michigan',   team2: 'maryland',   time: '12:00 PM', field: 'Field C', status: 'Scheduled' },
-      { id: g(), gender: 'women', team1: 'yeshiva',    team2: 'binghamton', time: '12:45 PM', field: 'Field A', status: 'Scheduled' },
+      {
+        id: g(), gender: 'men', team1: 'maryland', team2: 'michigan',
+        time: '10:30 AM', field: 'Field A', status: 'Scheduled',
+        liveStats: emptyPerSide(), finalBoxScore: emptyPerSide(),
+      },
+      {
+        id: g(), gender: 'women', team1: 'binghamton', team2: 'yeshiva',
+        time: '11:15 AM', field: 'Field B', status: 'Scheduled',
+        liveStats: emptyPerSide(), finalBoxScore: emptyPerSide(),
+      },
+      {
+        id: g(), gender: 'men', team1: 'michigan', team2: 'maryland',
+        time: '12:00 PM', field: 'Field C', status: 'Scheduled',
+        liveStats: emptyPerSide(), finalBoxScore: emptyPerSide(),
+      },
+      {
+        id: g(), gender: 'women', team1: 'yeshiva', team2: 'binghamton',
+        time: '12:45 PM', field: 'Field A', status: 'Scheduled',
+        liveStats: emptyPerSide(), finalBoxScore: emptyPerSide(),
+      },
     ],
   },
   {
     label: 'APR 5',
     date: '2025-04-05',
     games: [
-      { id: g(), gender: 'men',   team1: 'maryland',   team2: 'michigan',   time: '09:00 AM', field: 'Field A', status: 'Scheduled' },
-      { id: g(), gender: 'women', team1: 'binghamton', team2: 'yeshiva',    time: '09:45 AM', field: 'Field B', status: 'Scheduled' },
-      { id: g(), gender: 'men',   team1: 'michigan',   team2: 'maryland',   time: '10:30 AM', field: 'Field C', status: 'Scheduled' },
-      { id: g(), gender: 'women', team1: 'yeshiva',    team2: 'binghamton', time: '11:15 AM', field: 'Field A', status: 'Scheduled' },
+      { id: g(), gender: 'men',   team1: 'maryland',   team2: 'michigan',   time: '09:00 AM', field: 'Field A', status: 'Scheduled', liveStats: emptyPerSide(), finalBoxScore: emptyPerSide() },
+      { id: g(), gender: 'women', team1: 'binghamton', team2: 'yeshiva',    time: '09:45 AM', field: 'Field B', status: 'Scheduled', liveStats: emptyPerSide(), finalBoxScore: emptyPerSide() },
+      { id: g(), gender: 'men',   team1: 'michigan',   team2: 'maryland',   time: '10:30 AM', field: 'Field C', status: 'Scheduled', liveStats: emptyPerSide(), finalBoxScore: emptyPerSide() },
+      { id: g(), gender: 'women', team1: 'yeshiva',    team2: 'binghamton', time: '11:15 AM', field: 'Field A', status: 'Scheduled', liveStats: emptyPerSide(), finalBoxScore: emptyPerSide() },
     ],
   },
   {
     label: 'APR 6',
     date: '2025-04-06',
     games: [
-      { id: g(), gender: 'men',   team1: 'michigan',   team2: 'maryland',   time: '09:00 AM', field: 'Field A', status: 'Scheduled' },
-      { id: g(), gender: 'women', team1: 'yeshiva',    team2: 'binghamton', time: '09:45 AM', field: 'Field B', status: 'Scheduled' },
-      { id: g(), gender: 'men',   team1: 'maryland',   team2: 'michigan',   time: '10:30 AM', field: 'Field C', status: 'Scheduled' },
-      { id: g(), gender: 'women', team1: 'binghamton', team2: 'yeshiva',    time: '11:15 AM', field: 'Field A', status: 'Scheduled' },
+      { id: g(), gender: 'men',   team1: 'michigan',   team2: 'maryland',   time: '09:00 AM', field: 'Field A', status: 'Scheduled', liveStats: emptyPerSide(), finalBoxScore: emptyPerSide() },
+      { id: g(), gender: 'women', team1: 'yeshiva',    team2: 'binghamton', time: '09:45 AM', field: 'Field B', status: 'Scheduled', liveStats: emptyPerSide(), finalBoxScore: emptyPerSide() },
+      { id: g(), gender: 'men',   team1: 'maryland',   team2: 'michigan',   time: '10:30 AM', field: 'Field C', status: 'Scheduled', liveStats: emptyPerSide(), finalBoxScore: emptyPerSide() },
+      { id: g(), gender: 'women', team1: 'binghamton', team2: 'yeshiva',    time: '11:15 AM', field: 'Field A', status: 'Scheduled', liveStats: emptyPerSide(), finalBoxScore: emptyPerSide() },
     ],
   },
 ];
@@ -147,13 +168,11 @@ export function setGameStatus(gameId: string, next: GameStatus) {
     const g = day.games.find(x => x.id === gameId);
     if (!g) continue;
 
-    if (next === 'Live') {
-      g.liveStats ??= { team1: [], team2: [] };
-    }
     if (next === 'Final') {
+      // snapshot live into final on finalize
       g.finalBoxScore = {
-        team1: [...(g.liveStats?.team1 ?? [])],
-        team2: [...(g.liveStats?.team2 ?? [])],
+        team1: [...g.liveStats.team1],
+        team2: [...g.liveStats.team2],
       };
     }
     g.status = next;
@@ -171,17 +190,17 @@ export function applyLiveStat(
   for (const day of scheduleData) {
     const g = day.games.find(x => x.id === gameId);
     if (!g) continue;
-    g.liveStats ??= { team1: [], team2: [] };
+
     const bucket = team === 'team1' ? g.liveStats.team1 : g.liveStats.team2;
     let line = bucket.find(l => l.playerId === playerId);
     if (!line) {
       line = { playerId, touchdowns: 0, interceptions: 0, flagsPulled: 0, mvpAwards: 0 };
       bucket.push(line);
     }
-    if (patch.touchdowns != null)   line.touchdowns   = patch.touchdowns;
-    if (patch.interceptions != null)line.interceptions= patch.interceptions;
-    if (patch.flagsPulled != null)  line.flagsPulled  = patch.flagsPulled;
-    if (patch.mvpAwards != null)    line.mvpAwards    = patch.mvpAwards;
+    if (patch.touchdowns != null)    line.touchdowns    = patch.touchdowns;
+    if (patch.interceptions != null) line.interceptions = patch.interceptions;
+    if (patch.flagsPulled != null)   line.flagsPulled   = patch.flagsPulled;
+    if (patch.mvpAwards != null)     line.mvpAwards     = patch.mvpAwards;
     return line;
   }
   return null;
