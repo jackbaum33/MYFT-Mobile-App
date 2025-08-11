@@ -54,7 +54,7 @@ export const mockTeams: Team[] = [
   },
   {
     id: 'yeshiva',
-    name: 'YU',
+    name: 'Yeshiva',
     division: 'girls',
     captain: 'Sarah Lee',
     record: { wins: 4, losses: 0 },
