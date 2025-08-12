@@ -1,161 +1,222 @@
-// app/(tabs)/team/player/[id].tsx
+// app/(tabs)/leaderboard/player/[id].tsx
 import React, { useMemo } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
-import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
+import { View, Text, StyleSheet, FlatList, Image } from 'react-native';
+import { Stack, useLocalSearchParams } from 'expo-router';
 import { useTournament } from '../../../../context/TournamentContext';
+import { scheduleData, statsForRender } from '../../../data/scheduleData';
 import { getTeamLogo } from '../../../../assets/team_logos';
+
+const NAVY = '#001F3F';
+const CARD = '#07335f';
+const YELLOW = '#FFD700';
+const TEXT = '#E9ECEF';
+const MUTED = '#A5B4C3';
+
+type Line = {
+  key: string;
+  day: string;
+  vs: string;
+  td: number;
+  int: number;
+  flg: number;
+  mvp: number;
+};
 
 export default function PlayerProfileScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const router = useRouter();
-  const { teams, calculatePoints } = useTournament();
+  const { teams, calculatePoints } = useTournament(); // 👈 now pulling calculatePoints
 
-  // Find player + team info
-  const { player, teamName, teamId } = useMemo(() => {
-    let foundPlayer: any = null;
-    let foundTeamName = '';
-    let foundTeamId = '';
+  const player = useMemo(() => {
     for (const t of teams) {
       const p = t.players.find(pl => pl.id === id);
-      if (p) {
-        foundPlayer = p;
-        foundTeamName = t.name;
-        foundTeamId = t.id;
-        break;
-      }
+      if (p) return { player: p, teamName: t.name, teamId: t.id };
     }
-    return { player: foundPlayer, teamName: foundTeamName, teamId: foundTeamId };
+    return null;
   }, [teams, id]);
 
-  const logoSrc = getTeamLogo(teamId || undefined);
-  const pts = player ? calculatePoints(player) : 0;
+  const fantasyPoints = useMemo(() => {
+    if (!player) return 0;
+    return calculatePoints(player.player);
+  }, [player, calculatePoints]);
 
-  // Navigate back to the specific team (or list as fallback)
-  const goBackToTeam = () => {
-    if (teamId) {
-      router.replace({ pathname: '/(tabs)/team/[id]', params: { id: teamId } });
-    } else {
-      router.replace('/(tabs)/team');
+  const lines: Line[] = useMemo(() => {
+    if (!id) return [];
+    const out: Line[] = [];
+    for (const day of scheduleData) {
+      for (const g of day.games) {
+        const box = statsForRender(g);
+        if (!box) continue;
+        const from1 = box.team1.find(l => l.playerId === id);
+        if (from1) {
+          out.push({
+            key: `${g.id}-t1`,
+            day: day.label,
+            vs: g.team2.charAt(0).toUpperCase() + g.team2.slice(1),
+            td: from1.touchdowns, int: from1.interceptions, flg: from1.flagsPulled, mvp: from1.mvpAwards,
+          });
+        }
+        const from2 = box.team2.find(l => l.playerId === id);
+        if (from2) {
+          out.push({
+            key: `${g.id}-t2`,
+            day: day.label,
+            vs: g.team1.charAt(0).toUpperCase() + g.team1.slice(1),
+            td: from2.touchdowns, int: from2.interceptions, flg: from2.flagsPulled, mvp: from2.mvpAwards,
+          });
+        }
+      }
     }
-  };
+    return out;
+  }, [id]);
+
+  const totals = useMemo(() => {
+    return lines.reduce(
+      (acc, r) => {
+        acc.td += r.td; acc.int += r.int; acc.flg += r.flg; acc.mvp += r.mvp;
+        return acc;
+      },
+      { td: 0, int: 0, flg: 0, mvp: 0 }
+    );
+  }, [lines]);
+
+  if (!player) {
+    return (
+      <View style={[s.container, { justifyContent: 'center', alignItems: 'center' }]}>
+        <Stack.Screen options={{ title: 'Player' }} />
+        <Text style={{ color: YELLOW }}>Player not found.</Text>
+      </View>
+    );
+  }
+
+  const { player: p } = player;
+  const logoSrc = getTeamLogo(player.teamId);
 
   return (
-    <View style={styles.container}>
-      <Stack.Screen
-        options={{
-          title: 'Player Stats',
-          headerBackVisible: true,
-          headerStyle: { backgroundColor: '#001F3F' },
-          headerTintColor: '#FFD700',
-          headerTitleStyle: { color: '#FFD700', fontWeight: 'bold' },
-          headerTitleAlign: 'center',
-        }}
-      />
+    <View style={{ flex: 1, backgroundColor: NAVY }}>
+      <Stack.Screen options={{ title: `${p.name}` }} />
 
-
-      {player ? (
-        <>
-          {/* Header block: text on left, logo on right */}
-          <View style={styles.headerBlock}>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.title}>{player.name}</Text>
-              <Text style={styles.meta}>
-                Team: <Text style={styles.metaStrong}>{teamName}</Text>
-              </Text>
-              <Text style={styles.meta}>
-                Position: <Text style={styles.metaStrong}>{player.position}</Text>
-              </Text>
-            </View>
-
-            {logoSrc ? (
-              <Image source={logoSrc} style={styles.logo} resizeMode="contain" />
-            ) : null}
+      <View style={s.container}>
+        {/* Header / totals */}
+        <View style={s.headerCard}>
+          <View>
+            <Text style={s.name}>{p.name}</Text>
+            <Text style={s.meta}>{p.position}</Text>
           </View>
+          <Image source={logoSrc} style={s.logo} resizeMode="contain" />
+        </View>
 
-          <View style={styles.card}>
-            <Text style={styles.sectionTitle}>Points Breakdown</Text>
-            <View style={styles.row}>
-              <Text style={styles.label}>Touchdowns</Text>
-              <Text style={styles.value}>{player.stats.touchdowns}</Text>
-            </View>
-            <View style={styles.row}>
-              <Text style={styles.label}>Interceptions</Text>
-              <Text style={styles.value}>{player.stats.interceptions}</Text>
-            </View>
-            <View style={styles.row}>
-              <Text style={styles.label}>Flags Pulled</Text>
-              <Text style={styles.value}>{player.stats.flagsPulled}</Text>
-            </View>
-            <View style={styles.row}>
-              <Text style={styles.label}>MVP Awards</Text>
-              <Text style={styles.value}>{player.stats.mvpAwards}</Text>
-            </View>
-
-            <View style={styles.totalRow}>
-              <Text style={styles.totalLabel}>Total Fantasy Points</Text>
-              <Text style={styles.totalValue}>{pts} pts</Text>
-            </View>
+        <Text style={s.statsTitle}>Total Stats</Text>
+        <View style={s.headerCard}>
+          <View style={s.totalsRow}>
+            <StatBlock label="TD"  value={totals.td} />
+            <StatBlock label="INT" value={totals.int} />
+            <StatBlock label="FLG" value={totals.flg} />
+            <StatBlock label="MVP" value={totals.mvp} />
           </View>
-        </>
-      ) : (
-        <Text style={styles.meta}>Player not found.</Text>
-      )}
+        </View>
+
+        {/* Box score by game */}
+        <Text style={s.gameBreakdownTitle}>Game Breakdown</Text>
+        <View style={s.tableCard}>
+          <View style={[s.row, s.headRow]}>
+            <Text style={[s.hCell, s.cVs]}>Vs</Text>
+            <Text style={[s.hCell, s.cNum]}>TD</Text>
+            <Text style={[s.hCell, s.cNum]}>INT</Text>
+            <Text style={[s.hCell, s.cNum]}>FLG</Text>
+            <Text style={[s.hCell, s.cNum]}>MVP</Text>
+          </View>
+          <FlatList
+            data={lines}
+            keyExtractor={(r) => r.key}
+            ItemSeparatorComponent={() => <View style={s.rowSep} />}
+            renderItem={({ item }) => (
+              <View style={s.row}>
+                <Text style={[s.cell, s.cVs]} numberOfLines={1}>{item.vs}</Text>
+                <Text style={[s.cell, s.cNum]}>{item.td}</Text>
+                <Text style={[s.cell, s.cNum]}>{item.int}</Text>
+                <Text style={[s.cell, s.cNum]}>{item.flg}</Text>
+                <Text style={[s.cell, s.cNum]}>{item.mvp}</Text>
+              </View>
+            )}
+          />
+        </View>
+      </View>
+
+      {/* Bottom card for fantasy points */}
+      <View style={s.bottomCard}>
+        <Text style={s.bottomText}>Total Points: {fantasyPoints}</Text>
+      </View>
     </View>
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#001F3F', padding: 16 },
+function StatBlock({ label, value }: { label: string; value: number }) {
+  return (
+    <View style={s.statBlock}>
+      <Text style={s.statVal}>{value}</Text>
+      <Text style={s.statLbl}>{label}</Text>
+    </View>
+  );
+}
 
-  // Header block with logo on right
-  headerBlock: {
+const s = StyleSheet.create({
+  container: { flex: 1, padding: 12 },
+  headerCard: {
+    backgroundColor: CARD,
+    borderRadius: 12,
+    padding: 14,
+    marginBottom: 12,
     flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 12,
-    marginBottom: 8,
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
-
-  title: { color: '#FFD700', fontWeight: 'bold', fontSize: 28, marginBottom: 6 },
-  meta: { color: '#D7E3F4', fontSize: 16, marginBottom: 4 },
-  metaStrong: { color: '#FFD700', fontWeight: '600' },
-
-  logo: {
-    width: 54,
-    height: 54,
+  name: { color: YELLOW, fontWeight: '900', fontSize: 20 },
+  statsTitle: { color: YELLOW, fontWeight: '900', fontSize: 20, marginBottom: 10, marginLeft: 5 },
+  gameBreakdownTitle: { color: YELLOW, fontWeight: '900', fontSize: 20, marginBottom: 10, marginLeft: 5 },
+  meta: { color: MUTED, marginTop: 4 },
+  totalsRow: { flexDirection: 'row', gap: 10, marginTop: 10 },
+  statBlock: {
+    backgroundColor: '#0a3a68',
     borderRadius: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    alignItems: 'center',
+    flex: 1,
+  },
+  statVal: { color: YELLOW, fontWeight: '900', fontSize: 18 },
+  statLbl: { color: TEXT, fontWeight: '700', marginTop: 2 },
+  tableCard: { flex: 1, backgroundColor: CARD, borderRadius: 12, padding: 10 },
+  headRow: { backgroundColor: '#0a3a68', borderRadius: 8, marginBottom: 6 },
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#0a3a68',
+    borderRadius: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+  },
+  rowSep: { height: 8 },
+  hCell: { color: YELLOW, fontWeight: '800' },
+  cell: { color: YELLOW, fontWeight: '700' },
+  cVs: { flex: 1 },
+  cNum: { width: 52, textAlign: 'center' },
+  logo: {
+    width: 56,
+    height: 56,
+    borderRadius: 8,
     borderWidth: 1,
     borderColor: 'rgba(255,215,0,0.25)',
     backgroundColor: 'rgba(0,0,0,0.08)',
   },
-
-  card: {
-    marginTop: 8,
-    backgroundColor: '#07335f',
-    borderRadius: 12,
-    padding: 16,
-  },
-  sectionTitle: {
-    color: '#FFD700',
-    fontWeight: '700',
-    fontSize: 18,
-    marginBottom: 8,
-  },
-  row: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingVertical: 6,
-  },
-  label: { color: '#D7E3F4', fontSize: 16 },
-  value: { color: '#FFD700', fontWeight: '600', fontSize: 16 },
-
-  totalRow: {
+  // Bottom fantasy points card
+  bottomCard: {
+    backgroundColor: CARD,
+    padding: 14,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.15)',
-    marginTop: 10,
-    paddingTop: 10,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    borderColor: 'rgba(255,255,255,0.1)',
+    marginHorizontal: 10, // 👈 adds space on left/right
+    borderRadius: 12,     // 👈 rounded look
+    marginBottom: 12,     // space from bottom of screen
   },
-  totalLabel: { color: '#FFD700', fontWeight: '700', fontSize: 18 },
-  totalValue: { color: '#FFD700', fontWeight: '800', fontSize: 18 },
+  bottomText: { color: YELLOW, fontWeight: '900', fontSize: 18, textAlign: 'center' },
 });
