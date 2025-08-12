@@ -44,7 +44,7 @@ export default function ScheduleIndex() {
         style={s.card}
       >
         <View style={s.headerRow}>
-          <Text style={s.gender}>{item.gender === 'men' ? "MEN'S" : "WOMEN'S"}</Text>
+          <Text style={s.gender}>{item.gender === 'men' ? "Men's" : "Women's"}</Text>
           <Text style={s.status}>{item.status}</Text>
         </View>
 

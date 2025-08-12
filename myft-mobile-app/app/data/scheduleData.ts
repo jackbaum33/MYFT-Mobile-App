@@ -61,7 +61,7 @@ export const scheduleData: DaySchedule[] = [
         status: 'Live',
         liveStats: {
           team1: [
-            { playerId: 'p1', touchdowns: 2, interceptions: 0, flagsPulled: 1, mvpAwards: 1 },
+            { playerId: 'p1', touchdowns: 3, interceptions: 0, flagsPulled: 1, mvpAwards: 1 },
             { playerId: 'p2', touchdowns: 1, interceptions: 0, flagsPulled: 2, mvpAwards: 0 },
           ],
           team2: [
