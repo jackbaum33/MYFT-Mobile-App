@@ -118,7 +118,7 @@ export default function HomeScreen() {
       {/* Header */}
       <View style={s.headerWrap}>
         <Text style={s.header}>Welcome to the official MYFT App!</Text>
-        <Text style={s.sub}>Browse teams and players, view game schedule, set a personalized fantasy football roster, and more!</Text>
+        <Text style={s.sub}>Browse teams and players, view schedule of games, set a personalized fantasy football roster, and more!</Text>
       </View>
 
       <View style={s.headerWrap}>
