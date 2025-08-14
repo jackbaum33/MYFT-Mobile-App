@@ -10,8 +10,11 @@ import {
   Modal,
   Pressable,
   Platform,
+  Image,
+  FlatList,
 } from 'react-native';
 import { Ionicons, MaterialIcons, FontAwesome5 } from '@expo/vector-icons';
+import { pics } from '../../assets/images/board_pictures';
 
 // Colors
 const NAVY = '#001F3F';
@@ -28,29 +31,60 @@ const PHOTOS_URL = 'https://drive.google.com/drive/u/1/folders/1oKW8z7r-OTg8ANJs
 
 type ScheduleItem = {
   id: string;
-  date: string | Date;   // ISO string or Date
+  date: string | Date;
   title: string;
-  location: string;      // short label shown in the list
-  address: string;       // full address for the modal + maps
+  location: string;
+  address: string;
 };
 
-/** Replace with your real events + addresses */
 const SCHEDULE: ScheduleItem[] = [
-  { id: 'evt-1', date: '2025-08-28T09:00:00', title: 'Opening Ceremony',           location: 'Main Field',  address: '123 Tournament Way, Cityville, NY 10001' },
-  { id: 'evt-2', date: '2025-08-28T10:00:00', title: 'Group Stage – Round 1',      location: 'Fields A–D',  address: '200 Sports Complex Rd, Cityville, NY 10002' },
-  { id: 'evt-3', date: '2025-08-28T14:00:00', title: 'Skills Challenge',           location: 'Field B',     address: '200 Sports Complex Rd, Cityville, NY 10002' },
-  { id: 'evt-4', date: '2025-08-29T09:00:00', title: 'Group Stage – Round 2',      location: 'Fields A–D',  address: '200 Sports Complex Rd, Cityville, NY 10002' },
-  { id: 'evt-5', date: '2025-08-29T15:30:00', title: 'Quarterfinals',              location: 'Main Field',  address: '123 Tournament Way, Cityville, NY 10001' },
-  { id: 'evt-6', date: '2025-08-30T11:00:00', title: 'Semifinals',                 location: 'Main Field',  address: '123 Tournament Way, Cityville, NY 10001' },
-  { id: 'evt-7', date: '2025-08-30T15:00:00', title: 'Championship Game',          location: 'Main Field',  address: '123 Tournament Way, Cityville, NY 10001' },
-  { id: 'evt-8', date: '2025-08-30T17:00:00', title: 'Awards & Closing',           location: 'Main Stage',  address: '500 Celebration Ave, Cityville, NY 10003' },
+  { id: 'evt-1', date: '2025-08-28T09:00:00', title: 'Opening Ceremony',      location: 'Main Field',  address: '123 Tournament Way, Cityville, NY 10001' },
+  { id: 'evt-2', date: '2025-08-28T10:00:00', title: 'Group Stage – Round 1', location: 'Fields A–D',  address: '200 Sports Complex Rd, Cityville, NY 10002' },
+  { id: 'evt-3', date: '2025-08-28T14:00:00', title: 'Skills Challenge',      location: 'Field B',     address: '200 Sports Complex Rd, Cityville, NY 10002' },
+  { id: 'evt-4', date: '2025-08-29T09:00:00', title: 'Group Stage – Round 2', location: 'Fields A–D',  address: '200 Sports Complex Rd, Cityville, NY 10002' },
+  { id: 'evt-5', date: '2025-08-29T15:30:00', title: 'Quarterfinals',         location: 'Main Field',  address: '123 Tournament Way, Cityville, NY 10001' },
+  { id: 'evt-6', date: '2025-08-30T11:00:00', title: 'Semifinals',            location: 'Main Field',  address: '123 Tournament Way, Cityville, NY 10001' },
+  { id: 'evt-7', date: '2025-08-30T15:00:00', title: 'Championship Game',     location: 'Main Field',  address: '123 Tournament Way, Cityville, NY 10001' },
+  { id: 'evt-8', date: '2025-08-30T17:00:00', title: 'Awards & Closing',      location: 'Main Stage',  address: '500 Celebration Ave, Cityville, NY 10003' },
+];
+
+/* ==== BOARD GRID ==== */
+const boardPics: Record<string, any> = {
+  'Abby Kutin':        pics.abby,
+  'Eli Plotkin':       pics.eli,
+  'Fisher Angrist':    pics.fisher,
+  'Isaac Schiffman':   pics.isaac,
+  'Jack Baum':         pics.jack,
+  'James Forman':      pics.james,
+  'Josh Katz':         pics.josh,
+  'Levi Stein':        pics.levi,
+  'Lila Ellman':       pics.lila,
+  'Matan Silverberg':  pics.matan,
+  'Shayna Foreman':    pics.shayna,
+  'Viv Schlussel':     pics.viv,
+};
+
+type Member = { name: string; line1: string };
+const MEMBERS: Member[] = [
+  { name: 'Lila Ellman',      line1: 'Co-Chair' },
+  { name: 'Josh Katz',        line1: 'Co-Chair' },
+  { name: 'Levi Stein',       line1: 'Exective Advisor' },
+  { name: 'Abby Kutin',       line1: 'Website Developer, Brand Strategist' },
+  { name: 'Viv Schlussel',    line1: 'Photography' },
+  { name: 'Shayna Foreman',   line1: 'Events' },
+  { name: 'Isaac Schiffman',  line1: 'Recruitment' },
+  { name: 'Fisher Angrist',   line1: 'Finance' },
+  { name: 'Eli Plotkin',      line1: 'Housing' },
+  { name: 'James Forman',     line1: 'Gameplay Operations'  },
+  { name: 'Matan Silverberg', line1: 'Recruitment' },
+  { name: 'Jack Baum',        line1: 'Technology' }
 ];
 
 export default function HomeScreen() {
-  const [selected, setSelected] = useState<(ScheduleItem & { when: Date }) | null>(null);
+  const [selectedEvent, setSelectedEvent] = useState<(ScheduleItem & { when: Date }) | null>(null);
+  const [selectedMember, setSelectedMember] = useState<Member | null>(null);
 
   const sections = useMemo(() => {
-    // Normalize, sort, group by YYYY-MM-DD
     const normalized = SCHEDULE
       .map(it => ({ ...it, when: new Date(it.date) }))
       .sort((a, b) => a.when.getTime() - b.when.getTime());
@@ -65,7 +99,6 @@ export default function HomeScreen() {
       byDay.get(key)!.push(it);
     }
 
-    // Build SectionList sections
     return Array.from(byDay.entries()).map(([key, items]) => {
       const sample = items[0].when;
       const title = sample.toLocaleDateString(undefined, {
@@ -73,17 +106,11 @@ export default function HomeScreen() {
         month: 'short',
         day: 'numeric',
       });
-      return {
-        key,
-        title,
-        data: items,
-      };
+      return { key, title, data: items };
     });
   }, []);
 
-  const open = async (url: string) => {
-    try { await Linking.openURL(url); } catch {}
-  };
+  const open = async (url: string) => { try { await Linking.openURL(url); } catch {} };
 
   const openInMaps = (event: ScheduleItem & { when: Date }) => {
     const encoded = encodeURIComponent(event.address || `${event.location} ${event.title}`);
@@ -98,7 +125,7 @@ export default function HomeScreen() {
   const renderItem = ({ item }: any) => {
     const time = item.when.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
     return (
-      <TouchableOpacity style={s.card} onPress={() => setSelected(item)} activeOpacity={0.85}>
+      <TouchableOpacity style={s.card} onPress={() => setSelectedEvent(item)} activeOpacity={0.85}>
         <View style={{ flex: 1 }}>
           <Text style={s.title} numberOfLines={2}>{item.title}</Text>
           <Text style={s.meta} numberOfLines={1}>{time} • {item.location}</Text>
@@ -113,19 +140,51 @@ export default function HomeScreen() {
     </View>
   );
 
+  // Header that scrolls with the list
+  const ListHeader = () => (
+    <View style={s.headerContainer}>
+      <Text style={s.header}>Welcome to the official MYFT 2025 App!</Text>
+      <Text style={s.sub}>
+        Browse teams and players, view schedule of games, set a personalized fantasy football roster, and more!
+      </Text>
+      <Text style={s.scheduleHeader}>Tournament Schedule</Text>
+    </View>
+  );
+
+  const renderMember = ({ item }: { item: Member }) => {
+    const src = boardPics[item.name];
+    return (
+      <TouchableOpacity style={s.boardCard} onPress={() => setSelectedMember(item)} activeOpacity={0.9}>
+        <View style={s.avatarWrap}>
+          <Image source={src} style={s.avatarImg} resizeMode="cover" />
+        </View>
+        <Text style={s.memberName} numberOfLines={1}>{item.name}</Text>
+        <Text style={s.memberSub} numberOfLines={1}>{item.line1}</Text>
+      </TouchableOpacity>
+    );
+  };
+
+  // Footer that scrolls with the list (board grid only)
+  const BoardGrid = () => (
+    <View style={s.boardGridWrap}>
+      <Text style={s.boardTitle}>Meet the Board!</Text>
+      <FlatList
+        data={MEMBERS}
+        keyExtractor={(m) => m.name}
+        numColumns={3}
+        columnWrapperStyle={s.boardRow}
+        contentContainerStyle={s.boardGridPad}
+        renderItem={renderMember}
+        scrollEnabled={false}
+        showsVerticalScrollIndicator={false}
+      />
+      <View style={{ height: 8 }} />
+    </View>
+  );
+
   return (
     <View style={s.outer}>
-      {/* Header */}
-      <View style={s.headerWrap}>
-        <Text style={s.header}>Welcome to the official MYFT 2025 App!</Text>
-        <Text style={s.sub}>Browse teams and players, view schedule of games, set a personalized fantasy football roster, and more!</Text>
-      </View>
-
-      <View style={s.headerWrap}>
-        <Text style={s.scheduleHeader}>Tournament Schedule</Text>
-      </View>
-
-      {/* Schedule */}
+      {/* Scrollable content */}
       <SectionList
         sections={sections}
         keyExtractor={(item: any) => item.id}
@@ -134,13 +193,14 @@ export default function HomeScreen() {
         stickySectionHeadersEnabled
         ItemSeparatorComponent={() => <View style={s.sep} />}
         SectionSeparatorComponent={() => <View style={s.sectionSep} />}
-        contentContainerStyle={s.listPad}
-        style={{ flex: 1 }}
+        contentContainerStyle={[s.listPad, { paddingBottom: 110 }]} // room for fixed footer
+        ListHeaderComponent={ListHeader}
+        ListFooterComponent={BoardGrid}
         showsVerticalScrollIndicator={false}
       />
 
-      {/* Bottom link buttons */}
-      <View style={s.footer}>
+      {/* Fixed footer (does not scroll) */}
+      <View style={s.footerFixed}>
         <TouchableOpacity style={s.iconCard} onPress={() => open(WEBSITE_URL)}>
           <Ionicons name="globe-outline" size={24} color={YELLOW} />
           <Text style={s.iconLabel}>Website</Text>
@@ -158,75 +218,89 @@ export default function HomeScreen() {
       </View>
 
       {/* Event detail modal */}
-<Modal
-  visible={!!selected}
-  transparent
-  animationType="fade"
-  onRequestClose={() => setSelected(null)}
->
-  <Pressable
-    style={s.modalBackdrop}
-    onPress={() => setSelected(null)} // tap anywhere outside closes
-  >
-    <Pressable
-      style={s.modalCard}
-      onPress={(e) => e.stopPropagation()} // prevent closing if tapping inside the card
-    >
-      {selected && (
-        <>
-          <Text style={s.modalTitle}>{selected.title}</Text>
-          <Text style={s.modalMeta}>
-            {selected.when.toLocaleString(undefined, {
-              weekday: 'short',
-              month: 'short',
-              day: 'numeric',
-              hour: 'numeric',
-              minute: '2-digit',
-            })}
-          </Text>
+      <Modal
+        visible={!!selectedEvent}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setSelectedEvent(null)}
+      >
+        <Pressable style={s.modalBackdrop} onPress={() => setSelectedEvent(null)}>
+          <Pressable style={s.modalCard} onPress={(e) => e.stopPropagation()}>
+            {selectedEvent && (
+              <>
+                <Text style={s.modalTitle}>{selectedEvent.title}</Text>
+                <Text style={s.modalMeta}>
+                  {selectedEvent.when.toLocaleString(undefined, {
+                    weekday: 'short',
+                    month: 'short',
+                    day: 'numeric',
+                    hour: 'numeric',
+                    minute: '2-digit',
+                  })}
+                </Text>
 
-          <View style={s.addrBox}>
-            <Ionicons name="location-outline" size={18} color={YELLOW} />
-            <Text style={s.addrText}>{selected.address}</Text>
-          </View>
+                <View style={s.addrBox}>
+                  <Ionicons name="location-outline" size={18} color={YELLOW} />
+                  <Text style={s.addrText}>{selectedEvent.address}</Text>
+                </View>
 
-          <TouchableOpacity style={s.mapsBtn} onPress={() => openInMaps(selected)}>
-            <Ionicons name="navigate-outline" size={18} color={NAVY} />
-            <Text style={s.mapsBtnText}>Open in Maps</Text>
-          </TouchableOpacity>
+                <TouchableOpacity style={s.mapsBtn} onPress={() => openInMaps(selectedEvent)}>
+                  <Ionicons name="navigate-outline" size={18} color={NAVY} />
+                  <Text style={s.mapsBtnText}>Open in Maps</Text>
+                </TouchableOpacity>
 
-          <TouchableOpacity style={s.closeBtn} onPress={() => setSelected(null)}>
-            <Text style={s.closeBtnText}>Close</Text>
-          </TouchableOpacity>
-        </>
-      )}
-    </Pressable>
-  </Pressable>
-</Modal>
-</View>
+                <TouchableOpacity style={s.closeBtn} onPress={() => setSelectedEvent(null)}>
+                  <Text style={s.closeBtnText}>Close</Text>
+                </TouchableOpacity>
+              </>
+            )}
+          </Pressable>
+        </Pressable>
+      </Modal>
+
+      {/* Board image enlarge modal */}
+      <Modal
+        visible={!!selectedMember}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setSelectedMember(null)}
+      >
+        <Pressable style={s.modalBackdrop} onPress={() => setSelectedMember(null)}>
+          <Pressable style={s.modalCard} onPress={(e) => e.stopPropagation()}>
+            {selectedMember && (
+              <>
+                <View style={s.modalAvatarWrap}>
+                  <Image source={boardPics[selectedMember.name]} style={s.modalAvatarImg} resizeMode="cover" />
+                </View>
+                <Text style={s.modalName}>{selectedMember.name}</Text>
+                <Text style={s.modalSub}>{selectedMember.line1}</Text>
+
+                <TouchableOpacity style={s.closeBtn} onPress={() => setSelectedMember(null)}>
+                  <Text style={s.closeBtnText}>Close</Text>
+                </TouchableOpacity>
+              </>
+            )}
+          </Pressable>
+        </Pressable>
+      </Modal>
+    </View>
   );
 }
+
+const AVATAR = 88;
 
 const s = StyleSheet.create({
   outer: { flex: 1, backgroundColor: NAVY },
 
-  headerWrap: { paddingTop: 24, paddingHorizontal: 20, paddingBottom: 8 },
-  header: { color: YELLOW, fontSize: 20, fontWeight: '900', textAlign: 'center' },
-  sub: { color: TEXT, opacity: 0.85, fontSize: 13, textAlign: 'center', marginTop: 6 },
-  scheduleHeader: { color: YELLOW, fontSize: 20, fontWeight: '900', textAlign: 'center', marginBottom: 15 },
+  headerContainer: { paddingTop: 24, paddingHorizontal: 20, paddingBottom: 8 },
+  header: { color: YELLOW, fontSize: 24, fontWeight: '900', textAlign: 'center' },
+  sub: { color: TEXT, opacity: 0.9, fontSize: 14, textAlign: 'center', marginTop: 6 },
+  scheduleHeader: { color: YELLOW, fontSize: 20, fontWeight: '900', textAlign: 'center', marginTop: 16, marginBottom: 10 },
 
-  listPad: { paddingHorizontal: 16, paddingBottom: 16 },
+  listPad: { paddingHorizontal: 16 },
 
-  sectionHeader: {
-    backgroundColor: NAVY,
-    paddingVertical: 8,
-    paddingHorizontal: 6,
-  },
-  sectionHeaderText: {
-    color: YELLOW,
-    fontWeight: '900',
-    fontSize: 16,
-  },
+  sectionHeader: { backgroundColor: NAVY, paddingVertical: 8, paddingHorizontal: 6 },
+  sectionHeaderText: { color: YELLOW, fontWeight: '900', fontSize: 16 },
 
   sectionSep: { height: 4 },
   sep: { height: 10 },
@@ -241,8 +315,33 @@ const s = StyleSheet.create({
   title: { color: TEXT, fontSize: 16, fontWeight: '800' },
   meta: { color: MUTED, fontSize: 12, marginTop: 4 },
 
-  // Footer with link buttons
-  footer: {
+  /* Board grid (in list footer) */
+  boardGridWrap: { paddingHorizontal: 0, paddingBottom: 10, marginTop: 20 },
+  boardTitle: { color: YELLOW, fontSize: 18, fontWeight: '900', marginBottom: 10, textAlign: 'center' },
+  boardGridPad: { paddingHorizontal: 4, paddingBottom: 8 },
+  boardRow: { justifyContent: 'space-between', marginBottom: 18 },
+  boardCard: { width: '31.5%', alignItems: 'center' },
+
+  avatarWrap: {
+    width: AVATAR,
+    height: AVATAR,
+    borderRadius: AVATAR / 2,
+    overflow: 'hidden',
+    backgroundColor: NAVY,
+    borderWidth: 2,
+    borderColor: 'rgba(255,215,0,0.35)',
+    marginBottom: 8,
+  },
+  avatarImg: { width: '100%', height: '100%' },
+  memberName: { color: YELLOW, fontWeight: '900', fontSize: 13, textAlign: 'center' },
+  memberSub: { color: TEXT, fontSize: 11, textAlign: 'center' },
+
+  // Fixed footer buttons (not scrolling)
+  footerFixed: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
     flexDirection: 'row',
     justifyContent: 'space-between',
     gap: 12,
@@ -261,16 +360,11 @@ const s = StyleSheet.create({
     gap: 6,
     borderWidth: 1,
     borderColor: 'rgba(255,215,0,0.18)',
+    marginHorizontal: 8,
   },
-  iconLabel: {
-    color: TEXT,
-    fontWeight: '700',
-    fontSize: 12,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
+  iconLabel: { color: TEXT, fontWeight: '700', fontSize: 12, textTransform: 'uppercase', letterSpacing: 0.5 },
 
-  // Modal (no map; address + open button)
+  // Modal shared styles
   modalBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'center', alignItems: 'center' },
   modalCard: {
     width: '88%',
@@ -298,4 +392,19 @@ const s = StyleSheet.create({
   mapsBtnText: { color: NAVY, fontWeight: '900' },
   closeBtn: { paddingVertical: 8, paddingHorizontal: 10 },
   closeBtnText: { color: TEXT, fontWeight: '700' },
+
+  // Image modal
+  modalAvatarWrap: {
+    width: 220,
+    height: 220,
+    borderRadius: 110,
+    overflow: 'hidden',
+    backgroundColor: NAVY,
+    borderWidth: 2,
+    borderColor: 'rgba(255,215,0,0.35)',
+    marginBottom: 12,
+  },
+  modalAvatarImg: { width: '100%', height: '100%' },
+  modalName: { color: YELLOW, fontWeight: '900', fontSize: 20, textAlign: 'center', marginBottom: 4 },
+  modalSub: { color: TEXT, fontSize: 13, textAlign: 'center' },
 });
