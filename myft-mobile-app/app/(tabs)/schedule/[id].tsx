@@ -190,7 +190,7 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: NAVY, padding: 12 },
 
   headerCard: { backgroundColor: CARD, borderRadius: 12, padding: 12, marginBottom: 12 },
-  subhead: { color: MUTED, textAlign: 'right', marginBottom: 10, fontWeight: '700' },
+  subhead: { color: MUTED, textAlign: 'left', marginBottom: 10, fontWeight: '700' },
 
   teamRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 6 },
   logo: {
