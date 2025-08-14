@@ -14,6 +14,7 @@ import {
   FlatList,
 } from 'react-native';
 import { Ionicons, MaterialIcons, FontAwesome5 } from '@expo/vector-icons';
+import * as Clipboard from 'expo-clipboard';
 import { pics } from '../../assets/images/board_pictures';
 
 // Colors
@@ -64,25 +65,27 @@ const boardPics: Record<string, any> = {
   'Viv Schlussel':     pics.viv,
 };
 
-type Member = { name: string; line1: string };
+type Member = { name: string; line1: string; email: string };
+
 const MEMBERS: Member[] = [
-  { name: 'Lila Ellman',      line1: 'Co-Chair' },
-  { name: 'Josh Katz',        line1: 'Co-Chair' },
-  { name: 'Levi Stein',       line1: 'Exective Advisor' },
-  { name: 'Abby Kutin',       line1: 'Website Developer, Brand Strategist' },
-  { name: 'Viv Schlussel',    line1: 'Photography' },
-  { name: 'Shayna Foreman',   line1: 'Events' },
-  { name: 'Isaac Schiffman',  line1: 'Recruitment' },
-  { name: 'Fisher Angrist',   line1: 'Finance' },
-  { name: 'Eli Plotkin',      line1: 'Housing' },
-  { name: 'James Forman',     line1: 'Gameplay Operations'  },
-  { name: 'Matan Silverberg', line1: 'Recruitment' },
-  { name: 'Jack Baum',        line1: 'Technology' }
+  { name: 'Lila Ellman',      line1: 'Co-Chair',                            email: 'ellmanl@umich.edu'  },
+  { name: 'Josh Katz',        line1: 'Co-Chair',                            email: 'joshuaek@umich.edu' },
+  { name: 'Levi Stein',       line1: 'Exective Advisor',                    email: 'steinlev@umich.edu' },
+  { name: 'Abby Kutin',       line1: 'Website Developer, Brand Strategist', email: 'kutin@umich.edu'    },
+  { name: 'Viv Schlussel',    line1: 'Photography',                         email: 'vschluss@umich.edu' },
+  { name: 'Shayna Foreman',   line1: 'Events',                              email: 'shaynapf@umich.edu' },
+  { name: 'Isaac Schiffman',  line1: 'Recruitment',                         email: 'isaacsch@umich.edu' },
+  { name: 'Fisher Angrist',   line1: 'Finance',                             email: 'fangrist@umich.edu' },
+  { name: 'Eli Plotkin',      line1: 'Housing',                             email: 'eliplot@umich.edu'  },
+  { name: 'James Forman',     line1: 'Gameplay Operations',                 email: 'jameshf@umich.edu'  },
+  { name: 'Matan Silverberg', line1: 'Recruitment',                         email: 'matansil@umich.edu' },
+  { name: 'Jack Baum',        line1: 'Technology',                          email: 'jackbaum@umich.edu' }
 ];
 
 export default function HomeScreen() {
   const [selectedEvent, setSelectedEvent] = useState<(ScheduleItem & { when: Date }) | null>(null);
   const [selectedMember, setSelectedMember] = useState<Member | null>(null);
+  const [copied, setCopied] = useState(false);
 
   const sections = useMemo(() => {
     const normalized = SCHEDULE
@@ -120,6 +123,14 @@ export default function HomeScreen() {
       default: `https://www.google.com/maps/search/?api=1&query=${encoded}`,
     });
     if (url) open(url);
+  };
+
+  const copyEmail = async (email: string) => {
+    try {
+      await Clipboard.setStringAsync(email);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1200);
+    } catch {}
   };
 
   const renderItem = ({ item }: any) => {
@@ -164,10 +175,10 @@ export default function HomeScreen() {
     );
   };
 
-  // Footer that scrolls with the list (board grid only)
+  // Board grid in the list footer
   const BoardGrid = () => (
     <View style={s.boardGridWrap}>
-      <Text style={s.boardTitle}>Meet the Board!</Text>
+      <Text style={s.boardTitle}>Meet the Board</Text>
       <FlatList
         data={MEMBERS}
         keyExtractor={(m) => m.name}
@@ -258,7 +269,7 @@ export default function HomeScreen() {
         </Pressable>
       </Modal>
 
-      {/* Board image enlarge modal */}
+      {/* Board image enlarge modal + copy email */}
       <Modal
         visible={!!selectedMember}
         transparent
@@ -270,10 +281,32 @@ export default function HomeScreen() {
             {selectedMember && (
               <>
                 <View style={s.modalAvatarWrap}>
-                  <Image source={boardPics[selectedMember.name]} style={s.modalAvatarImg} resizeMode="cover" />
+                  <Image
+                    source={boardPics[selectedMember.name]}
+                    style={s.modalAvatarImg}
+                    resizeMode="cover"
+                  />
                 </View>
+
                 <Text style={s.modalName}>{selectedMember.name}</Text>
                 <Text style={s.modalSub}>{selectedMember.line1}</Text>
+
+                <View style={s.contactRow}>
+                  <Text style={s.contactLabel}>Contact:</Text>
+
+                  <TouchableOpacity
+                    style={s.emailBtn}
+                    onPress={() => copyEmail(selectedMember.email)}
+                    activeOpacity={0.85}
+                  >
+                    <Text style={s.emailText} numberOfLines={1}>
+                      {selectedMember.email}
+                    </Text>
+                    <Ionicons name="copy-outline" size={18} color={YELLOW} />
+                  </TouchableOpacity>
+                </View>
+
+                {copied ? <Text style={s.copiedHint}>Copied!</Text> : null}
 
                 <TouchableOpacity style={s.closeBtn} onPress={() => setSelectedMember(null)}>
                   <Text style={s.closeBtnText}>Close</Text>
@@ -393,7 +426,7 @@ const s = StyleSheet.create({
   closeBtn: { paddingVertical: 8, paddingHorizontal: 10 },
   closeBtnText: { color: TEXT, fontWeight: '700' },
 
-  // Image modal
+  // Image modal + contact
   modalAvatarWrap: {
     width: 220,
     height: 220,
@@ -407,4 +440,38 @@ const s = StyleSheet.create({
   modalAvatarImg: { width: '100%', height: '100%' },
   modalName: { color: YELLOW, fontWeight: '900', fontSize: 20, textAlign: 'center', marginBottom: 4 },
   modalSub: { color: TEXT, fontSize: 13, textAlign: 'center' },
+
+  contactRow: {
+    width: '100%',
+    marginTop: 10,
+    alignItems: 'center',
+    gap: 6,
+  },
+  contactLabel: {
+    color: TEXT,
+    fontSize: 12,
+    opacity: 0.9,
+    marginBottom: 2,
+  },
+  emailBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: '#0b3c70',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(255,215,0,0.25)',
+    maxWidth: '100%',
+  },
+  emailText: {
+    color: YELLOW,
+    fontWeight: '800',
+  },
+  copiedHint: {
+    color: YELLOW,
+    fontWeight: '800',
+    marginTop: 6,
+  },
 });
