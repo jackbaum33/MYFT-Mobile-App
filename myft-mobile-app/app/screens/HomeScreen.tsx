@@ -269,6 +269,7 @@ export default function HomeScreen() {
         </Pressable>
       </Modal>
 
+
       {/* Board image enlarge modal + copy email */}
       <Modal
         visible={!!selectedMember}
@@ -328,7 +329,7 @@ const s = StyleSheet.create({
   headerContainer: { paddingTop: 24, paddingHorizontal: 20, paddingBottom: 8 },
   header: { color: YELLOW, fontSize: 24, fontWeight: '900', textAlign: 'center' },
   sub: { color: TEXT, opacity: 0.9, fontSize: 14, textAlign: 'center', marginTop: 6 },
-  scheduleHeader: { color: YELLOW, fontSize: 20, fontWeight: '900', textAlign: 'center', marginTop: 16, marginBottom: 10 },
+  scheduleHeader: { color: YELLOW, fontSize: 25, fontWeight: '900', textAlign: 'center', marginTop: 16, marginBottom: 10 },
 
   listPad: { paddingHorizontal: 16 },
 
@@ -366,7 +367,7 @@ const s = StyleSheet.create({
     marginBottom: 8,
   },
   avatarImg: { width: '100%', height: '100%' },
-  memberName: { color: YELLOW, fontWeight: '900', fontSize: 13, textAlign: 'center' },
+  memberName: { color: YELLOW, fontWeight: '900', fontSize: 12, textAlign: 'center' },
   memberSub: { color: TEXT, fontSize: 11, textAlign: 'center' },
 
   // Fixed footer buttons (not scrolling)
