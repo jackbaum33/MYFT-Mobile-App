@@ -38,6 +38,9 @@ export default function ProfileScreen() {
   const [avatarOpen, setAvatarOpen] = useState(false);
   const [copied, setCopied] = useState(false);
 
+  const MEDIA_IMAGE: any =
+  (ImagePicker as any).MediaType?.Image;
+
   useEffect(() => {
     setDisplayName(user?.displayName ?? '');
     setUsername(user?.username ?? '');
@@ -77,7 +80,7 @@ export default function ProfileScreen() {
   const pickFromLibrary = async () => {
     if (!(await ensureLibraryPermission())) return;
     const res = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      mediaTypes: MEDIA_IMAGE,
       allowsEditing: true,
       aspect: [1, 1],
       quality: 0.9,
@@ -272,6 +275,9 @@ export default function ProfileScreen() {
           <View style={s.backdrop}>
             <View style={s.modalCard}>
               {/* X button in corner */}
+              <TouchableOpacity style={s.modalCloseX} onPress={() => setAvatarOpen(false)}>
+                <Ionicons name="close" size={26} color={TEXT} />
+              </TouchableOpacity>
 
               <Text style={s.modalTitle}>Profile Photo</Text>
 
