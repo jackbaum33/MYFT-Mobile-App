@@ -14,7 +14,7 @@ import {
   Modal,
   Linking,
 } from 'react-native';
-import { Stack } from 'expo-router';
+import { Stack, router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import * as Clipboard from 'expo-clipboard';
@@ -29,18 +29,13 @@ const LINE = 'rgba(255,255,255,0.25)';
 export default function ProfileScreen() {
   const { user, updateUser } = useAuth();
 
-  // local editable state
   const [displayName, setDisplayName] = useState(user?.displayName ?? '');
   const [username, setUsername] = useState(user?.username ?? '');
   const [photoUri, setPhotoUri] = useState<string | undefined>(user?.photoUri ?? undefined);
 
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
-
-  // image modal
   const [avatarOpen, setAvatarOpen] = useState(false);
-
-  // copied feedback
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
@@ -53,40 +48,28 @@ export default function ProfileScreen() {
   const ensureLibraryPermission = async (): Promise<boolean> => {
     const { status, canAskAgain } = await ImagePicker.getMediaLibraryPermissionsAsync();
     if (status === 'granted') return true;
-
     if (canAskAgain) {
       const req = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (req.status === 'granted') return true;
     }
-
-    Alert.alert(
-      'Allow Photo Access',
-      'To choose a profile photo, please allow access to your photo library.',
-      [
-        { text: 'Not now', style: 'cancel' },
-        { text: 'Open Settings', onPress: () => Linking.openSettings() },
-      ]
-    );
+    Alert.alert('Allow Photo Access','To choose a profile photo, please allow access to your photo library.',[
+      { text: 'Not now', style: 'cancel' },
+      { text: 'Open Settings', onPress: () => Linking.openSettings() },
+    ]);
     return false;
   };
 
   const ensureCameraPermission = async (): Promise<boolean> => {
     const { status, canAskAgain } = await ImagePicker.getCameraPermissionsAsync();
     if (status === 'granted') return true;
-
     if (canAskAgain) {
       const req = await ImagePicker.requestCameraPermissionsAsync();
       if (req.status === 'granted') return true;
     }
-
-    Alert.alert(
-      'Allow Camera Access',
-      'To take a profile photo, please allow camera access.',
-      [
-        { text: 'Not now', style: 'cancel' },
-        { text: 'Open Settings', onPress: () => Linking.openSettings() },
-      ]
-    );
+    Alert.alert('Allow Camera Access','To take a profile photo, please allow camera access.',[
+      { text: 'Not now', style: 'cancel' },
+      { text: 'Open Settings', onPress: () => Linking.openSettings() },
+    ]);
     return false;
   };
 
@@ -121,25 +104,21 @@ export default function ProfileScreen() {
   };
 
   const changePhoto = () => {
-    Alert.alert(
-      'Change Photo',
-      'Pick a source',
-      [
-        { text: 'Camera', onPress: takeWithCamera },
-        { text: 'Photo Library', onPress: pickFromLibrary },
-        photoUri
-          ? {
-              text: 'Remove Photo',
-              style: 'destructive',
-              onPress: async () => {
-                await updateUser({ photoUri: undefined });
-                setPhotoUri(undefined);
-              },
-            }
-          : undefined,
-        { text: 'Cancel', style: 'cancel' },
-      ].filter(Boolean) as any
-    );
+    Alert.alert('Change Photo','Pick a source',[
+      { text: 'Camera', onPress: takeWithCamera },
+      { text: 'Photo Library', onPress: pickFromLibrary },
+      photoUri
+        ? {
+            text: 'Remove Photo',
+            style: 'destructive',
+            onPress: async () => {
+              await updateUser({ photoUri: undefined });
+              setPhotoUri(undefined);
+            },
+          }
+        : undefined,
+      { text: 'Cancel', style: 'cancel' },
+    ].filter(Boolean) as any);
   };
 
   // ---------- Save edits ----------
@@ -174,7 +153,6 @@ export default function ProfileScreen() {
 
   return (
     <>
-      {/* Stack header to match Schedule style */}
       <Stack.Screen
         options={{
           title: 'Profile',
@@ -183,6 +161,9 @@ export default function ProfileScreen() {
           headerTitleStyle: { color: YELLOW, fontWeight: 'bold' },
         }}
       />
+     <TouchableOpacity style={s.modalCloseX} onPress={() => router.back()}>
+                <Ionicons name="close" size={26} color={TEXT} />
+     </TouchableOpacity>
 
       <KeyboardAvoidingView
         style={s.outer}
@@ -190,10 +171,8 @@ export default function ProfileScreen() {
         keyboardVerticalOffset={Platform.select({ ios: 0, android: 0 })}
       >
         <ScrollView contentContainerStyle={s.scroll} bounces={false}>
-          {/* Profile Card */}
           <Text style={s.title}>My Profile</Text>
           <View style={s.sheet}>
-            {/* Avatar row */}
             <View style={s.avatarRow}>
               <TouchableOpacity onPress={() => setAvatarOpen(true)} activeOpacity={0.8}>
                 {photoUri ? (
@@ -208,12 +187,9 @@ export default function ProfileScreen() {
               <View style={s.infoCol}>
                 <Text style={s.label}>Name</Text>
                 <Text style={s.value}>{user?.displayName ?? '—'}</Text>
-
                 <View style={{ height: 8 }} />
-
                 <Text style={s.label}>Username</Text>
                 <Text style={s.value}>{user?.username ?? '—'}</Text>
-
                 <View style={{ height: 10 }} />
 
                 {!editing ? (
@@ -225,7 +201,6 @@ export default function ProfileScreen() {
               </View>
             </View>
 
-            {/* Editable inputs (collapsed by default) */}
             {editing ? (
               <View>
                 <View style={s.field}>
@@ -267,7 +242,6 @@ export default function ProfileScreen() {
             ) : null}
           </View>
 
-          {/* Support / Contact Card */}
           <View style={[s.sheet, { marginTop: 10 }]}>
             <Text style={[s.title, { marginBottom: 8 }]}>Need Help?</Text>
             <Text style={s.supportText}>
@@ -297,6 +271,8 @@ export default function ProfileScreen() {
         >
           <View style={s.backdrop}>
             <View style={s.modalCard}>
+              {/* X button in corner */}
+
               <Text style={s.modalTitle}>Profile Photo</Text>
 
               <View style={s.modalAvatarWrap}>
@@ -312,10 +288,6 @@ export default function ProfileScreen() {
               <TouchableOpacity style={s.bigBtn} onPress={changePhoto}>
                 <Ionicons name="camera-outline" size={20} color={NAVY} />
                 <Text style={s.bigBtnText}>Change Photo</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity style={s.closeBtn} onPress={() => setAvatarOpen(false)}>
-                <Text style={s.closeBtnText}>Close</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -336,22 +308,15 @@ const s = StyleSheet.create({
     borderWidth: 1,
     borderColor: LINE,
     marginTop: 15,
-    marginBottom: 30
+    marginBottom: 30,
   },
   title: { color: YELLOW, fontWeight: '700', fontSize: 17, textAlign: 'center', marginBottom: 20, marginTop: -10 },
 
   avatarRow: { flexDirection: 'row', alignItems: 'center', gap: 16, marginBottom: 14 },
-  avatar: {
-    width: 84,
-    height: 84,
-    borderRadius: 42,
-    borderWidth: 1,
-    borderColor: 'rgba(255,215,0,0.35)',
-  },
+  avatar: { width: 84, height: 84, borderRadius: 42, borderWidth: 1, borderColor: 'rgba(255,215,0,0.35)' },
   avatarPlaceholder: { alignItems: 'center', justifyContent: 'center', backgroundColor: CARD },
 
   infoCol: { flex: 1, minWidth: 0 },
-
   label: { color: TEXT, fontSize: 12, fontWeight: '700', marginBottom: 2, opacity: 0.9 },
   value: { color: YELLOW, fontSize: 16, fontWeight: '900' },
 
@@ -367,7 +332,6 @@ const s = StyleSheet.create({
   },
   smallBtnText: { color: NAVY, fontWeight: '900', fontSize: 12 },
 
-  // Edit mode fields
   field: { marginTop: 10 },
   editLabel: { color: TEXT, marginBottom: 6, fontWeight: '700' },
   input: {
@@ -381,19 +345,10 @@ const s = StyleSheet.create({
   },
 
   actionsRow: { flexDirection: 'row', gap: 10, marginTop: 16 },
-  actionBtn: {
-    flex: 1,
-    backgroundColor: YELLOW,
-    borderRadius: 10,
-    paddingVertical: 12,
-    alignItems: 'center',
-  },
+  actionBtn: { flex: 1, backgroundColor: YELLOW, borderRadius: 10, paddingVertical: 12, alignItems: 'center' },
   actionText: { color: NAVY, fontWeight: '900' },
 
-  // Support card text
   supportText: { color: TEXT, fontSize: 15, textAlign: 'center', marginBottom: 10 },
-
-  // Copy-to-clipboard chip (email)
   copyChip: {
     alignSelf: 'center',
     flexDirection: 'row',
@@ -409,7 +364,6 @@ const s = StyleSheet.create({
   copyChipText: { color: YELLOW, fontWeight: '900', fontSize: 16 },
   copiedHint: { color: YELLOW, fontWeight: '800', marginTop: 8, textAlign: 'center' },
 
-  // Modal (enlarged)
   backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.55)', justifyContent: 'center', alignItems: 'center' },
   modalCard: {
     width: '92%',
@@ -419,7 +373,9 @@ const s = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(255,215,0,0.28)',
     alignItems: 'center',
+    position: 'relative',
   },
+  modalCloseX: { position: 'absolute', top: 10, right: 10, padding: 6, zIndex: 10 },
   modalTitle: { color: YELLOW, fontWeight: '900', fontSize: 22, marginBottom: 14 },
   modalAvatarWrap: {
     width: 240,
@@ -445,7 +401,4 @@ const s = StyleSheet.create({
     marginBottom: 12,
   },
   bigBtnText: { color: NAVY, fontWeight: '900', fontSize: 16 },
-
-  closeBtn: { paddingVertical: 10, paddingHorizontal: 12, marginTop: 8 },
-  closeBtnText: { color: TEXT, fontWeight: '700', fontSize: 16 },
 });

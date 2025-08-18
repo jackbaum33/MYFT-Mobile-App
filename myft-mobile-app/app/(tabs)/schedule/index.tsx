@@ -75,7 +75,7 @@ export default function ScheduleIndex() {
     <View style={s.container}>
       <Stack.Screen
         options={{
-          title: 'All Games',
+          title: '',
           headerStyle: { backgroundColor: NAVY },
           headerTintColor: YELLOW,
           headerTitleStyle: { color: YELLOW, fontWeight: 'bold' },

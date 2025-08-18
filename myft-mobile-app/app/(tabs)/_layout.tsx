@@ -1,46 +1,45 @@
+// app/(tabs)/_layout.tsx
 import { Tabs } from 'expo-router';
 import { AntDesign, Ionicons } from '@expo/vector-icons';
+import ProfileButton from '../utils/ProfileButton';
+
+const NAVY = '#001F3F';
+const YELLOW = '#FFD700';
 
 export default function TabLayout() {
   return (
     <Tabs
       screenOptions={({ route }) => ({
-        headerShown: false,
-        tabBarActiveTintColor: '#FFD700',
+        headerShown: true,
+        headerStyle: { backgroundColor: NAVY, height: 50},
+        headerTintColor: YELLOW,
+        headerTitleStyle: { color: YELLOW, fontWeight: 'bold', marginTop: -50, textAlign: 'center', marginLeft: 10 },
+        headerRight: () => <ProfileButton />,
+        tabBarActiveTintColor: YELLOW,
         tabBarInactiveTintColor: '#ffffff',
-        tabBarStyle: {
-          backgroundColor: '#001F3F',
-          borderTopWidth: 0,
+        headerRightContainerStyle: {
+          paddingRight: 10,
+          marginTop: -50, // ⬆️ nudge up a bit
         },
-        sceneContainerStyle: {
-          backgroundColor: '#001F3F', // 👈 this is key
-        },
+        tabBarStyle: { backgroundColor: NAVY, borderTopWidth: 0 },
+        sceneContainerStyle: { backgroundColor: NAVY },
         tabBarIcon: ({ color, size }) => {
           switch (route.name) {
-            case 'index':
-              return <AntDesign name="home" size={size} color={color} />;
-            case 'schedule':
-              return <AntDesign name="calendar" size={size} color={color} />;
-            case 'team':
-              return <AntDesign name="team" size={size} color={color} />;
-            case 'fantasy':
-              return <Ionicons name="american-football-outline" size={size} color={color} />;
-            case 'leaderboard':
-              return <AntDesign name="Trophy" size={size} color={color} />;
-            case 'profile':
-              return <Ionicons name="person-circle-outline" size={size} color={color} />;
-            default:
-              return null;
+            case 'index':       return <AntDesign name="home" size={size} color={color} />;
+            case 'schedule':    return <AntDesign name="calendar" size={size} color={color} />;
+            case 'team':        return <AntDesign name="team" size={size} color={color} />;
+            case 'fantasy':     return <Ionicons name="american-football-outline" size={size} color={color} />;
+            case 'leaderboard': return <AntDesign name="Trophy" size={size} color={color} />;
+            default: return null;
           }
         },
       })}
     >
-      <Tabs.Screen name="index" options={{ tabBarLabel: 'Home' }} />
-      <Tabs.Screen name="schedule" options={{ tabBarLabel: 'Schedule' }} />
-      <Tabs.Screen name="team" options={{ tabBarLabel: 'Teams' }} />
-      <Tabs.Screen name="fantasy" options={{ tabBarLabel: 'Fantasy' }} />
-      <Tabs.Screen name="leaderboard" options={{ tabBarLabel: 'Standings' }} />
-      <Tabs.Screen name="profile" options={{ tabBarLabel: 'Profile' }} />
+      <Tabs.Screen name="index" options={{ tabBarLabel: 'Home', title: '' }} />
+      <Tabs.Screen name="schedule" options={{ tabBarLabel: 'Schedule', title: 'All Games' }} />
+      <Tabs.Screen name="team" options={{ tabBarLabel: 'Teams', title: 'All Teams' }} />
+      <Tabs.Screen name="fantasy" options={{ tabBarLabel: 'Fantasy', title: 'Fantasy Dashboard' }} />
+      <Tabs.Screen name="leaderboard" options={{ tabBarLabel: 'Standings', title: 'Fantasy Leaderboard' }} />
     </Tabs>
   );
 }

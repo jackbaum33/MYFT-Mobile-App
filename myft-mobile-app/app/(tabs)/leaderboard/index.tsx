@@ -116,7 +116,7 @@ export default function LeaderboardIndex() {
 
   return (
     <View style={styles.container}>
-      <Stack.Screen options={{ title: 'Fantasy Leaderboard' }} />
+      <Stack.Screen options={{ title: '' }} />
       <View style={styles.toggleRow}>
         <TouchableOpacity
           onPress={() => setMode('players')}
