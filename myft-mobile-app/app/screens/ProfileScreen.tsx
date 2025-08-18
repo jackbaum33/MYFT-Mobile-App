@@ -1,55 +1,451 @@
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+// app/(tabs)/profile.tsx
+import React, { useEffect, useState } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  Image,
+  TextInput,
+  Platform,
+  Alert,
+  ScrollView,
+  KeyboardAvoidingView,
+  Modal,
+  Linking,
+} from 'react-native';
+import { Stack } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
+import * as ImagePicker from 'expo-image-picker';
+import * as Clipboard from 'expo-clipboard';
 import { useAuth } from '../../context/AuthContext';
 
+const NAVY = '#001F3F';
+const CARD = '#07335f';
+const YELLOW = '#FFD700';
+const TEXT = '#E9ECEF';
+const LINE = 'rgba(255,255,255,0.25)';
+
 export default function ProfileScreen() {
-  const { user, logout } = useAuth();
+  const { user, updateUser } = useAuth();
+
+  // local editable state
+  const [displayName, setDisplayName] = useState(user?.displayName ?? '');
+  const [username, setUsername] = useState(user?.username ?? '');
+  const [photoUri, setPhotoUri] = useState<string | undefined>(user?.photoUri ?? undefined);
+
+  const [editing, setEditing] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  // image modal
+  const [avatarOpen, setAvatarOpen] = useState(false);
+
+  // copied feedback
+  const [copied, setCopied] = useState(false);
+
+  useEffect(() => {
+    setDisplayName(user?.displayName ?? '');
+    setUsername(user?.username ?? '');
+    setPhotoUri(user?.photoUri ?? undefined);
+  }, [user?.displayName, user?.username, user?.photoUri]);
+
+  // ---------- Permission helpers ----------
+  const ensureLibraryPermission = async (): Promise<boolean> => {
+    const { status, canAskAgain } = await ImagePicker.getMediaLibraryPermissionsAsync();
+    if (status === 'granted') return true;
+
+    if (canAskAgain) {
+      const req = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (req.status === 'granted') return true;
+    }
+
+    Alert.alert(
+      'Allow Photo Access',
+      'To choose a profile photo, please allow access to your photo library.',
+      [
+        { text: 'Not now', style: 'cancel' },
+        { text: 'Open Settings', onPress: () => Linking.openSettings() },
+      ]
+    );
+    return false;
+  };
+
+  const ensureCameraPermission = async (): Promise<boolean> => {
+    const { status, canAskAgain } = await ImagePicker.getCameraPermissionsAsync();
+    if (status === 'granted') return true;
+
+    if (canAskAgain) {
+      const req = await ImagePicker.requestCameraPermissionsAsync();
+      if (req.status === 'granted') return true;
+    }
+
+    Alert.alert(
+      'Allow Camera Access',
+      'To take a profile photo, please allow camera access.',
+      [
+        { text: 'Not now', style: 'cancel' },
+        { text: 'Open Settings', onPress: () => Linking.openSettings() },
+      ]
+    );
+    return false;
+  };
+
+  // ---------- Photo actions ----------
+  const pickFromLibrary = async () => {
+    if (!(await ensureLibraryPermission())) return;
+    const res = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.9,
+    });
+    if (!res.canceled) {
+      const uri = res.assets[0].uri;
+      await updateUser({ photoUri: uri });
+      setPhotoUri(uri);
+    }
+  };
+
+  const takeWithCamera = async () => {
+    if (!(await ensureCameraPermission())) return;
+    const res = await ImagePicker.launchCameraAsync({
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.9,
+    });
+    if (!res.canceled) {
+      const uri = res.assets[0].uri;
+      await updateUser({ photoUri: uri });
+      setPhotoUri(uri);
+    }
+  };
+
+  const changePhoto = () => {
+    Alert.alert(
+      'Change Photo',
+      'Pick a source',
+      [
+        { text: 'Camera', onPress: takeWithCamera },
+        { text: 'Photo Library', onPress: pickFromLibrary },
+        photoUri
+          ? {
+              text: 'Remove Photo',
+              style: 'destructive',
+              onPress: async () => {
+                await updateUser({ photoUri: undefined });
+                setPhotoUri(undefined);
+              },
+            }
+          : undefined,
+        { text: 'Cancel', style: 'cancel' },
+      ].filter(Boolean) as any
+    );
+  };
+
+  // ---------- Save edits ----------
+  const onSave = async () => {
+    try {
+      setSaving(true);
+      await updateUser({
+        displayName: displayName.trim(),
+        username: username.trim(),
+      });
+      setEditing(false);
+      Alert.alert('Saved', 'Your profile has been updated.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const resetEdits = () => {
+    setDisplayName(user?.displayName ?? '');
+    setUsername(user?.username ?? '');
+    setEditing(false);
+  };
+
+  // ---------- Copy helper ----------
+  const copyEmail = async (email: string) => {
+    try {
+      await Clipboard.setStringAsync(email);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1200);
+    } catch {}
+  };
 
   return (
-    <View style={styles.outer}>
-      <View style={styles.container}>
-        <Text style={styles.title}>Profile</Text>
-        <Text style={styles.text}>Username: {user?.username}</Text>
+    <>
+      {/* Stack header to match Schedule style */}
+      <Stack.Screen
+        options={{
+          title: 'Profile',
+          headerStyle: { backgroundColor: NAVY },
+          headerTintColor: YELLOW,
+          headerTitleStyle: { color: YELLOW, fontWeight: 'bold' },
+        }}
+      />
 
-        <TouchableOpacity style={styles.button} onPress={logout}>
-          <Text style={styles.buttonText}>Log Out</Text>
-        </TouchableOpacity>
-      </View>
-    </View>
+      <KeyboardAvoidingView
+        style={s.outer}
+        behavior={Platform.select({ ios: 'padding', android: undefined })}
+        keyboardVerticalOffset={Platform.select({ ios: 0, android: 0 })}
+      >
+        <ScrollView contentContainerStyle={s.scroll} bounces={false}>
+          {/* Profile Card */}
+          <Text style={s.title}>My Profile</Text>
+          <View style={s.sheet}>
+            {/* Avatar row */}
+            <View style={s.avatarRow}>
+              <TouchableOpacity onPress={() => setAvatarOpen(true)} activeOpacity={0.8}>
+                {photoUri ? (
+                  <Image source={{ uri: photoUri }} style={s.avatar} />
+                ) : (
+                  <View style={[s.avatar, s.avatarPlaceholder]}>
+                    <Ionicons name="person-outline" size={40} color={YELLOW} />
+                  </View>
+                )}
+              </TouchableOpacity>
+
+              <View style={s.infoCol}>
+                <Text style={s.label}>Name</Text>
+                <Text style={s.value}>{user?.displayName ?? '—'}</Text>
+
+                <View style={{ height: 8 }} />
+
+                <Text style={s.label}>Username</Text>
+                <Text style={s.value}>{user?.username ?? '—'}</Text>
+
+                <View style={{ height: 10 }} />
+
+                {!editing ? (
+                  <TouchableOpacity style={s.smallBtn} onPress={() => setEditing(true)}>
+                    <Ionicons name="create-outline" size={16} color={NAVY} />
+                    <Text style={s.smallBtnText}>Change Name</Text>
+                  </TouchableOpacity>
+                ) : null}
+              </View>
+            </View>
+
+            {/* Editable inputs (collapsed by default) */}
+            {editing ? (
+              <View>
+                <View style={s.field}>
+                  <Text style={s.editLabel}>Edit Name</Text>
+                  <TextInput
+                    placeholder="Display name"
+                    placeholderTextColor="#94a3b8"
+                    value={displayName}
+                    onChangeText={setDisplayName}
+                    style={s.input}
+                  />
+                </View>
+
+                <View style={s.field}>
+                  <Text style={s.editLabel}>Edit Username</Text>
+                  <TextInput
+                    placeholder="Username"
+                    autoCapitalize="none"
+                    placeholderTextColor="#94a3b8"
+                    value={username}
+                    onChangeText={setUsername}
+                    style={s.input}
+                  />
+                </View>
+
+                <View style={s.actionsRow}>
+                  <TouchableOpacity
+                    style={[s.actionBtn, { backgroundColor: '#1c2f4f' }]}
+                    onPress={resetEdits}
+                  >
+                    <Text style={[s.actionText, { color: YELLOW }]}>Cancel</Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity style={s.actionBtn} onPress={onSave} disabled={saving}>
+                    <Text style={s.actionText}>{saving ? 'Saving…' : 'Save'}</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            ) : null}
+          </View>
+
+          {/* Support / Contact Card */}
+          <View style={[s.sheet, { marginTop: 10 }]}>
+            <Text style={[s.title, { marginBottom: 8 }]}>Need Help?</Text>
+            <Text style={s.supportText}>
+              Thank you for using the MYFT app!{'\n'}
+              For any questions, please email Jack Baum
+            </Text>
+
+            <TouchableOpacity
+              style={s.copyChip}
+              onPress={() => copyEmail('jackbaum@umich.edu')}
+              activeOpacity={0.85}
+            >
+              <Text style={s.copyChipText}>jackbaum@umich.edu</Text>
+              <Ionicons name="copy-outline" size={20} color={YELLOW} />
+            </TouchableOpacity>
+
+            {copied ? <Text style={s.copiedHint}>Copied!</Text> : null}
+          </View>
+        </ScrollView>
+
+        {/* Avatar modal with Change Photo */}
+        <Modal
+          visible={avatarOpen}
+          transparent
+          animationType="fade"
+          onRequestClose={() => setAvatarOpen(false)}
+        >
+          <View style={s.backdrop}>
+            <View style={s.modalCard}>
+              <Text style={s.modalTitle}>Profile Photo</Text>
+
+              <View style={s.modalAvatarWrap}>
+                {photoUri ? (
+                  <Image source={{ uri: photoUri }} style={s.modalAvatarImg} />
+                ) : (
+                  <View style={[s.modalAvatarImg, s.modalPlaceholder]}>
+                    <Ionicons name="person-outline" size={84} color={YELLOW} />
+                  </View>
+                )}
+              </View>
+
+              <TouchableOpacity style={s.bigBtn} onPress={changePhoto}>
+                <Ionicons name="camera-outline" size={20} color={NAVY} />
+                <Text style={s.bigBtnText}>Change Photo</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity style={s.closeBtn} onPress={() => setAvatarOpen(false)}>
+                <Text style={s.closeBtnText}>Close</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
+      </KeyboardAvoidingView>
+    </>
   );
 }
 
-const styles = StyleSheet.create({
-  outer: {
-    flex: 1,
-    backgroundColor: '#001F3F', // Navy background
+const s = StyleSheet.create({
+  outer: { flex: 1, backgroundColor: NAVY },
+  scroll: { padding: 16, paddingTop: 24 },
+
+  sheet: {
+    backgroundColor: NAVY,
+    borderRadius: 16,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: LINE,
+    marginTop: 15,
+    marginBottom: 30
   },
-  container: {
-    flex: 1,
-    justifyContent: 'center',
+  title: { color: YELLOW, fontWeight: '700', fontSize: 17, textAlign: 'center', marginBottom: 20, marginTop: -10 },
+
+  avatarRow: { flexDirection: 'row', alignItems: 'center', gap: 16, marginBottom: 14 },
+  avatar: {
+    width: 84,
+    height: 84,
+    borderRadius: 42,
+    borderWidth: 1,
+    borderColor: 'rgba(255,215,0,0.35)',
+  },
+  avatarPlaceholder: { alignItems: 'center', justifyContent: 'center', backgroundColor: CARD },
+
+  infoCol: { flex: 1, minWidth: 0 },
+
+  label: { color: TEXT, fontSize: 12, fontWeight: '700', marginBottom: 2, opacity: 0.9 },
+  value: { color: YELLOW, fontSize: 16, fontWeight: '900' },
+
+  smallBtn: {
+    alignSelf: 'flex-start',
+    flexDirection: 'row',
     alignItems: 'center',
-    padding: 24,
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    marginBottom: 16,
-    color: '#FFD700',
-  },
-  text: {
-    fontSize: 18,
-    marginBottom: 24,
-    color: '#FFD700',
-  },
-  button: {
-    backgroundColor: '#FFD700',
-    paddingVertical: 12,
-    paddingHorizontal: 24,
+    gap: 6,
+    backgroundColor: YELLOW,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
     borderRadius: 8,
   },
-  buttonText: {
-    color: '#001F3F',
-    fontSize: 16,
-    fontWeight: 'bold',
+  smallBtnText: { color: NAVY, fontWeight: '900', fontSize: 12 },
+
+  // Edit mode fields
+  field: { marginTop: 10 },
+  editLabel: { color: TEXT, marginBottom: 6, fontWeight: '700' },
+  input: {
+    backgroundColor: CARD,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: Platform.select({ ios: 12, android: 8 }),
+    color: TEXT,
+    borderWidth: 1,
+    borderColor: LINE,
   },
+
+  actionsRow: { flexDirection: 'row', gap: 10, marginTop: 16 },
+  actionBtn: {
+    flex: 1,
+    backgroundColor: YELLOW,
+    borderRadius: 10,
+    paddingVertical: 12,
+    alignItems: 'center',
+  },
+  actionText: { color: NAVY, fontWeight: '900' },
+
+  // Support card text
+  supportText: { color: TEXT, fontSize: 15, textAlign: 'center', marginBottom: 10 },
+
+  // Copy-to-clipboard chip (email)
+  copyChip: {
+    alignSelf: 'center',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255,215,0,0.35)',
+    backgroundColor: '#082d54',
+  },
+  copyChipText: { color: YELLOW, fontWeight: '900', fontSize: 16 },
+  copiedHint: { color: YELLOW, fontWeight: '800', marginTop: 8, textAlign: 'center' },
+
+  // Modal (enlarged)
+  backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.55)', justifyContent: 'center', alignItems: 'center' },
+  modalCard: {
+    width: '92%',
+    backgroundColor: NAVY,
+    borderRadius: 18,
+    padding: 22,
+    borderWidth: 1,
+    borderColor: 'rgba(255,215,0,0.28)',
+    alignItems: 'center',
+  },
+  modalTitle: { color: YELLOW, fontWeight: '900', fontSize: 22, marginBottom: 14 },
+  modalAvatarWrap: {
+    width: 240,
+    height: 240,
+    borderRadius: 120,
+    overflow: 'hidden',
+    backgroundColor: NAVY,
+    borderWidth: 2,
+    borderColor: 'rgba(255,215,0,0.35)',
+    marginBottom: 14,
+  },
+  modalAvatarImg: { width: '100%', height: '100%' },
+  modalPlaceholder: { alignItems: 'center', justifyContent: 'center', backgroundColor: CARD },
+
+  bigBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: YELLOW,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 10,
+    marginBottom: 12,
+  },
+  bigBtnText: { color: NAVY, fontWeight: '900', fontSize: 16 },
+
+  closeBtn: { paddingVertical: 10, paddingHorizontal: 12, marginTop: 8 },
+  closeBtnText: { color: TEXT, fontWeight: '700', fontSize: 16 },
 });

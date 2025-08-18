@@ -6,37 +6,59 @@ export interface User {
   username: string;
   displayName: string;
   points?: number;
+  photoUri?: string;            // 👈 NEW: optional profile photo
 }
+
+type UpdateUserInput = Partial<Pick<User, 'username' | 'displayName' | 'photoUri' | 'points'>>;
 
 interface AuthContextType {
   user: User | null;
-  login: (username: string, displayName: string) => void;
-  logout: () => void;
-  updateDisplayName: (displayName: string) => void;
-  updatePoints: (points: number) => void;
   allUsers: User[];
+  login: (username: string, displayName: string) => void | Promise<void>;
+  logout: () => void | Promise<void>;
+
+  // Existing methods kept for compatibility
+  updateDisplayName: (displayName: string) => void | Promise<void>;
+  updatePoints: (points: number) => void | Promise<void>;
+
+  // NEW: flexible update for username/displayName/photoUri/points
+  updateUser: (partial: UpdateUserInput) => void | Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
-const BACKEND_URL = 'http://localhost:5000/api/users'; // or your deployed API URL
+
+// TODO: replace with your deployed API base
+const BACKEND_URL = 'http://localhost:5000/api/users';
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [allUsers, setAllUsers] = useState<User[]>([]);
 
   useEffect(() => {
-    const loadUser = async () => {
+    const load = async () => {
       const stored = await AsyncStorage.getItem('currentUser');
       const users = await AsyncStorage.getItem('allUsers');
       if (stored) setUser(JSON.parse(stored));
       if (users) setAllUsers(JSON.parse(users));
     };
-    loadUser();
+    load();
   }, []);
+
+  const persistCurrentUser = async (u: User | null) => {
+    if (u) {
+      await AsyncStorage.setItem('currentUser', JSON.stringify(u));
+    } else {
+      await AsyncStorage.removeItem('currentUser');
+    }
+  };
+
+  const persistAllUsers = async (list: User[]) => {
+    await AsyncStorage.setItem('allUsers', JSON.stringify(list));
+  };
 
   const syncToBackend = async (userData: User) => {
     try {
-      await fetch(`${BACKEND_URL}/${userData.username}`, {
+      await fetch(`${BACKEND_URL}/${encodeURIComponent(userData.username)}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(userData),
@@ -47,57 +69,69 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const login = async (username: string, displayName: string) => {
-    const newUser: User = { username, displayName, points: 0 };
+    const newUser: User = { username, displayName, points: 0, photoUri: undefined };
     setUser(newUser);
-    await AsyncStorage.setItem('currentUser', JSON.stringify(newUser));
+    await persistCurrentUser(newUser);
 
     const updatedUsers = [...allUsers.filter(u => u.username !== username), newUser];
     setAllUsers(updatedUsers);
-    await AsyncStorage.setItem('allUsers', JSON.stringify(updatedUsers));
+    await persistAllUsers(updatedUsers);
 
     syncToBackend(newUser);
   };
 
   const logout = async () => {
     setUser(null);
-    await AsyncStorage.removeItem('currentUser');
+    await persistCurrentUser(null);
   };
 
-  const updateDisplayName = async (displayName: string) => {
+  const updateUser = async (partial: UpdateUserInput) => {
     if (!user) return;
-    const updatedUser = { ...user, displayName };
-    setUser(updatedUser);
-    await AsyncStorage.setItem('currentUser', JSON.stringify(updatedUser));
 
-    const updatedUsers = allUsers.map(u => u.username === user.username ? updatedUser : u);
-    setAllUsers(updatedUsers);
-    await AsyncStorage.setItem('allUsers', JSON.stringify(updatedUsers));
+    const oldUsername = user.username;
+    const newUser: User = { ...user, ...partial };
 
-    syncToBackend(updatedUser);
+    // Update current user state/storage
+    setUser(newUser);
+    await persistCurrentUser(newUser);
+
+    // Update the allUsers list (handle username changes)
+    let nextAll = allUsers;
+
+    // remove old entry
+    nextAll = nextAll.filter(u => u.username !== oldUsername);
+    // add/replace with new entry
+    nextAll = [...nextAll, newUser];
+
+    setAllUsers(nextAll);
+    await persistAllUsers(nextAll);
+
+    syncToBackend(newUser);
   };
 
-  const updatePoints = async (points: number) => {
-    if (!user) return;
-    const updatedUser = { ...user, points };
-    setUser(updatedUser);
-    await AsyncStorage.setItem('currentUser', JSON.stringify(updatedUser));
-
-    const updatedUsers = allUsers.map(u => u.username === user.username ? updatedUser : u);
-    setAllUsers(updatedUsers);
-    await AsyncStorage.setItem('allUsers', JSON.stringify(updatedUsers));
-
-    syncToBackend(updatedUser);
-  };
+  // Backwards-compatible helpers
+  const updateDisplayName = async (displayName: string) => updateUser({ displayName });
+  const updatePoints = async (points: number) => updateUser({ points });
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, updateDisplayName, updatePoints, allUsers }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        allUsers,
+        login,
+        logout,
+        updateDisplayName,
+        updatePoints,
+        updateUser,          // 👈 expose new method
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );
 };
 
 export const useAuth = () => {
-  const context = useContext(AuthContext);
-  if (!context) throw new Error('useAuth must be used within an AuthProvider');
-  return context;
+  const ctx = useContext(AuthContext);
+  if (!ctx) throw new Error('useAuth must be used within an AuthProvider');
+  return ctx;
 };
