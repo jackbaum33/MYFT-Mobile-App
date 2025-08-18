@@ -1,5 +1,5 @@
 // app/screens/HomeScreen.tsx
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -82,6 +82,81 @@ const MEMBERS: Member[] = [
   { name: 'Jack Baum',        line1: 'Technology',                          email: 'jackbaum@umich.edu' }
 ];
 
+/* =========================================
+   Memoized Board Card & Grid
+========================================= */
+
+const AVATAR = 88;
+
+const BoardCard = React.memo(function BoardCard({
+  member,
+  onPress,
+}: {
+  member: Member;
+  onPress: (m: Member) => void;
+}) {
+  const src = boardPics[member.name];
+  return (
+    <TouchableOpacity
+      style={s.boardCard}
+      onPress={() => onPress(member)}
+      activeOpacity={0.9}
+    >
+      <View style={s.avatarWrap}>
+        <Image source={src} style={s.avatarImg} resizeMode="cover" />
+      </View>
+      <Text style={s.memberName} numberOfLines={1}>{member.name}</Text>
+      <Text style={s.memberSub} numberOfLines={1}>{member.line1}</Text>
+    </TouchableOpacity>
+  );
+}, (prev, next) => (
+  prev.member.name === next.member.name &&
+  prev.member.line1 === next.member.line1 &&
+  prev.onPress === next.onPress
+));
+
+const BoardGrid = React.memo(function BoardGrid({
+  members,
+  onPressMember,
+}: {
+  members: Member[];
+  onPressMember: (m: Member) => void;
+}) {
+  const renderMember = useCallback(
+    ({ item }: { item: Member }) => <BoardCard member={item} onPress={onPressMember} />,
+    [onPressMember]
+  );
+
+  return (
+    <View style={s.boardGridWrap}>
+      <Text style={s.boardTitle}>Meet the Board</Text>
+      <FlatList
+        data={members}
+        keyExtractor={(m) => m.name}
+        numColumns={3}
+        columnWrapperStyle={s.boardRow}
+        contentContainerStyle={s.boardGridPad}
+        renderItem={renderMember}
+        scrollEnabled={false}
+        showsVerticalScrollIndicator={false}
+        removeClippedSubviews
+        initialNumToRender={12}
+        windowSize={3}
+        getItemLayout={(_, index) => {
+          const row = Math.floor(index / 3);
+          const ROW_HEIGHT = 18 /* name/sub */ + 8 /* gap */ + AVATAR + 18; // approx; improves perf
+          return { length: ROW_HEIGHT, offset: row * ROW_HEIGHT, index };
+        }}
+      />
+      <View style={{ height: 8 }} />
+    </View>
+  );
+});
+
+/* =========================================
+   HomeScreen
+========================================= */
+
 export default function HomeScreen() {
   const [selectedEvent, setSelectedEvent] = useState<(ScheduleItem & { when: Date }) | null>(null);
   const [selectedMember, setSelectedMember] = useState<Member | null>(null);
@@ -113,9 +188,11 @@ export default function HomeScreen() {
     });
   }, []);
 
-  const open = async (url: string) => { try { await Linking.openURL(url); } catch {} };
+  const open = useCallback(async (url: string) => {
+    try { await Linking.openURL(url); } catch {}
+  }, []);
 
-  const openInMaps = (event: ScheduleItem & { when: Date }) => {
+  const openInMaps = useCallback((event: ScheduleItem & { when: Date }) => {
     const encoded = encodeURIComponent(event.address || `${event.location} ${event.title}`);
     const url = Platform.select({
       ios: `http://maps.apple.com/?q=${encoded}`,
@@ -123,17 +200,17 @@ export default function HomeScreen() {
       default: `https://www.google.com/maps/search/?api=1&query=${encoded}`,
     });
     if (url) open(url);
-  };
+  }, [open]);
 
-  const copyEmail = async (email: string) => {
+  const copyEmail = useCallback(async (email: string) => {
     try {
       await Clipboard.setStringAsync(email);
       setCopied(true);
       setTimeout(() => setCopied(false), 1200);
     } catch {}
-  };
+  }, []);
 
-  const renderItem = ({ item }: any) => {
+  const renderItem = useCallback(({ item }: { item: ScheduleItem & { when: Date } }) => {
     const time = item.when.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
     return (
       <TouchableOpacity style={s.card} onPress={() => setSelectedEvent(item)} activeOpacity={0.85}>
@@ -143,16 +220,16 @@ export default function HomeScreen() {
         </View>
       </TouchableOpacity>
     );
-  };
+  }, []);
 
-  const renderSectionHeader = ({ section }: any) => (
+  const renderSectionHeader = useCallback(({ section }: any) => (
     <View style={s.sectionHeader}>
       <Text style={s.sectionHeaderText}>{section.title}</Text>
     </View>
-  );
+  ), []);
 
   // Header that scrolls with the list
-  const ListHeader = () => (
+  const ListHeader = useCallback(() => (
     <View style={s.headerContainer}>
       <Text style={s.header}>Welcome to the official MYFT 2025 App!</Text>
       <Text style={s.sub}>
@@ -160,38 +237,12 @@ export default function HomeScreen() {
       </Text>
       <Text style={s.scheduleHeader}>Tournament Schedule</Text>
     </View>
-  );
+  ), []);
 
-  const renderMember = ({ item }: { item: Member }) => {
-    const src = boardPics[item.name];
-    return (
-      <TouchableOpacity style={s.boardCard} onPress={() => setSelectedMember(item)} activeOpacity={0.9}>
-        <View style={s.avatarWrap}>
-          <Image source={src} style={s.avatarImg} resizeMode="cover" />
-        </View>
-        <Text style={s.memberName} numberOfLines={1}>{item.name}</Text>
-        <Text style={s.memberSub} numberOfLines={1}>{item.line1}</Text>
-      </TouchableOpacity>
-    );
-  };
-
-  // Board grid in the list footer
-  const BoardGrid = () => (
-    <View style={s.boardGridWrap}>
-      <Text style={s.boardTitle}>Meet the Board</Text>
-      <FlatList
-        data={MEMBERS}
-        keyExtractor={(m) => m.name}
-        numColumns={3}
-        columnWrapperStyle={s.boardRow}
-        contentContainerStyle={s.boardGridPad}
-        renderItem={renderMember}
-        scrollEnabled={false}
-        showsVerticalScrollIndicator={false}
-      />
-      <View style={{ height: 8 }} />
-    </View>
-  );
+  // Stable press handler passed to BoardGrid (prevents board re-renders)
+  const onPressMember = useCallback((m: Member) => {
+    setSelectedMember(m);
+  }, []);
 
   return (
     <View style={s.outer}>
@@ -206,7 +257,8 @@ export default function HomeScreen() {
         SectionSeparatorComponent={() => <View style={s.sectionSep} />}
         contentContainerStyle={[s.listPad, { paddingBottom: 110 }]} // room for fixed footer
         ListHeaderComponent={ListHeader}
-        ListFooterComponent={BoardGrid}
+        // Pass a memoized component so it doesn't update with unrelated state
+        ListFooterComponent={<BoardGrid members={MEMBERS} onPressMember={onPressMember} />}
         showsVerticalScrollIndicator={false}
       />
 
@@ -269,7 +321,6 @@ export default function HomeScreen() {
         </Pressable>
       </Modal>
 
-
       {/* Board image enlarge modal + copy email */}
       <Modal
         visible={!!selectedMember}
@@ -320,8 +371,6 @@ export default function HomeScreen() {
     </View>
   );
 }
-
-const AVATAR = 88;
 
 const s = StyleSheet.create({
   outer: { flex: 1, backgroundColor: NAVY },
