@@ -6,7 +6,7 @@ export interface Player {
   id: string;
   name: string;
   position: 'QB' | 'WR' | 'RB' | 'DB' | 'LB' | 'OL' | 'DL' | 'Util';
-  division: 'boys' | 'girls';
+  division: 'Boys' | 'Girls';
   teamId: string;
   stats: {
     touchdowns: number;
@@ -19,7 +19,7 @@ export interface Player {
 export interface Team {
   id: string;
   name: string;
-  division: 'boys' | 'girls';
+  division: 'Boys' | 'Girls';
   captain: string;                // NEW
   record: { wins: number; losses: number }; // NEW
   players: Player[];
@@ -34,7 +34,7 @@ export interface FantasyRoster {
 interface TournamentContextType {
   teams: Team[];
   userRoster: FantasyRoster;
-  updateRoster: (division: 'boys' | 'girls', playerId: string) => void;
+  updateRoster: (division: 'Boys' | 'Girls', playerId: string) => void;
   calculatePoints: (player: Player) => number;
 }
 
@@ -46,11 +46,11 @@ export const TournamentProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   const [teams] = useState<Team[]>(mockTeams);
   const [userRoster, setUserRoster] = useState<FantasyRoster>({ boys: [], girls: [] });
 
-  const updateRoster = (division: 'boys' | 'girls', playerId: string) => {
+  const updateRoster = (division: 'Boys' | 'Girls', playerId: string) => {
     setUserRoster(prev => {
       const existing = prev[division];
       const updated = existing.includes(playerId)
-        ? existing.filter(id => id !== playerId)
+        ? existing.filter((id: string) => id !== playerId)
         : existing.length < 7
           ? [...existing, playerId]
           : existing;

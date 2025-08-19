@@ -44,7 +44,6 @@ export default function ScheduleIndex() {
         style={s.card}
       >
         <View style={s.headerRow}>
-          <Text style={s.gender}>{item.gender === 'men' ? "Men's" : "Women's"}</Text>
           <Text style={s.status}>{item.status}</Text>
         </View>
 
@@ -129,8 +128,7 @@ const s = StyleSheet.create({
     justifyContent: 'space-between',
   },
   headerRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 },
-  gender: { color: YELLOW, fontWeight: '800', fontSize: 12 },
-  status: { color: MUTED, fontWeight: '700', fontSize: 12 },
+  status: { color: YELLOW, fontWeight: '700', fontSize: 12 },
 
   row: { flexDirection: 'row', alignItems: 'center', marginVertical: 2 },
   logo: { width: 22, height: 22, marginRight: 8, borderRadius: 4, backgroundColor: '#0b1520' },
