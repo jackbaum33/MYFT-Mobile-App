@@ -1,3 +1,4 @@
+// screens/FantasyScreen.tsx
 import React, { useMemo, useState } from 'react';
 import {
   View,
@@ -94,28 +95,32 @@ export default function FantasyScreen() {
    *  ------------------------- */
   const [detail, setDetail] = useState<any | null>(null);
 
+  const confirmRemoveFromTeam = (player: any) => {
+    const division = player.__division as 'boys' | 'girls';
+    Alert.alert(
+      'Remove from Team',
+      `Remove ${player.name} from your Fantasy roster?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Remove',
+          style: 'destructive',
+          onPress: () => {
+            updateRoster(division, player.id);
+            setDetail(null);
+          },
+        },
+      ],
+    );
+  };
+
   const confirmAddToTeam = (player: any) => {
     const division = player.__division as 'boys' | 'girls';
     const already =
       (division === 'boys' ? userRoster.boys : userRoster.girls)?.includes(player.id) ?? false;
 
     if (already) {
-      // Remove?
-      Alert.alert(
-        'Remove from Team',
-        `Remove ${player.name} from your Fantasy roster?`,
-        [
-          { text: 'Cancel', style: 'cancel' },
-          {
-            text: 'Remove',
-            style: 'destructive',
-            onPress: () => {
-              updateRoster(division, player.id);
-              setDetail(null);
-            },
-          },
-        ],
-      );
+      confirmRemoveFromTeam(player);
       return;
     }
 
@@ -385,7 +390,7 @@ export default function FantasyScreen() {
               <>
                 <Text style={styles.modalTitle}>{detail.name}</Text>
                 <Text style={styles.modalMeta}>
-                  {detail.position} • {detail.__team}
+                  {detail.position} • {detail.__team} • {capitalize(detail.__division)}
                 </Text>
 
                 <View style={styles.statRow}>
@@ -395,10 +400,27 @@ export default function FantasyScreen() {
                   </Text>
                 </View>
 
-                <TouchableOpacity style={styles.addBtn} onPress={() => confirmAddToTeam(detail)}>
-                  <Ionicons name="add-circle-outline" size={18} color={NAVY} />
-                  <Text style={styles.addBtnText}>Add to Team</Text>
-                </TouchableOpacity>
+                {/* Add / Remove switch */}
+                {(() => {
+                  const division = detail.__division as 'boys' | 'girls';
+                  const isSelected =
+                    (division === 'boys' ? userRoster.boys : userRoster.girls)?.includes(detail.id) ?? false;
+
+                  if (isSelected) {
+                    return (
+                      <TouchableOpacity style={styles.removeBtn} onPress={() => confirmRemoveFromTeam(detail)}>
+                        <Ionicons name="trash-outline" size={18} color="#fff" />
+                        <Text style={styles.removeBtnText}>Remove Player</Text>
+                      </TouchableOpacity>
+                    );
+                  }
+                  return (
+                    <TouchableOpacity style={styles.addBtn} onPress={() => confirmAddToTeam(detail)}>
+                      <Ionicons name="add-circle-outline" size={18} color={NAVY} />
+                      <Text style={styles.addBtnText}>Add Player</Text>
+                    </TouchableOpacity>
+                  );
+                })()}
 
                 <TouchableOpacity style={styles.closeBtn} onPress={() => setDetail(null)}>
                   <Text style={styles.closeBtnText}>Close</Text>
@@ -473,8 +495,13 @@ const styles = StyleSheet.create({
   modalMeta: { color: TEXT, marginTop: 6, marginBottom: 12 },
   statRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
   statText: { color: TEXT, fontWeight: '800' },
+
   addBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: YELLOW, paddingHorizontal: 14, paddingVertical: 10, borderRadius: 10, marginBottom: 8 },
   addBtnText: { color: NAVY, fontWeight: '900' },
+
+  removeBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#E74C3C', paddingHorizontal: 14, paddingVertical: 10, borderRadius: 10, marginBottom: 8 },
+  removeBtnText: { color: '#fff', fontWeight: '900' },
+
   closeBtn: { paddingVertical: 8, paddingHorizontal: 10 },
   closeBtnText: { color: TEXT, fontWeight: '700' },
 });
