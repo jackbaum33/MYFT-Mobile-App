@@ -243,7 +243,7 @@ export default function LeaderboardIndex() {
 
   return (
     <View style={styles.container}>
-      <Stack.Screen options={{ title: '' }} />
+      <Stack.Screen options={{ title: 'Fantasy Leaderboard' }} />
 
       {/* Players/Users toggle */}
       <View style={styles.toggleRow}>

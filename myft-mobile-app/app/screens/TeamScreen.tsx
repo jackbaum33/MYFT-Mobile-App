@@ -8,7 +8,7 @@ import { getTeamLogo } from '../../assets/team_logos';  // ← import helper
 export default function TeamScreen() {
   const router = useRouter();
   const { teams } = useTournament();
-  const [division, setDivision] = useState<'boys' | 'girls'>('boys');
+  const [division, setDivision] = useState<'Boys' | 'Girls'>('Boys');
 
   const filteredTeams = useMemo(
     () => teams.filter(t => t.division === division),
@@ -20,16 +20,16 @@ export default function TeamScreen() {
 
       <View style={styles.toggle}>
         <TouchableOpacity
-          style={[styles.toggleBtn, division === 'boys' && styles.toggleActive]}
-          onPress={() => setDivision('boys')}
+          style={[styles.toggleBtn, division === 'Boys' && styles.toggleActive]}
+          onPress={() => setDivision('Boys')}
         >
-          <Text style={[styles.toggleText, division === 'boys' && styles.toggleTextActive]}>Boys</Text>
+          <Text style={[styles.toggleText, division === 'Boys' && styles.toggleTextActive]}>Boys</Text>
         </TouchableOpacity>
         <TouchableOpacity
-          style={[styles.toggleBtn, division === 'girls' && styles.toggleActive]}
-          onPress={() => setDivision('girls')}
+          style={[styles.toggleBtn, division === 'Girls' && styles.toggleActive]}
+          onPress={() => setDivision('Girls')}
         >
-          <Text style={[styles.toggleText, division === 'girls' && styles.toggleTextActive]}>Girls</Text>
+          <Text style={[styles.toggleText, division === 'Girls' && styles.toggleTextActive]}>Girls</Text>
         </TouchableOpacity>
       </View>
 
