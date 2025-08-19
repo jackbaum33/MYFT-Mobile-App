@@ -1,11 +1,10 @@
 // data/mockData.ts (example shape – adjust to your full list)
 import { Team } from '../../context/TournamentContext';
-
 export const mockTeams: Team[] = [
   {
     id: 'michigan',
     name: 'Michigan',
-    division: 'Boys',
+    division: 'boys',
     captain: 'Eli Plotkin',
     record: { wins: 3, losses: 1 },
     players: [
@@ -13,7 +12,7 @@ export const mockTeams: Team[] = [
         id: 'p1',
         name: 'Eli Plotkin',
         position: 'QB',
-        division: 'Boys',
+        division: 'boys',
         teamId: 'falcons',
         stats: { touchdowns: 10, interceptions: 1, flagsPulled: 3, mvpAwards: 1 },
       },
@@ -21,7 +20,7 @@ export const mockTeams: Team[] = [
         id: 'p2',
         name: 'Boaz Edidin',
         position: 'WR',
-        division: 'Boys',
+        division: 'boys',
         teamId: 'falcons',
         stats: { touchdowns: 4, interceptions: 0, flagsPulled: 2, mvpAwards: 0 },
       },
@@ -30,7 +29,7 @@ export const mockTeams: Team[] = [
   {
     id: 'maryland',
     name: 'Maryland',
-    division: 'Boys',
+    division: 'boys',
     captain: 'Lev Blumenfeld',
     record: { wins: 2, losses: 2 },
     players: [
@@ -38,7 +37,7 @@ export const mockTeams: Team[] = [
         id: 'p3',
         name: 'Lev Blumenfeld',
         position: 'RB',
-        division: 'Boys',
+        division: 'boys',
         teamId: 'wolves',
         stats: { touchdowns: 5, interceptions: 0, flagsPulled: 4, mvpAwards: 0 },
       },
@@ -46,7 +45,7 @@ export const mockTeams: Team[] = [
         id: 'p4',
         name: 'Elliot Sokol',
         position: 'DB',
-        division: 'Boys',
+        division: 'boys',
         teamId: 'wolves',
         stats: { touchdowns: 1, interceptions: 2, flagsPulled: 5, mvpAwards: 0 },
       },
@@ -55,7 +54,7 @@ export const mockTeams: Team[] = [
   {
     id: 'yeshiva',
     name: 'Yeshiva',
-    division: 'Girls',
+    division: 'girls',
     captain: 'Yoni Arnet',
     record: { wins: 4, losses: 0 },
     players: [
@@ -63,7 +62,7 @@ export const mockTeams: Team[] = [
         id: 'p5',
         name: 'Yoni Arnet',
         position: 'QB',
-        division: 'Girls',
+        division: 'girls',
         teamId: 'panthers',
         stats: { touchdowns: 9, interceptions: 0, flagsPulled: 2, mvpAwards: 2 },
       },
@@ -71,7 +70,7 @@ export const mockTeams: Team[] = [
         id: 'p6',
         name: 'David Gaffen',
         position: 'WR',
-        division: 'Girls',
+        division: 'girls',
         teamId: 'panthers',
         stats: { touchdowns: 3, interceptions: 0, flagsPulled: 1, mvpAwards: 0 },
       },
@@ -80,7 +79,7 @@ export const mockTeams: Team[] = [
   {
     id: 'binghamton',
     name: 'Binghamton',
-    division: 'Girls',
+    division: 'girls',
     captain: 'Jared Moskowitz',
     record: { wins: 1, losses: 3 },
     players: [
@@ -88,7 +87,7 @@ export const mockTeams: Team[] = [
         id: 'p7',
         name: 'Jared Moskowitz',
         position: 'RB',
-        division: 'Girls',
+        division: 'girls',
         teamId: 'hawks',
         stats: { touchdowns: 2, interceptions: 0, flagsPulled: 6, mvpAwards: 0 },
       },
@@ -96,7 +95,7 @@ export const mockTeams: Team[] = [
         id: 'p8',
         name: 'Joey Bond',
         position: 'DB',
-        division: 'Girls',
+        division: 'girls',
         teamId: 'hawks',
         stats: { touchdowns: 0, interceptions: 3, flagsPulled: 7, mvpAwards: 0 },
       },

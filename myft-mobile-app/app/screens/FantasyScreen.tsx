@@ -1,97 +1,480 @@
-// screens/FantasyScreen.tsx
-import React, { useState } from 'react';
-import { View, Text, FlatList, TouchableOpacity, Button, StyleSheet } from 'react-native';
+import React, { useMemo, useState } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  FlatList,
+  TouchableOpacity,
+  Modal,
+  Pressable,
+  Alert,
+  Platform,
+  ActionSheetIOS,
+} from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useTournament } from '../../context/TournamentContext';
+
+const NAVY = '#001F3F';
+const CARD = '#07335f';
+const YELLOW = '#FFD700';
+const TEXT = '#E9ECEF';
+const MUTED = '#A5B4C3';
+const LINE = 'rgba(255,255,255,0.12)';
+
+type FilterKey = 'division' | 'school' | 'position' | null;
+
+function capitalize(s: string) {
+  return s ? s.charAt(0).toUpperCase() + s.slice(1) : s;
+}
 
 export default function FantasyScreen() {
   const { teams, userRoster, updateRoster, calculatePoints } = useTournament();
-  const [selectedDivision, setSelectedDivision] = useState<'boys' | 'girls'>('boys');
 
-  const players = teams
-    .filter(team => team.division === selectedDivision)
-    .flatMap(team => team.players);
+  /** -------------------------
+   *   Onboarding / view state
+   *  ------------------------- */
+  const [hasOnboarded, setHasOnboarded] = useState(false); // swap to persistent storage later
+  const [tab, setTab] = useState<'all' | 'team'>('all');
 
-  const selectedIds = userRoster[selectedDivision];
+  /** -------------------------
+   *   Filters
+   *  ------------------------- */
+  const [activeFilter, setActiveFilter] = useState<FilterKey>(null);
+  const [divisionSelected, setDivisionSelected] = useState<'boys' | 'girls' | null>(null);
+  const [schoolSelected, setSchoolSelected] = useState<string | null>(null);
+  const [positionSelected, setPositionSelected] = useState<string | null>(null);
 
+  const allPlayers = useMemo(
+    () => teams.flatMap(t => t.players.map(p => ({ ...p, __team: t.name, __division: t.division } as any))),
+    [teams]
+  );
+
+  const schoolOptions = useMemo(
+    () => Array.from(new Set(teams.map(t => t.name))).sort(),
+    [teams]
+  );
+  const positionOptions = useMemo(
+    () => Array.from(new Set(allPlayers.map(p => p.position))).sort(),
+    [allPlayers]
+  );
+
+  const maxBoys = 4;
+  const maxGirls = 4;
+  const selectedBoys = userRoster.boys?.length ?? 0;
+  const selectedGirls = userRoster.girls?.length ?? 0;
+  const totalSelected = selectedBoys + selectedGirls;
+
+  /** -------------------------
+   *   Filtering + sorting
+   *  ------------------------- */
+  const filteredPlayers = useMemo(() => {
+    let arr = [...allPlayers].map(p => ({ ...p, fantasy: calculatePoints(p) }));
+    if (divisionSelected) arr = arr.filter(p => p.__division === divisionSelected);
+    if (schoolSelected) arr = arr.filter(p => p.__team === schoolSelected);
+    if (positionSelected) arr = arr.filter(p => p.position === positionSelected);
+    // always sort by fantasy desc
+    arr.sort((a, b) => b.fantasy - a.fantasy);
+    return arr;
+  }, [allPlayers, divisionSelected, schoolSelected, positionSelected, calculatePoints]);
+
+  /** -------------------------
+   *   "My Team" dataset
+   *  ------------------------- */
+  const myTeamPlayers = useMemo(() => {
+    const ids = new Set([...(userRoster.boys ?? []), ...(userRoster.girls ?? [])]);
+    const enriched = allPlayers
+      .filter(p => ids.has(p.id))
+      .map(p => ({ ...p, fantasy: calculatePoints(p) }))
+      .sort((a, b) => b.fantasy - a.fantasy);
+    return enriched;
+  }, [allPlayers, userRoster, calculatePoints]);
+
+  /** -------------------------
+   *   Player detail modal
+   *  ------------------------- */
+  const [detail, setDetail] = useState<any | null>(null);
+
+  const confirmAddToTeam = (player: any) => {
+    const division = player.__division as 'boys' | 'girls';
+    const already =
+      (division === 'boys' ? userRoster.boys : userRoster.girls)?.includes(player.id) ?? false;
+
+    if (already) {
+      // Remove?
+      Alert.alert(
+        'Remove from Team',
+        `Remove ${player.name} from your Fantasy roster?`,
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Remove',
+            style: 'destructive',
+            onPress: () => {
+              updateRoster(division, player.id);
+              setDetail(null);
+            },
+          },
+        ],
+      );
+      return;
+    }
+
+    const cap = division === 'boys' ? maxBoys : maxGirls;
+    const count = division === 'boys' ? selectedBoys : selectedGirls;
+    if (count >= cap) {
+      Alert.alert(
+        'Roster Full',
+        `You already have ${cap} ${division === 'boys' ? 'boys' : 'girls'} selected.`,
+      );
+      return;
+    }
+
+    Alert.alert(
+      'Add to Team',
+      `Add ${player.name} to your Fantasy roster?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Add',
+          onPress: () => {
+            updateRoster(division, player.id);
+            setDetail(null);
+          },
+        },
+      ],
+    );
+  };
+
+  /** -------------------------
+   *   Filter button helpers
+   *  ------------------------- */
+  const onPressFilter = (key: Exclude<FilterKey, null>) => {
+    // If filter has a value, tapping its pill clears it
+    if (key === 'division' && divisionSelected) { setDivisionSelected(null); return; }
+    if (key === 'school' && schoolSelected) { setSchoolSelected(null); return; }
+    if (key === 'position' && positionSelected) { setPositionSelected(null); return; }
+
+    // Open chooser
+    if (Platform.OS === 'ios') {
+      // Native iOS sheet
+      if (key === 'division') {
+        ActionSheetIOS.showActionSheetWithOptions(
+          {
+            title: 'Select Division',
+            options: ['Cancel', 'Boys', 'Girls'],
+            cancelButtonIndex: 0,
+            userInterfaceStyle: 'dark',
+          },
+          idx => {
+            if (idx === 1) setDivisionSelected('boys');
+            else if (idx === 2) setDivisionSelected('girls');
+          },
+        );
+      } else if (key === 'school') {
+        ActionSheetIOS.showActionSheetWithOptions(
+          {
+            title: 'Select School',
+            options: ['Cancel', ...schoolOptions],
+            cancelButtonIndex: 0,
+            userInterfaceStyle: 'dark',
+          },
+          idx => {
+            if (idx > 0) setSchoolSelected(schoolOptions[idx - 1]);
+          },
+        );
+      } else {
+        ActionSheetIOS.showActionSheetWithOptions(
+          {
+            title: 'Select Position',
+            options: ['Cancel', ...positionOptions],
+            cancelButtonIndex: 0,
+            userInterfaceStyle: 'dark',
+          },
+          idx => {
+            if (idx > 0) setPositionSelected(positionOptions[idx - 1]);
+          },
+        );
+      }
+    } else {
+      // Simple inline sheet for Android/others
+      setActiveFilter(prev => (prev === key ? null : key));
+    }
+  };
+
+  /** -------------------------
+   *   Save team
+   *  ------------------------- */
+  const canSave = selectedBoys === maxBoys && selectedGirls === maxGirls;
+  const onSaveTeam = () => {
+    if (!canSave) {
+      Alert.alert('Almost there!', 'Pick 4 boys and 4 girls to complete your team.');
+      return;
+    }
+    Alert.alert('Team Saved', 'Your fantasy roster has been saved for this session.');
+    // TODO: persist to storage / backend here
+  };
+
+  /** -------------------------
+   *   Render helpers
+   *  ------------------------- */
+  const Pill = ({
+    label,
+    active,
+    onPress,
+  }: { label: string; active?: boolean; onPress: () => void }) => (
+    <TouchableOpacity
+      onPress={onPress}
+      style={[styles.pill, active && styles.pillActive]}
+    >
+      <Text style={[styles.pillText, active && styles.pillTextActive]}>{label}</Text>
+    </TouchableOpacity>
+  );
+
+  const PlayerRow = ({ item }: { item: any }) => {
+    const division = item.__division as 'boys' | 'girls';
+    const selected =
+      (division === 'boys' ? userRoster.boys : userRoster.girls)?.includes(item.id) ?? false;
+
+    return (
+      <TouchableOpacity style={styles.row} activeOpacity={0.9} onPress={() => setDetail(item)}>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.primary} numberOfLines={1}>{item.name}</Text>
+          <Text style={styles.sub} numberOfLines={1}>
+            {item.position} • {item.__team} • {capitalize(division)}
+          </Text>
+        </View>
+        <Text style={styles.points}>{item.fantasy} pts</Text>
+        {selected ? <Ionicons name="checkmark-circle" size={20} color={YELLOW} style={{ marginLeft: 8 }} /> : null}
+      </TouchableOpacity>
+    );
+  };
+
+  /** -------------------------
+   *   Onboarding screen
+   *  ------------------------- */
+  if (!hasOnboarded) {
+    return (
+      <View style={styles.onboardOuter}>
+        <Ionicons name="american-football-outline" size={48} color={YELLOW} />
+        <Text style={styles.onboardTitle}>Welcome to MYFT 2025 Fantasy Football!</Text>
+        <Text style={styles.onboardSub}>
+          Press continue to get started building your roster. Pick 4 Boys and 4 Girls.
+        </Text>
+        <TouchableOpacity style={styles.cta} onPress={() => setHasOnboarded(true)}>
+          <Text style={styles.ctaText}>Continue</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
+  /** -------------------------
+   *   Main screen
+   *  ------------------------- */
   return (
     <View style={styles.container}>
-      <View style={styles.buttonGroup}>
-        <Button
-          title="Boys"
-          onPress={() => setSelectedDivision('boys')}
-          color={selectedDivision === 'boys' ? '#FFD700' : '#555'}
-        />
-        <Button
-          title="Girls"
-          onPress={() => setSelectedDivision('girls')}
-          color={selectedDivision === 'girls' ? '#FFD700' : '#555'}
-        />
+      {/* Header / progress */}
+      <View style={styles.topRow}>
+        <View style={styles.counter}>
+          <Text style={styles.counterText}>Boys: {selectedBoys}/{maxBoys}</Text>
+        </View>
+        <View style={styles.counter}>
+          <Text style={styles.counterText}>Girls: {selectedGirls}/{maxGirls}</Text>
+        </View>
+        <TouchableOpacity style={[styles.saveBtn, !canSave && { opacity: 0.6 }]} onPress={onSaveTeam}>
+          <Ionicons name="save-outline" size={16} color={NAVY} />
+          <Text style={styles.saveBtnText}>Save Team</Text>
+        </TouchableOpacity>
       </View>
 
-      <Text style={styles.instructions}>
-        Select up to 7 players for the {selectedDivision} division
-      </Text>
+      {/* Tabs */}
+      <View style={styles.toggleRow}>
+        <TouchableOpacity
+          onPress={() => setTab('all')}
+          style={[styles.toggleBtn, tab === 'all' && styles.toggleActive]}
+        >
+          <Text style={[styles.toggleText, tab === 'all' && styles.toggleTextActive]}>All Players</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          onPress={() => setTab('team')}
+          style={[styles.toggleBtn, tab === 'team' && styles.toggleActive]}
+        >
+          <Text style={[styles.toggleText, tab === 'team' && styles.toggleTextActive]}>My Team ({totalSelected})</Text>
+        </TouchableOpacity>
+      </View>
 
-      <FlatList
-        data={players}
-        keyExtractor={(item) => item.id}
-        renderItem={({ item }) => {
-          const isSelected = selectedIds.includes(item.id);
-          return (
-            <TouchableOpacity
-              style={[
-                styles.playerCard,
-                { backgroundColor: isSelected ? '#2ECC71' : '#003366' },
-              ]}
-              onPress={() => updateRoster(selectedDivision, item.id)}
-            >
-              <Text style={styles.playerName}>{item.name}</Text>
-              <Text style={styles.playerStats}>
-                TDs: {item.stats.touchdowns}, INTs: {item.stats.interceptions}, Flags: {item.stats.flagsPulled}, MVPs: {item.stats.mvpAwards}
-              </Text>
-              <Text style={styles.fantasyPoints}>Fantasy Pts: {calculatePoints(item)}</Text>
-            </TouchableOpacity>
-          );
-        }}
-      />
+      {/* Filters (All Players) */}
+      {tab === 'all' && (
+        <>
+          <Text style={styles.filterLabel}>Filters</Text>
+          <View style={styles.filterRow}>
+            <Pill
+              label={`Division${divisionSelected ? `: ${capitalize(divisionSelected)}` : ''}`}
+              active={!!divisionSelected}
+              onPress={() => onPressFilter('division')}
+            />
+            <Pill
+              label={`School${schoolSelected ? `: ${schoolSelected}` : ''}`}
+              active={!!schoolSelected}
+              onPress={() => onPressFilter('school')}
+            />
+            <Pill
+              label={`Position${positionSelected ? `: ${positionSelected}` : ''}`}
+              active={!!positionSelected}
+              onPress={() => onPressFilter('position')}
+            />
+          </View>
+
+          {/* Inline sheet for Android/others */}
+          {Platform.OS !== 'ios' && activeFilter && (
+            <View style={styles.dropdown}>
+              {activeFilter === 'division' &&
+                (['boys', 'girls'] as const).map(opt => (
+                  <TouchableOpacity key={opt} onPress={() => { setDivisionSelected(opt); setActiveFilter(null); }}>
+                    <Text style={styles.dropdownItem}>{capitalize(opt)}</Text>
+                  </TouchableOpacity>
+                ))}
+              {activeFilter === 'school' &&
+                schoolOptions.map(opt => (
+                  <TouchableOpacity key={opt} onPress={() => { setSchoolSelected(opt); setActiveFilter(null); }}>
+                    <Text style={styles.dropdownItem}>{opt}</Text>
+                  </TouchableOpacity>
+                ))}
+              {activeFilter === 'position' &&
+                positionOptions.map(opt => (
+                  <TouchableOpacity key={opt} onPress={() => { setPositionSelected(opt); setActiveFilter(null); }}>
+                    <Text style={styles.dropdownItem}>{opt}</Text>
+                  </TouchableOpacity>
+                ))}
+            </View>
+          )}
+        </>
+      )}
+
+      {/* Lists */}
+      {tab === 'all' ? (
+        <FlatList
+          data={filteredPlayers}
+          keyExtractor={(p: any) => p.id}
+          renderItem={({ item }) => <PlayerRow item={item} />}
+          contentContainerStyle={{ paddingBottom: 20 }}
+          showsVerticalScrollIndicator={false}
+        />
+      ) : (
+        <FlatList
+          data={myTeamPlayers}
+          keyExtractor={(p: any) => p.id}
+          renderItem={({ item }) => <PlayerRow item={item} />}
+          ListEmptyComponent={
+            <Text style={styles.empty}>No players yet. Pick from All Players.</Text>
+          }
+          contentContainerStyle={{ paddingBottom: 20 }}
+          showsVerticalScrollIndicator={false}
+        />
+      )}
+
+      {/* Player details modal */}
+      <Modal
+        visible={!!detail}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setDetail(null)}
+      >
+        <Pressable style={styles.backdrop} onPress={() => setDetail(null)}>
+          <Pressable style={styles.modalCard} onPress={(e) => e.stopPropagation()}>
+            {detail && (
+              <>
+                <Text style={styles.modalTitle}>{detail.name}</Text>
+                <Text style={styles.modalMeta}>
+                  {detail.position} • {detail.__team}
+                </Text>
+
+                <View style={styles.statRow}>
+                  <Text style={styles.statText}>Fantasy Points: </Text>
+                  <Text style={[styles.statText, { color: YELLOW, fontWeight: '900' }]}>
+                    {detail.fantasy ?? calculatePoints(detail)}
+                  </Text>
+                </View>
+
+                <TouchableOpacity style={styles.addBtn} onPress={() => confirmAddToTeam(detail)}>
+                  <Ionicons name="add-circle-outline" size={18} color={NAVY} />
+                  <Text style={styles.addBtnText}>Add to Team</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity style={styles.closeBtn} onPress={() => setDetail(null)}>
+                  <Text style={styles.closeBtnText}>Close</Text>
+                </TouchableOpacity>
+              </>
+            )}
+          </Pressable>
+        </Pressable>
+      </Modal>
     </View>
   );
 }
 
+/** -------------------------
+ *   Styles
+ *  ------------------------- */
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    padding: 16,
-    backgroundColor: '#001F3F', // navy blue
+  container: { flex: 1, backgroundColor: NAVY, padding: 12 },
+
+  // Onboarding
+  onboardOuter: {
+    flex: 1, backgroundColor: NAVY, alignItems: 'center', justifyContent: 'center', padding: 20, marginTop: -50
   },
-  buttonGroup: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    marginBottom: 16,
-    gap: 10,
+  onboardTitle: { color: YELLOW, fontSize: 24, fontWeight: '900', textAlign: 'center', marginTop: 12 },
+  onboardSub: { color: TEXT, opacity: 0.9, textAlign: 'center', marginTop: 8 },
+  cta: {
+    marginTop: 16, backgroundColor: YELLOW, paddingHorizontal: 18, paddingVertical: 12, borderRadius: 10,
   },
-  instructions: {
-    fontSize: 18,
-    marginBottom: 8,
-    color: '#FFD700',
-    textAlign: 'center',
+  ctaText: { color: NAVY, fontWeight: '900' },
+
+  // Top bar
+  topRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10 },
+  counter: {
+    backgroundColor: '#0b3c70', paddingHorizontal: 10, paddingVertical: 8, borderRadius: 10, borderWidth: 1, borderColor: LINE,
   },
-  playerCard: {
-    padding: 12,
-    marginBottom: 8,
-    borderRadius: 8,
+  counterText: { color: TEXT, fontWeight: '800' },
+  saveBtn: { marginLeft: 'auto', flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: YELLOW, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 10 },
+  saveBtnText: { color: NAVY, fontWeight: '900' },
+
+  // Tabs
+  toggleRow: { flexDirection: 'row', gap: 8, marginBottom: 12 },
+  toggleBtn: { flex: 1, paddingVertical: 10, borderRadius: 10, backgroundColor: '#062a4e', alignItems: 'center' },
+  toggleActive: { backgroundColor: '#0b3c70' },
+  toggleText: { color: MUTED, fontWeight: '800' },
+  toggleTextActive: { color: YELLOW },
+
+  // Filters
+  filterLabel: { color: YELLOW, fontWeight: '700', fontSize: 16, marginBottom: 8 },
+  filterRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 8 },
+  pill: { backgroundColor: '#062a4e', borderRadius: 999, paddingHorizontal: 12, paddingVertical: 8, borderWidth: 1, borderColor: LINE },
+  pillActive: { backgroundColor: YELLOW, borderColor: 'rgba(0,0,0,0.12)' },
+  pillText: { color: TEXT, fontWeight: '800' },
+  pillTextActive: { color: NAVY },
+
+  dropdown: {
+    backgroundColor: CARD, borderRadius: 10, borderWidth: 1, borderColor: 'rgba(255,255,255,0.18)', padding: 8, marginBottom: 8,
   },
-  playerName: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#FFD700',
-  },
-  playerStats: {
-    fontSize: 14,
-    color: '#CCCCCC',
-  },
-  fantasyPoints: {
-    fontWeight: 'bold',
-    color: '#FFD700',
-  },
+  dropdownItem: { color: TEXT, paddingVertical: 10, fontWeight: '800' },
+
+  // Rows
+  row: { flexDirection: 'row', alignItems: 'center', backgroundColor: CARD, borderRadius: 12, padding: 14, marginBottom: 10, borderWidth: 1, borderColor: LINE },
+  primary: { color: TEXT, fontWeight: '800', fontSize: 16 },
+  sub: { color: MUTED, fontSize: 12, marginTop: 2 },
+  points: { color: YELLOW, fontWeight: '900', fontSize: 16, marginLeft: 8 },
+
+  empty: { color: MUTED, textAlign: 'center', marginTop: 30 },
+
+  // Modal
+  backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'center', alignItems: 'center' },
+  modalCard: { width: '88%', backgroundColor: NAVY, borderRadius: 16, padding: 16, alignItems: 'center', borderWidth: 1, borderColor: 'rgba(255,215,0,0.25)' },
+  modalTitle: { color: YELLOW, fontSize: 20, fontWeight: '900' },
+  modalMeta: { color: TEXT, marginTop: 6, marginBottom: 12 },
+  statRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
+  statText: { color: TEXT, fontWeight: '800' },
+  addBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: YELLOW, paddingHorizontal: 14, paddingVertical: 10, borderRadius: 10, marginBottom: 8 },
+  addBtnText: { color: NAVY, fontWeight: '900' },
+  closeBtn: { paddingVertical: 8, paddingHorizontal: 10 },
+  closeBtnText: { color: TEXT, fontWeight: '700' },
 });

@@ -38,7 +38,7 @@ export default function TabLayout() {
       <Tabs.Screen name="index" options={{ tabBarLabel: 'Home', title: '' }} />
       <Tabs.Screen name="schedule" options={{ tabBarLabel: 'Schedule', title: '' }} />
       <Tabs.Screen name="team" options={{ tabBarLabel: 'Teams', title: '' }} />
-      <Tabs.Screen name="fantasy" options={{ tabBarLabel: 'Fantasy', title: '' }} />
+      <Tabs.Screen name="fantasy" options={{ tabBarLabel: 'Fantasy', title: 'Fantasy Dashboard' }} />
       <Tabs.Screen name="leaderboard" options={{ tabBarLabel: 'Standings', title: '' }} />
     </Tabs>
   );

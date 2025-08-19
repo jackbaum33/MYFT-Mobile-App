@@ -1,12 +1,15 @@
 // context/TournamentContext.tsx
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useMemo, useState } from 'react';
+import { mockTeams } from '../app/data/mockData'; // adjust path if yours differs
 
-// context/TournamentContext.tsx (only interfaces shown)
+/** ---------- Types ---------- **/
+export type Division = 'boys' | 'girls';
+
 export interface Player {
   id: string;
   name: string;
-  position: 'QB' | 'WR' | 'RB' | 'DB' | 'LB' | 'OL' | 'DL' | 'Util';
-  division: 'Boys' | 'Girls';
+  division: Division;
+  position: string;
   teamId: string;
   stats: {
     touchdowns: number;
@@ -19,59 +22,73 @@ export interface Player {
 export interface Team {
   id: string;
   name: string;
-  division: 'Boys' | 'Girls';
-  captain: string;                // NEW
-  record: { wins: number; losses: number }; // NEW
+  division: Division;
+  captain: string;
+  record: { wins: number; losses: number }; // <-- added to match your data
   players: Player[];
 }
 
-
 export interface FantasyRoster {
-  boys: string[]; // player IDs
+  boys: string[];
   girls: string[];
 }
 
-interface TournamentContextType {
+type TournamentContextType = {
   teams: Team[];
   userRoster: FantasyRoster;
-  updateRoster: (division: 'Boys' | 'Girls', playerId: string) => void;
-  calculatePoints: (player: Player) => number;
-}
+  updateRoster: (division: Division, playerId: string) => void; // toggle add/remove
+  calculatePoints: (p: Player) => number;
+};
 
-import { mockTeams } from '../app/data/mockData';
-
+/** ---------- Context ---------- **/
 const TournamentContext = createContext<TournamentContextType | undefined>(undefined);
 
+/** Normalize any incoming division strings (defensive) */
+const normDiv = (v: unknown): Division => {
+  const s = String(v ?? '').toLowerCase();
+  if (s.startsWith('girl')) return 'girls';
+  return 'boys';
+};
+
+/** ---------- Provider ---------- **/
 export const TournamentProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [teams] = useState<Team[]>(mockTeams);
+  // Normalize mock data to satisfy strict typing
+  const [teams] = useState<Team[]>(
+    () =>
+      mockTeams.map((t) => ({
+        ...t,
+        division: normDiv(t.division),
+        players: t.players.map((p) => ({ ...p, division: normDiv(p.division) })),
+      }))
+  );
+
   const [userRoster, setUserRoster] = useState<FantasyRoster>({ boys: [], girls: [] });
 
-  const updateRoster = (division: 'Boys' | 'Girls', playerId: string) => {
-    setUserRoster(prev => {
-      const existing = prev[division];
-      const updated = existing.includes(playerId)
-        ? existing.filter((id: string) => id !== playerId)
-        : existing.length < 7
-          ? [...existing, playerId]
-          : existing;
-      return { ...prev, [division]: updated };
+  /** Toggle add/remove a player from a division list (safe, no undefined.includes) */
+  const updateRoster = (division: Division, playerId: string) => {
+    setUserRoster((prev) => {
+      const list = prev[division] ?? [];
+      const exists = list.includes(playerId);
+      const nextList = exists ? list.filter((id) => id !== playerId) : [...list, playerId];
+      return { ...prev, [division]: nextList };
     });
   };
 
-  const calculatePoints = (player: Player) => {
-    const { touchdowns, interceptions, flagsPulled, mvpAwards } = player.stats;
-    return touchdowns * 6 + interceptions * 3 + flagsPulled * 1 + mvpAwards * 10;
-  };
+  /** Simple fantasy scoring (adjust to your rules) */
+  const calculatePoints = (p: Player) =>
+    p.stats.touchdowns * 6 + p.stats.interceptions * -2 + p.stats.flagsPulled * 1 + p.stats.mvpAwards * 5;
 
-  return (
-    <TournamentContext.Provider value={{ teams, userRoster, updateRoster, calculatePoints }}>
-      {children}
-    </TournamentContext.Provider>
+  const value = useMemo(
+    () => ({ teams, userRoster, updateRoster, calculatePoints }),
+    [teams, userRoster]
   );
+
+  return <TournamentContext.Provider value={value}>{children}</TournamentContext.Provider>;
 };
 
+/** ---------- Hook ---------- **/
 export const useTournament = () => {
-  const context = useContext(TournamentContext);
-  if (!context) throw new Error('useTournament must be used within TournamentProvider');
-  return context;
+  const ctx = useContext(TournamentContext);
+  if (!ctx) throw new Error('useTournament must be used within a TournamentProvider');
+  return ctx;
 };
