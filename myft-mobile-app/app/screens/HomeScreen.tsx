@@ -39,14 +39,14 @@ type ScheduleItem = {
 };
 
 const SCHEDULE: ScheduleItem[] = [
-  { id: 'evt-1', date: '2025-08-28T09:00:00', title: 'Opening Ceremony',      location: 'Main Field',  address: '123 Tournament Way, Cityville, NY 10001' },
-  { id: 'evt-2', date: '2025-08-28T10:00:00', title: 'Group Stage – Round 1', location: 'Fields A–D',  address: '200 Sports Complex Rd, Cityville, NY 10002' },
-  { id: 'evt-3', date: '2025-08-28T14:00:00', title: 'Skills Challenge',      location: 'Field B',     address: '200 Sports Complex Rd, Cityville, NY 10002' },
-  { id: 'evt-4', date: '2025-08-29T09:00:00', title: 'Group Stage – Round 2', location: 'Fields A–D',  address: '200 Sports Complex Rd, Cityville, NY 10002' },
-  { id: 'evt-5', date: '2025-08-29T15:30:00', title: 'Quarterfinals',         location: 'Main Field',  address: '123 Tournament Way, Cityville, NY 10001' },
-  { id: 'evt-6', date: '2025-08-30T11:00:00', title: 'Semifinals',            location: 'Main Field',  address: '123 Tournament Way, Cityville, NY 10001' },
-  { id: 'evt-7', date: '2025-08-30T15:00:00', title: 'Championship Game',     location: 'Main Field',  address: '123 Tournament Way, Cityville, NY 10001' },
-  { id: 'evt-8', date: '2025-08-30T17:00:00', title: 'Awards & Closing',      location: 'Main Stage',  address: '500 Celebration Ave, Cityville, NY 10003' },
+  { id: 'evt-1', date: '2025-08-28T09:00:00', title: 'Sam Lukashok',          location: 'Main Field',  address: '123 Tournament Way, Cityville, NY 10001' },
+  { id: 'evt-2', date: '2025-08-28T10:00:00', title: 'Sam Lukashok – Round 1',location: 'Fields A–D',  address: '200 Sports Complex Rd, Cityville, NY 10002' },
+  { id: 'evt-3', date: '2025-08-28T14:00:00', title: 'Sam Lukashok',          location: 'Field B',     address: '200 Sports Complex Rd, Cityville, NY 10002' },
+  { id: 'evt-4', date: '2025-08-29T09:00:00', title: 'Sam Lukashok – Round 2',location: 'Fields A–D',  address: '200 Sports Complex Rd, Cityville, NY 10002' },
+  { id: 'evt-5', date: '2025-08-29T15:30:00', title: 'Sam Lukashok',          location: 'Main Field',  address: '123 Tournament Way, Cityville, NY 10001' },
+  { id: 'evt-6', date: '2025-08-30T11:00:00', title: 'Sam Lukashok',          location: 'Main Field',  address: '123 Tournament Way, Cityville, NY 10001' },
+  { id: 'evt-7', date: '2025-08-30T15:00:00', title: 'Sam Lukashok',          location: 'Main Field',  address: '123 Tournament Way, Cityville, NY 10001' },
+  { id: 'evt-8', date: '2025-08-30T17:00:00', title: 'Sam Lukashok',          location: 'Main Stage',  address: '500 Celebration Ave, Cityville, NY 10003' },
 ];
 
 /* ==== BOARD GRID ==== */
@@ -129,7 +129,7 @@ const BoardGrid = React.memo(function BoardGrid({
 
   return (
     <View style={s.boardGridWrap}>
-      <Text style={s.boardTitle}>Meet the Board</Text>
+      <Text style={s.boardTitle}>Meet the Board!</Text>
       <FlatList
         data={members}
         keyExtractor={(m) => m.name}
