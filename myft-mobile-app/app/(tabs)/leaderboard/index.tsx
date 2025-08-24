@@ -12,7 +12,6 @@ const NAVY = '#00274C';
 const YELLOW = '#FFCB05';
 const TEXT = '#E9ECEF';
 const MUTED = '#A5B4C3';
-const GOLD = '#d69738', SILVER = '#C0C0C0', BRONZE = '#CD7F32';
 
 type FilterKey = 'division' | 'school' | 'position';
 
@@ -359,7 +358,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#07335f',     // the dark blue track
-    borderRadius: 18,
+    borderRadius: 10,
     padding: 6,                     // gutters around the pills
     gap: 8,
     marginBottom: 20
@@ -368,7 +367,7 @@ const styles = StyleSheet.create({
   // Each pill
   segBtn: {
     flex: 1,
-    borderRadius: 14,
+    borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 10,
