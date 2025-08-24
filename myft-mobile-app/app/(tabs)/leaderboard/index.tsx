@@ -7,12 +7,12 @@ import { mapPlayersById, rosterTotalPoints } from '../../utils/fantasy';
 import { useAuth } from '../../../context/AuthContext';
 import { makeDeterministicUsers, type FakeUser } from './_fakeUsers';
 
-const NAVY = '#001F3F';
-const CARD = '#07335f';
-const YELLOW = '#FFD700';
+const CARD = '#00417D';
+const NAVY = '#00274C';
+const YELLOW = '#FFCB05';
 const TEXT = '#E9ECEF';
 const MUTED = '#A5B4C3';
-const GOLD = '#FFD700', SILVER = '#C0C0C0', BRONZE = '#CD7F32';
+const GOLD = '#d69738', SILVER = '#C0C0C0', BRONZE = '#CD7F32';
 
 type FilterKey = 'division' | 'school' | 'position';
 
@@ -191,9 +191,9 @@ export default function LeaderboardIndex() {
     const school = playerIdToTeamName.get(item.id) ?? '';
 
     let rankStyle = styles.rank;
-    if (index === 0) rankStyle = [styles.rank, { color: GOLD }] as any;
-    else if (index === 1) rankStyle = [styles.rank, { color: SILVER }] as any;
-    else if (index === 2) rankStyle = [styles.rank, { color: BRONZE }] as any;
+    if (index === 0) rankStyle = [styles.rank, { color: TEXT }] as any;
+    else if (index === 1) rankStyle = [styles.rank, { color: TEXT }] as any;
+    else if (index === 2) rankStyle = [styles.rank, { color: TEXT }] as any;
 
     return (
       <Link
@@ -216,9 +216,9 @@ export default function LeaderboardIndex() {
 
   const renderUser = ({ item, index }: { item: FakeUser; index: number }) => {
     let rankStyle = styles.rank;
-    if (index === 0) rankStyle = [styles.rank, { color: GOLD }] as any;
-    else if (index === 1) rankStyle = [styles.rank, { color: SILVER }] as any;
-    else if (index === 2) rankStyle = [styles.rank, { color: BRONZE }] as any;
+    if (index === 0) rankStyle = [styles.rank, { color: TEXT }] as any;
+    else if (index === 1) rankStyle = [styles.rank, { color: TEXT }] as any;
+    else if (index === 2) rankStyle = [styles.rank, { color: TEXT }] as any;
 
     const isMe = signedIn?.username && item.username === signedIn.username;
 
@@ -246,20 +246,24 @@ export default function LeaderboardIndex() {
       <Stack.Screen options={{ title: 'Fantasy Leaderboard' }} />
 
       {/* Players/Users toggle */}
-      <View style={styles.toggleRow}>
-        <TouchableOpacity
-          onPress={() => setMode('players')}
-          style={[styles.toggleBtn, mode === 'players' && styles.toggleActive]}
-        >
-          <Text style={[styles.toggleText, mode === 'players' && styles.toggleActive]}>Players</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          onPress={() => setMode('users')}
-          style={[styles.toggleBtn, mode === 'users' && styles.toggleActive]}
-        >
-          <Text style={[styles.toggleText, mode === 'users' && styles.toggleActive]}>Users</Text>
-        </TouchableOpacity>
-      </View>
+      <View style={styles.segWrap}>
+  <TouchableOpacity
+    onPress={() => setMode('players' /* or 'boys' if this is the division toggle */)}
+    style={[styles.segBtn, mode === 'players' && styles.segBtnActive]}
+    activeOpacity={0.9}
+  >
+    <Text style={[styles.segText, mode === 'players' && styles.segTextActive]}>Players</Text>
+  </TouchableOpacity>
+
+  <TouchableOpacity
+    onPress={() => setMode('users' /* or 'girls' if this is the division toggle */)}
+    style={[styles.segBtn, mode === 'users' && styles.segBtnActive]}
+    activeOpacity={0.9}
+  >
+    <Text style={[styles.segText, mode === 'users' && styles.segTextActive]}>Users</Text>
+  </TouchableOpacity>
+</View>
+
 
       {/* Filters (only for Players) */}
       {mode === 'players' && (
@@ -326,11 +330,11 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingVertical: 10,
     borderRadius: 10,
-    backgroundColor: '#062a4e',
+    backgroundColor: CARD,
     alignItems: 'center',
   },
-  toggleActive: { backgroundColor: '#0b3c70' },
-  toggleText: { color: MUTED, fontWeight: '800' },
+  toggleActive: { backgroundColor: YELLOW },
+  toggleText: { color: NAVY, fontWeight: '800' },
 
   // Filters
   filterRow: {
@@ -345,11 +349,51 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 8,
-    backgroundColor: '#062a4e',
+    backgroundColor: CARD,
   },
   filterBtnActive: { backgroundColor: YELLOW },
   filterBtnText: { color: TEXT, fontWeight: '800' },
   filterBtnTextActive: { color: NAVY },
+
+  segWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#07335f',     // the dark blue track
+    borderRadius: 18,
+    padding: 6,                     // gutters around the pills
+    gap: 8,
+    marginBottom: 20
+  },
+  
+  // Each pill
+  segBtn: {
+    flex: 1,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 10,
+  },
+  
+  // Selected pill
+  segBtnActive: {
+    backgroundColor: YELLOW,
+    // subtle shadow for iOS
+    shadowColor: '#000',
+    shadowOpacity: 0.15,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
+    // elevation for Android
+    elevation: 2,
+  },
+  
+  // Text colors
+  segText: {
+    color: YELLOW,       // unselected label is yellow on blue track
+    fontWeight: '700',
+  },
+  segTextActive: {
+    color: NAVY,         // selected label turns navy on yellow pill
+  },
 
   row: {
     flexDirection: 'row',
@@ -361,7 +405,7 @@ const styles = StyleSheet.create({
   },
   rowMe: { borderWidth: 2, borderColor: YELLOW },
   rank: { width: 48, textAlign: 'left', color: TEXT, fontWeight: '900', fontSize: 16 },
-  rankTop: { color: GOLD },
+  rankTop: { color: TEXT },
   primary: { color: TEXT, fontWeight: '800', fontSize: 16 },
   sub: { color: MUTED, fontSize: 12, marginTop: 2 },
   points: { color: YELLOW, fontWeight: '900', fontSize: 18, marginLeft: 10 },

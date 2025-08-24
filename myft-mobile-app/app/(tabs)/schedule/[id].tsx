@@ -21,11 +21,11 @@ type Row = {
   mvp: number;
 };
 
-const YELLOW = '#FFD700';
-const NAVY   = '#001F3F';
-const CARD   = '#07335f';
-const CARD2  = '#0a3a68';
-const MUTED  = '#BFD0E4';
+const CARD = '#00417D';
+const NAVY = '#00274C';
+const YELLOW = '#FFCB05';
+const CARD2  = '#00417D';
+const MUTED  = '#00417D';
 
 export default function GameDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();

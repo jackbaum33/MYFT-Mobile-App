@@ -7,9 +7,9 @@ import { useAuth } from '../../../../context/AuthContext';
 import { makeDeterministicUsers, type FakeUser } from '../_fakeUsers';
 import { mapPlayersById, rosterWithPoints, rosterTotalPoints } from '../../../utils/fantasy';
 
-const NAVY = '#001F3F';
-const CARD = '#07335f';
-const YELLOW = '#FFD700';
+const CARD = '#00417D';
+const NAVY = '#00274C';
+const YELLOW = '#FFCB05';
 const TEXT = '#E9ECEF';
 const MUTED = '#A5B4C3';
 

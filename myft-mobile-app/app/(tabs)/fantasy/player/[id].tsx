@@ -3,9 +3,9 @@ import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useTournament } from '../../../../context/TournamentContext';
 
-const NAVY = '#001F3F';
-const CARD = '#07335f';
-const YELLOW = '#FFD700';
+const CARD = '#00417D';
+const NAVY = '#00274C';
+const YELLOW = '#FFCB05';
 const TEXT = '#E9ECEF';
 const LINE = 'rgba(255,255,255,0.14)';
 

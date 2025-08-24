@@ -5,6 +5,10 @@ import { useRouter } from 'expo-router';
 import { useTournament } from '../../context/TournamentContext';
 import { getTeamLogo } from '../../assets/team_logos';  // ← import helper
 
+const CARD = '#00417D';
+const NAVY = '#00274C';
+const YELLOW = '#FFCB05';
+
 export default function TeamScreen() {
   const router = useRouter();
   const { teams } = useTournament();
@@ -69,16 +73,16 @@ export default function TeamScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#001F3F', padding: 16 },
-  header: { fontSize: 28, fontWeight: 'bold', color: '#FFD700', textAlign: 'center', marginBottom: 12 },
-  toggle: { flexDirection: 'row', backgroundColor: '#003366', borderRadius: 10, padding: 6, marginBottom: 12 },
+  container: { flex: 1, backgroundColor: NAVY, padding: 16 },
+  header: { fontSize: 28, fontWeight: 'bold', color: NAVY, textAlign: 'center', marginBottom: 12 },
+  toggle: { flexDirection: 'row', backgroundColor: CARD, borderRadius: 10, padding: 6, marginBottom: 12 },
   toggleBtn: { flex: 1, paddingVertical: 10, borderRadius: 8, alignItems: 'center' },
-  toggleActive: { backgroundColor: '#FFD700' },
-  toggleText: { color: '#FFD700', fontWeight: '600' },
-  toggleTextActive: { color: '#001F3F' },
+  toggleActive: { backgroundColor: YELLOW },
+  toggleText: { color: YELLOW, fontWeight: '600' },
+  toggleTextActive: { color: NAVY },
 
   card: {
-    backgroundColor: '#07335f',
+    backgroundColor: CARD,
     padding: 14,
     borderRadius: 12,
     marginBottom: 12,
@@ -86,9 +90,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   cardText: { flex: 1, gap: 2 },
-  teamName: { color: '#FFD700', fontWeight: 'bold', fontSize: 18, marginBottom: 4 },
+  teamName: { color: YELLOW, fontWeight: 'bold', fontSize: 18, marginBottom: 4 },
   meta: { color: '#D7E3F4', fontSize: 14 },
-  metaStrong: { color: '#FFD700', fontWeight: '600' },
+  metaStrong: { color: YELLOW, fontWeight: '600' },
 
   logo: {
     width: 56,

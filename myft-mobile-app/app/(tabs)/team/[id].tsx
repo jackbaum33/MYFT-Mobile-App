@@ -4,6 +4,10 @@ import { Stack, Link, useLocalSearchParams, useRouter } from 'expo-router';
 import { useTournament } from '../../../context/TournamentContext';
 import { getTeamLogo } from '../../../assets/team_logos';
 
+const CARD = '#00417D';
+const NAVY = '#00274C';
+const YELLOW = '#FFCB05';
+
 export default function TeamDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
@@ -23,14 +27,14 @@ export default function TeamDetailScreen() {
             headerBackVisible: true, // show default chevron
           }}
         />
-        <Text style={{ color: '#FFD700', fontSize: 16, marginBottom: 12 }}>
+        <Text style={{ color: YELLOW, fontSize: 16, marginBottom: 12 }}>
           Team not found.
         </Text>
         <TouchableOpacity
           onPress={() => router.replace('/(tabs)/team')}
-          style={{ backgroundColor: '#FFD700', padding: 12, borderRadius: 8, alignSelf: 'flex-start' }}
+          style={{ backgroundColor: YELLOW, padding: 12, borderRadius: 8, alignSelf: 'flex-start' }}
         >
-          <Text style={{ color: '#001F3F', fontWeight: '700' }}>Go to Rosters</Text>
+          <Text style={{ color: YELLOW, fontWeight: '700' }}>Go to Rosters</Text>
         </TouchableOpacity>
       </View>
     );
@@ -43,9 +47,9 @@ export default function TeamDetailScreen() {
         options={{
           title: `${team.name}`,
           headerBackVisible: true,
-          headerStyle: { backgroundColor: '#001F3F' },
-          headerTintColor: '#FFD700',
-          headerTitleStyle: { color: '#FFD700', fontWeight: 'bold' },
+          headerStyle: { backgroundColor: NAVY },
+          headerTintColor: YELLOW,
+          headerTitleStyle: { color: YELLOW, fontWeight: 'bold' },
         }}
       />
 
@@ -89,7 +93,7 @@ export default function TeamDetailScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#001F3F', padding: 16 },
+  container: { flex: 1, backgroundColor: NAVY, padding: 16 },
 
   headerBlock: {
     flexDirection: 'row',
@@ -97,9 +101,9 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   headerText: { flex: 1 },
-  title: { color: '#FFD700', fontWeight: 'bold', fontSize: 28, marginBottom: 6 },
+  title: { color: YELLOW, fontWeight: 'bold', fontSize: 28, marginBottom: 6 },
   meta: { color: '#D7E3F4', fontSize: 14, marginTop: 2 },
-  metaStrong: { color: '#FFD700', fontWeight: '600' },
+  metaStrong: { color: YELLOW, fontWeight: '600' },
 
   logo: {
     width: 56,
@@ -111,13 +115,13 @@ const styles = StyleSheet.create({
   },
 
   playerRow: {
-    backgroundColor: '#07335f',
+    backgroundColor: CARD,
     padding: 20,
     borderRadius: 10,
     flexDirection: 'row',
     alignItems: 'center',
   },
-  playerName: { flex: 1, color: '#FFD700', fontSize: 20, fontWeight: '600' },
+  playerName: { flex: 1, color: YELLOW, fontSize: 20, fontWeight: '600' },
   playerMeta: { width: 60, textAlign: 'right', color: '#D7E3F4' },
-  playerPts: { width: 70, textAlign: 'right', color: '#FFD700', fontWeight: '700' },
+  playerPts: { width: 70, textAlign: 'right', color: YELLOW, fontWeight: '700' },
 });

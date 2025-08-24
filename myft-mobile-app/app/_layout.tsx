@@ -9,8 +9,8 @@ export default function Layout() {
     <SafeAreaProvider>
     <AuthProvider>
       <TournamentProvider>
-        <SafeAreaView style={{ flex: 1, backgroundColor: '#001F3F' }}>
-        <StatusBar barStyle="light-content" backgroundColor="#001F3F" />
+        <SafeAreaView style={{ flex: 1, backgroundColor: '#00274C' }}>
+        <StatusBar barStyle="light-content" backgroundColor="#00274C" />
           <Slot />
         </SafeAreaView>
       </TournamentProvider>

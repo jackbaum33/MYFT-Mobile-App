@@ -18,9 +18,9 @@ import * as Clipboard from 'expo-clipboard';
 import { pics } from '../../assets/images/board_pictures';
 
 // Colors
-const NAVY = '#001F3F';
-const CARD = '#07335f';
-const YELLOW = '#FFD700';
+const CARD = '#00417D';
+const NAVY = '#00274C';
+const YELLOW = '#FFCB05';
 const TEXT = '#E9ECEF';
 const MUTED = '#A5B4C3';
 const LINE = 'rgba(255,255,255,0.08)';
@@ -432,11 +432,11 @@ const s = StyleSheet.create({
     paddingVertical: 12,
     borderTopWidth: 1,
     borderColor: LINE,
-    backgroundColor: '#062a4e',
+    backgroundColor: NAVY,
   },
   iconCard: {
     flex: 1,
-    backgroundColor: '#0b3c70',
+    backgroundColor: CARD,
     borderRadius: 12,
     paddingVertical: 12,
     alignItems: 'center',
@@ -507,7 +507,7 @@ const s = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    backgroundColor: '#0b3c70',
+    backgroundColor: CARD,
     paddingVertical: 8,
     paddingHorizontal: 12,
     borderRadius: 10,

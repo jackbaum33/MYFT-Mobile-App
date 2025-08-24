@@ -2,6 +2,10 @@ import React from 'react';
 import { View, Text, FlatList, StyleSheet } from 'react-native';
 import { useTournament } from '../../context/TournamentContext';
 
+const CARD = '#00417D';
+const NAVY = '#00274C';
+const YELLOW = '#FFCB05';
+
 export default function LeaderboardScreen() {
   const { teams, userRoster, calculatePoints } = useTournament();
 
@@ -46,7 +50,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 16,
-    backgroundColor: '#001F3F', // Navy
+    backgroundColor: NAVY, // Navy
   },
   header: {
     fontSize: 24,
