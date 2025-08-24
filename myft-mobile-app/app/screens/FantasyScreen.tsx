@@ -427,6 +427,7 @@ export default function FantasyScreen() {
                 </TouchableOpacity>
               </>
             )}
+            
           </Pressable>
         </Pressable>
       </Modal>
