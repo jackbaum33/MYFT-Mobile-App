@@ -6,12 +6,12 @@ import { useTournament } from '../../../../context/TournamentContext';
 import { useAuth } from '../../../../context/AuthContext';
 import { makeDeterministicUsers, type FakeUser } from '../_fakeUsers';
 import { mapPlayersById, rosterWithPoints, rosterTotalPoints } from '../../../utils/fantasy';
+import { FONT_FAMILIES } from '@/assets/fonts';
 
 const CARD = '#00417D';
 const NAVY = '#00274C';
 const YELLOW = '#FFCB05';
 const TEXT = '#E9ECEF';
-const MUTED = '#A5B4C3';
 
 export default function UserLeaderboardDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -94,13 +94,13 @@ export default function UserLeaderboardDetail() {
 const s = StyleSheet.create({
   container: { flex: 1, backgroundColor: NAVY, padding: 12 },
   headerCard: { backgroundColor: CARD, borderRadius: 12, padding: 14, marginBottom: 12 },
-  name: { color: YELLOW, fontWeight: '900', fontSize: 20 },
-  meta: { color: MUTED, marginTop: 4 },
-  teamTitle: { color: YELLOW, fontWeight: '900', fontSize: 20, marginBottom: 10 },
-  total: { color: TEXT, fontWeight: '900', fontSize: 18, marginTop: 8 },
+  name: { color: YELLOW, fontWeight: '900', fontSize: 20, fontFamily: FONT_FAMILIES.archivoBlack },
+  meta: { color: TEXT, marginTop: 4, fontFamily: FONT_FAMILIES.archivoNarrow},
+  teamTitle: { color: YELLOW, fontWeight: '900', fontSize: 20, marginBottom: 5, fontFamily: FONT_FAMILIES.archivoBlack },
+  total: { color: TEXT, fontWeight: '900', fontSize: 18, marginTop: 8, fontFamily: FONT_FAMILIES.archivoNarrow},
 
   row: { flexDirection: 'row', alignItems: 'center', backgroundColor: CARD, borderRadius: 12, padding: 14 },
-  primary: { color: TEXT, fontWeight: '800', fontSize: 16 },
-  sub: { color: MUTED, fontSize: 12, marginTop: 2 },
-  points: { color: YELLOW, fontWeight: '900', fontSize: 18, marginLeft: 10 },
+  primary: { color: TEXT, fontWeight: '800', fontSize: 16, fontFamily: FONT_FAMILIES.archivoBlack },
+  sub: { color: TEXT, fontSize: 12, marginTop: 2, fontFamily: FONT_FAMILIES.archivoNarrow },
+  points: { color: YELLOW, fontWeight: '900', fontSize: 18, marginLeft: 10, fontFamily: FONT_FAMILIES.archivoBlack },
 });

@@ -4,11 +4,11 @@ import { Stack, useRouter } from 'expo-router';
 import { scheduleData, type Game, type PlayerGameStat, derivedPoints } from '../../data/scheduleData';
 import { useTournament } from '../../../context/TournamentContext';
 import { getTeamLogo } from '../../../assets/team_logos';
+import { FONT_FAMILIES } from '@/assets/fonts';
 
 const CARD = '#00417D';
 const NAVY = '#00274C';
 const YELLOW = '#FFCB05';
-const MUTED = '#A5B4C3';
 const TEXT = '#E9ECEF';
 
 
@@ -112,9 +112,9 @@ const s = StyleSheet.create({
   container: { flex: 1, backgroundColor: NAVY, paddingTop: 8 },
   tabs: { flexDirection: 'row', justifyContent: 'space-around', paddingHorizontal: 8, marginBottom: 8 },
   tab: { paddingVertical: 8, paddingHorizontal: 12, borderRadius: 6 },
-  tabActive: { backgroundColor: '#182434' },
-  tabText: { color: MUTED, fontWeight: '700', letterSpacing: 1 },
-  tabTextActive: { color: TEXT },
+  tabActive: { backgroundColor: NAVY },
+  tabText: { color: TEXT, fontWeight: '700', letterSpacing: 1, fontFamily: FONT_FAMILIES.archivoBlack},
+  tabTextActive: { color: TEXT, fontFamily: FONT_FAMILIES.archivoBlack },
   underline: { height: 3, backgroundColor: YELLOW, borderRadius: 2, marginTop: 6 },
 
   card: {
@@ -127,12 +127,12 @@ const s = StyleSheet.create({
     justifyContent: 'space-between',
   },
   headerRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 },
-  status: { color: YELLOW, fontWeight: '700', fontSize: 12 },
+  status: { color: YELLOW, fontWeight: '700', fontSize: 12, fontFamily: FONT_FAMILIES.archivoBlack },
 
   row: { flexDirection: 'row', alignItems: 'center', marginVertical: 2 },
   logo: { width: 22, height: 22, marginRight: 8, borderRadius: 4, backgroundColor: '#0b1520' },
-  teamName: { color: TEXT, fontWeight: '800' },
-  captain: { color: '#cfe0f2', fontSize: 11 },
+  teamName: { color: TEXT, fontWeight: '800', fontFamily: FONT_FAMILIES.archivoBlack },
+  captain: { color: '#cfe0f2', fontSize: 11, fontFamily: FONT_FAMILIES.archivoNarrow },
   score: { color: TEXT, fontWeight: '900', fontSize: 18, marginLeft: 8 },
-  meta: { color: TEXT, fontSize: 11, marginTop: 6, textAlign: 'left' },
+  meta: { color: TEXT, fontSize: 15, marginTop: 6, textAlign: 'left', fontFamily: FONT_FAMILIES.archivoNarrow},
 });

@@ -3,8 +3,10 @@ import { StatusBar } from 'react-native';
 import { AuthProvider } from '../context/AuthContext';
 import { TournamentProvider } from '../context/TournamentContext';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
+import { useAppFonts } from "../assets/fonts";
 
 export default function Layout() {
+  const fontsLoaded = useAppFonts();
   return (
     <SafeAreaProvider>
     <AuthProvider>

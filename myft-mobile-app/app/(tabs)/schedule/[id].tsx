@@ -2,6 +2,7 @@
 import React, { useMemo, useState } from 'react';
 import { View, Text, StyleSheet, FlatList, Image, TouchableOpacity } from 'react-native';
 import { Stack, useLocalSearchParams } from 'expo-router';
+import { FONT_FAMILIES } from '@/assets/fonts';
 import {
   findGameById,
   statsForRender,
@@ -23,6 +24,7 @@ type Row = {
 
 const CARD = '#00417D';
 const NAVY = '#00274C';
+const TEXT = '#E9ECEF';
 const YELLOW = '#FFCB05';
 const CARD2  = '#00417D';
 const MUTED  = '#00417D';
@@ -41,7 +43,7 @@ export default function GameDetail() {
             title: 'Box Score',
             headerStyle: { backgroundColor: NAVY },
             headerTintColor: YELLOW,
-            headerTitleStyle: { color: YELLOW, fontWeight: 'bold' },
+            headerTitleStyle: { color: YELLOW, fontWeight: 'bold', fontFamily: FONT_FAMILIES.archivoBlack },
           }}
         />
         <Text style={styles.empty}>Game not found.</Text>
@@ -190,7 +192,7 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: NAVY, padding: 12 },
 
   headerCard: { backgroundColor: CARD, borderRadius: 12, padding: 12, marginBottom: 12 },
-  subhead: { color: MUTED, textAlign: 'left', marginBottom: 10, fontWeight: '700' },
+  subhead: { color: TEXT, textAlign: 'left', marginBottom: 10, fontWeight: '700', fontFamily: FONT_FAMILIES.archivoBlack},
 
   teamRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 6 },
   logo: {
@@ -198,27 +200,27 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.15)', borderWidth: 1, borderColor: 'rgba(255,215,0,0.25)'
   },
   teamName: { color: YELLOW, fontWeight: '800', fontSize: 16 },
-  captain: { color: MUTED, fontSize: 12 },
+  captain: { color: TEXT, fontSize: 12 },
   score: { color: YELLOW, fontWeight: '900', fontSize: 22, marginLeft: 8 },
   sepLine: { height: 1, backgroundColor: 'rgba(255,255,255,0.12)', marginVertical: 8 },
-  status: { color: YELLOW, fontSize: 16, fontWeight: '700', marginTop: 4, marginBottom: 20, textAlign: 'right' },
+  status: { color: YELLOW, fontSize: 16, fontWeight: '700', marginTop: 4, marginBottom: 20, textAlign: 'right', fontFamily: FONT_FAMILIES.archivoBlack },
 
   toggleRow: { flexDirection: 'row', gap: 8, marginBottom: 10 },
   toggleBtn: { flex: 1, paddingVertical: 8, borderRadius: 8, backgroundColor: '#062a4e', alignItems: 'center' },
-  toggleActive: { backgroundColor: '#0b3c70' },
-  toggleText: { color: '#94abc3', fontWeight: '700' },
-  toggleTextActive: { color: YELLOW },
+  toggleActive: { backgroundColor: CARD },
+  toggleText: { color: TEXT, fontWeight: '700', fontFamily: FONT_FAMILIES.archivoBlack },
+  toggleTextActive: { color: YELLOW, fontFamily: FONT_FAMILIES.archivoBlack},
 
   tableCard: { flex: 1, backgroundColor: CARD, borderRadius: 12, padding: 10 },
-  headRow: { backgroundColor: CARD2, borderRadius: 8, marginBottom: 6 },
-  row: { flexDirection: 'row', alignItems: 'center', backgroundColor: CARD2, borderRadius: 8, paddingVertical: 10, paddingHorizontal: 12 },
+  headRow: { backgroundColor: CARD, borderRadius: 8, marginBottom: 6 },
+  row: { flexDirection: 'row', alignItems: 'center', backgroundColor: CARD, borderRadius: 8, paddingVertical: 10, paddingHorizontal: 12 },
   rowSep: { height: 8 },
-  hCell: { color: YELLOW, fontWeight: '800' },
-  cell: { color: YELLOW, fontWeight: '700' },
+  hCell: { color: YELLOW, fontWeight: '800', fontFamily: FONT_FAMILIES.archivoBlack},
+  cell: { color: YELLOW, fontWeight: '700', fontFamily: FONT_FAMILIES.archivoBlack },
 
   // column widths — make name wider so long names fit
   cName: { flex: 1.8 },
-  cPos:  { width: 52, textAlign: 'center', color: MUTED, fontWeight: '800' },
+  cPos:  { width: 52, textAlign: 'center', color: TEXT, fontWeight: '800', fontFamily: FONT_FAMILIES.archivoBlack },
   cNum:  { width: 54, textAlign: 'center' },
 
   empty: { color: YELLOW, textAlign: 'center' },

@@ -5,12 +5,12 @@ import { Stack, useLocalSearchParams } from 'expo-router';
 import { useTournament } from '../../../../context/TournamentContext';
 import { scheduleData, statsForRender } from '../../../data/scheduleData';
 import { getTeamLogo } from '../../../../assets/team_logos';
+import { FONT_FAMILIES } from '@/assets/fonts';
 
 const CARD = '#00417D';
 const NAVY = '#00274C';
 const YELLOW = '#FFCB05';
 const TEXT = '#E9ECEF';
-const MUTED = '#A5B4C3';
 
 type Line = {
   key: string;
@@ -170,10 +170,10 @@ const s = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
   },
-  name: { color: YELLOW, fontWeight: '900', fontSize: 20 },
+  name: { color: YELLOW, fontWeight: '900', fontSize: 20, fontFamily: FONT_FAMILIES.archivoBlack },
   statsTitle: { color: YELLOW, fontWeight: '900', fontSize: 20, marginBottom: 10, marginLeft: 5 },
   gameBreakdownTitle: { color: YELLOW, fontWeight: '900', fontSize: 20, marginBottom: 10, marginLeft: 5 },
-  meta: { color: MUTED, marginTop: 4 },
+  meta: { color: TEXT, marginTop: 4, fontFamily: FONT_FAMILIES.archivoNarrow },
   totalsRow: { flexDirection: 'row', gap: 10, marginTop: 10 },
   statBlock: {
     backgroundColor: '#0a3a68',
@@ -183,8 +183,8 @@ const s = StyleSheet.create({
     alignItems: 'center',
     flex: 1,
   },
-  statVal: { color: YELLOW, fontWeight: '900', fontSize: 18 },
-  statLbl: { color: TEXT, fontWeight: '700', marginTop: 2 },
+  statVal: { color: YELLOW, fontWeight: '900', fontSize: 18, fontFamily: FONT_FAMILIES.archivoBlack},
+  statLbl: { color: TEXT, fontWeight: '700', marginTop: 2, fontFamily: FONT_FAMILIES.archivoBlack },
   tableCard: { flex: 1, backgroundColor: CARD, borderRadius: 12, padding: 10 },
   headRow: { backgroundColor: '#0a3a68', borderRadius: 8, marginBottom: 6 },
   row: {
@@ -196,8 +196,8 @@ const s = StyleSheet.create({
     paddingHorizontal: 12,
   },
   rowSep: { height: 8 },
-  hCell: { color: YELLOW, fontWeight: '800' },
-  cell: { color: YELLOW, fontWeight: '700' },
+  hCell: { color: YELLOW, fontWeight: '800', fontFamily: FONT_FAMILIES.archivoBlack },
+  cell: { color: YELLOW, fontWeight: '700', fontFamily: FONT_FAMILIES.archivoBlack },
   cVs: { flex: 1 },
   cNum: { width: 52, textAlign: 'center' },
   logo: {
@@ -216,7 +216,7 @@ const s = StyleSheet.create({
     borderColor: 'rgba(255,255,255,0.1)',
     marginHorizontal: 10, // 👈 adds space on left/right
     borderRadius: 12,     // 👈 rounded look
-    marginBottom: 12,     // space from bottom of screen
+    marginBottom: 20,     // space from bottom of screen
   },
-  bottomText: { color: YELLOW, fontWeight: '900', fontSize: 18, textAlign: 'center' },
+  bottomText: { color: YELLOW, fontWeight: '900', fontSize: 18, textAlign: 'center', fontFamily: FONT_FAMILIES.archivoBlack },
 });

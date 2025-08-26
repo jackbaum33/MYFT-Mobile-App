@@ -15,14 +15,15 @@ import {
   Linking,
 } from 'react-native';
 import { Stack, router } from 'expo-router';
+import { FONT_FAMILIES } from '@/assets/fonts';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import * as Clipboard from 'expo-clipboard';
 import { useAuth } from '../../context/AuthContext';
 
-const NAVY = '#001F3F';
-const CARD = '#07335f';
-const YELLOW = '#FFD700';
+const CARD = '#00417D';
+const NAVY = '#00274C';
+const YELLOW = '#FFCB05';
 const TEXT = '#E9ECEF';
 const LINE = 'rgba(255,255,255,0.25)';
 
@@ -249,7 +250,7 @@ export default function ProfileScreen() {
             <Text style={[s.title, { marginBottom: 8 }]}>Need Help?</Text>
             <Text style={s.supportText}>
               Thank you for using the MYFT app!{'\n'}
-              For any questions, please email Jack Baum
+              For any questions, please email Jack Baum:
             </Text>
 
             <TouchableOpacity
@@ -316,15 +317,15 @@ const s = StyleSheet.create({
     marginTop: 15,
     marginBottom: 30,
   },
-  title: { color: YELLOW, fontWeight: '700', fontSize: 17, textAlign: 'center', marginBottom: 20, marginTop: -10 },
+  title: { color: YELLOW, fontWeight: '700', fontSize: 17, textAlign: 'center', marginBottom: 20, marginTop: -10, fontFamily: FONT_FAMILIES.archivoBlack },
 
   avatarRow: { flexDirection: 'row', alignItems: 'center', gap: 16, marginBottom: 14 },
   avatar: { width: 84, height: 84, borderRadius: 42, borderWidth: 1, borderColor: 'rgba(255,215,0,0.35)' },
   avatarPlaceholder: { alignItems: 'center', justifyContent: 'center', backgroundColor: CARD },
 
   infoCol: { flex: 1, minWidth: 0 },
-  label: { color: TEXT, fontSize: 12, fontWeight: '700', marginBottom: 2, opacity: 0.9 },
-  value: { color: YELLOW, fontSize: 16, fontWeight: '900' },
+  label: { color: TEXT, fontSize: 12, fontWeight: '700', marginBottom: 2, opacity: 0.9, fontFamily: FONT_FAMILIES.archivoBlack},
+  value: { color: YELLOW, fontSize: 16, fontWeight: '900', fontFamily: FONT_FAMILIES.archivoBlack },
 
   smallBtn: {
     alignSelf: 'flex-start',
@@ -336,25 +337,26 @@ const s = StyleSheet.create({
     paddingVertical: 8,
     borderRadius: 8,
   },
-  smallBtnText: { color: NAVY, fontWeight: '900', fontSize: 12 },
+  smallBtnText: { color: NAVY, fontWeight: '900', fontSize: 12, fontFamily: FONT_FAMILIES.archivoBlack},
 
   field: { marginTop: 10 },
-  editLabel: { color: TEXT, marginBottom: 6, fontWeight: '700' },
+  editLabel: { color: TEXT, marginBottom: 6, fontWeight: '700',fontFamily: FONT_FAMILIES.archivoBlack},
   input: {
     backgroundColor: CARD,
     borderRadius: 10,
     paddingHorizontal: 12,
     paddingVertical: Platform.select({ ios: 12, android: 8 }),
     color: TEXT,
+    fontFamily: FONT_FAMILIES.archivoNarrow,
     borderWidth: 1,
     borderColor: LINE,
   },
 
   actionsRow: { flexDirection: 'row', gap: 10, marginTop: 16 },
   actionBtn: { flex: 1, backgroundColor: YELLOW, borderRadius: 10, paddingVertical: 12, alignItems: 'center' },
-  actionText: { color: NAVY, fontWeight: '900' },
+  actionText: { color: NAVY, fontWeight: '900', fontFamily: FONT_FAMILIES.archivoBlack },
 
-  supportText: { color: TEXT, fontSize: 15, textAlign: 'center', marginBottom: 10 },
+  supportText: { color: TEXT, fontSize: 13, textAlign: 'center', marginBottom: 10, fontFamily: FONT_FAMILIES.archivoBlack},
   copyChip: {
     alignSelf: 'center',
     flexDirection: 'row',
@@ -367,7 +369,7 @@ const s = StyleSheet.create({
     borderColor: 'rgba(255,215,0,0.35)',
     backgroundColor: '#082d54',
   },
-  copyChipText: { color: YELLOW, fontWeight: '900', fontSize: 16 },
+  copyChipText: { color: YELLOW, fontWeight: '900', fontSize: 16, fontFamily: FONT_FAMILIES.archivoBlack },
   copiedHint: { color: YELLOW, fontWeight: '800', marginTop: 8, textAlign: 'center' },
 
   backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.55)', justifyContent: 'center', alignItems: 'center' },
@@ -382,7 +384,7 @@ const s = StyleSheet.create({
     position: 'relative',
   },
   modalCloseX: { position: 'absolute', top: 10, right: 10, padding: 6, zIndex: 10 },
-  modalTitle: { color: YELLOW, fontWeight: '900', fontSize: 22, marginBottom: 14 },
+  modalTitle: { color: YELLOW, fontWeight: '900', fontSize: 22, marginBottom: 14, fontFamily: FONT_FAMILIES.archivoBlack },
   modalAvatarWrap: {
     width: 240,
     height: 240,
@@ -406,5 +408,5 @@ const s = StyleSheet.create({
     borderRadius: 10,
     marginBottom: 12,
   },
-  bigBtnText: { color: NAVY, fontWeight: '900', fontSize: 16 },
+  bigBtnText: { color: NAVY, fontWeight: '900', fontSize: 16, fontFamily: FONT_FAMILIES.archivoBlack},
 });

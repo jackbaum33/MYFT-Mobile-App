@@ -1,4 +1,5 @@
 import { Stack } from 'expo-router';
+import { FONT_FAMILIES } from '@/assets/fonts';
 
 export default function ScheduleStackLayout() {
   return (
@@ -6,7 +7,7 @@ export default function ScheduleStackLayout() {
       screenOptions={{
         headerStyle: { backgroundColor: '#001F3F' },
         headerTintColor: '#FFD700',
-        headerTitleStyle: { color: '#FFD700', fontWeight: 'bold' },
+        headerTitleStyle: { color: '#FFD700', fontWeight: 'bold', fontFamily: FONT_FAMILIES.archivoBlack },
         contentStyle: { backgroundColor: '#001F3F' },
       }}
     />

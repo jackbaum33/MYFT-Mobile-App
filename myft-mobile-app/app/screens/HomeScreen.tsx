@@ -15,6 +15,7 @@ import {
 } from 'react-native';
 import { Ionicons, MaterialIcons, FontAwesome5 } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
+import { FONT_FAMILIES } from '@/assets/fonts';
 import { pics } from '../../assets/images/board_pictures';
 
 // Colors
@@ -376,14 +377,14 @@ const s = StyleSheet.create({
   outer: { flex: 1, backgroundColor: NAVY },
 
   headerContainer: { paddingTop: 24, paddingHorizontal: 20, paddingBottom: 8 },
-  header: { color: YELLOW, fontSize: 24, fontWeight: '900', textAlign: 'center' },
-  sub: { color: TEXT, opacity: 0.9, fontSize: 14, textAlign: 'center', marginTop: 6 },
-  scheduleHeader: { color: YELLOW, fontSize: 25, fontWeight: '900', textAlign: 'center', marginTop: 16, marginBottom: 10 },
+  header: { color: YELLOW, fontSize: 24, fontWeight: '900', textAlign: 'center', fontFamily: FONT_FAMILIES.archivoBlack},
+  sub: { color: TEXT, opacity: 0.9, fontSize: 14, textAlign: 'center', marginTop: 6, fontFamily: FONT_FAMILIES.archivoNarrow },
+  scheduleHeader: { color: YELLOW, fontSize: 25, fontWeight: '900', textAlign: 'center', marginTop: 16, marginBottom: 10, fontFamily: FONT_FAMILIES.archivoBlack },
 
   listPad: { paddingHorizontal: 16 },
 
   sectionHeader: { backgroundColor: NAVY, paddingVertical: 8, paddingHorizontal: 6 },
-  sectionHeaderText: { color: YELLOW, fontWeight: '900', fontSize: 16 },
+  sectionHeaderText: { color: YELLOW, fontWeight: '900', fontSize: 16, fontFamily: FONT_FAMILIES.archivoBlack},
 
   sectionSep: { height: 4 },
   sep: { height: 10 },
@@ -395,12 +396,12 @@ const s = StyleSheet.create({
     borderWidth: 1,
     borderColor: LINE,
   },
-  title: { color: TEXT, fontSize: 16, fontWeight: '800' },
-  meta: { color: MUTED, fontSize: 12, marginTop: 4 },
+  title: { color: TEXT, fontSize: 16, fontWeight: '800', fontFamily: FONT_FAMILIES.archivoBlack},
+  meta: { color: MUTED, fontSize: 12, marginTop: 4, fontFamily: FONT_FAMILIES.archivoNarrow },
 
   /* Board grid (in list footer) */
   boardGridWrap: { paddingHorizontal: 0, paddingBottom: 10, marginTop: 20 },
-  boardTitle: { color: YELLOW, fontSize: 18, fontWeight: '900', marginBottom: 10, textAlign: 'center' },
+  boardTitle: { color: YELLOW, fontSize: 18, fontWeight: '900', marginBottom: 10, textAlign: 'center', fontFamily: FONT_FAMILIES.archivoBlack},
   boardGridPad: { paddingHorizontal: 4, paddingBottom: 8 },
   boardRow: { justifyContent: 'space-between', marginBottom: 18 },
   boardCard: { width: '31.5%', alignItems: 'center' },
@@ -416,8 +417,8 @@ const s = StyleSheet.create({
     marginBottom: 8,
   },
   avatarImg: { width: '100%', height: '100%' },
-  memberName: { color: YELLOW, fontWeight: '900', fontSize: 12, textAlign: 'center' },
-  memberSub: { color: TEXT, fontSize: 11, textAlign: 'center' },
+  memberName: { color: YELLOW, fontWeight: '900', fontSize: 12, textAlign: 'center', fontFamily: FONT_FAMILIES.archivoBlack },
+  memberSub: { color: TEXT, fontSize: 11, textAlign: 'center', fontFamily: FONT_FAMILIES.archivoNarrow},
 
   // Fixed footer buttons (not scrolling)
   footerFixed: {
@@ -445,7 +446,7 @@ const s = StyleSheet.create({
     borderColor: 'rgba(255,215,0,0.18)',
     marginHorizontal: 8,
   },
-  iconLabel: { color: TEXT, fontWeight: '700', fontSize: 12, textTransform: 'uppercase', letterSpacing: 0.5 },
+  iconLabel: { color: TEXT, fontWeight: '700', fontSize: 12, textTransform: 'uppercase', letterSpacing: 0.5, fontFamily: FONT_FAMILIES.archivoNarrow},
 
   // Modal shared styles
   modalBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'center', alignItems: 'center' },
@@ -458,10 +459,10 @@ const s = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(255,215,0,0.25)',
   },
-  modalTitle: { color: YELLOW, fontSize: 18, fontWeight: '900', textAlign: 'center' },
-  modalMeta: { color: TEXT, fontSize: 13, marginTop: 6, marginBottom: 10 },
+  modalTitle: { color: YELLOW, fontSize: 18, fontWeight: '900', textAlign: 'center', fontFamily: FONT_FAMILIES.archivoBlack },
+  modalMeta: { color: TEXT, fontSize: 13, marginTop: 6, marginBottom: 10, fontFamily: FONT_FAMILIES.archivoNarrow},
   addrBox: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12 },
-  addrText: { color: TEXT, fontSize: 13, textAlign: 'center' },
+  addrText: { color: TEXT, fontSize: 13, textAlign: 'center', fontFamily: FONT_FAMILIES.archivoNarrow },
   mapsBtn: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -472,9 +473,9 @@ const s = StyleSheet.create({
     borderRadius: 10,
     marginBottom: 8,
   },
-  mapsBtnText: { color: NAVY, fontWeight: '900' },
+  mapsBtnText: { color: NAVY, fontWeight: '900', fontFamily: FONT_FAMILIES.archivoBlack},
   closeBtn: { paddingVertical: 8, paddingHorizontal: 10 },
-  closeBtnText: { color: TEXT, fontWeight: '700' },
+  closeBtnText: { color: TEXT, fontWeight: '700', fontFamily: FONT_FAMILIES.archivoBlack},
 
   // Image modal + contact
   modalAvatarWrap: {
@@ -488,8 +489,8 @@ const s = StyleSheet.create({
     marginBottom: 12,
   },
   modalAvatarImg: { width: '100%', height: '100%' },
-  modalName: { color: YELLOW, fontWeight: '900', fontSize: 20, textAlign: 'center', marginBottom: 4 },
-  modalSub: { color: TEXT, fontSize: 13, textAlign: 'center' },
+  modalName: { color: YELLOW, fontWeight: '900', fontSize: 20, textAlign: 'center', marginBottom: 4, fontFamily: FONT_FAMILIES.archivoBlack},
+  modalSub: { color: TEXT, fontSize: 13, textAlign: 'center', fontFamily: FONT_FAMILIES.archivoNarrow },
 
   contactRow: {
     width: '100%',
@@ -502,6 +503,7 @@ const s = StyleSheet.create({
     fontSize: 12,
     opacity: 0.9,
     marginBottom: 2,
+    fontFamily: FONT_FAMILIES.archivoBlack
   },
   emailBtn: {
     flexDirection: 'row',
@@ -518,10 +520,12 @@ const s = StyleSheet.create({
   emailText: {
     color: YELLOW,
     fontWeight: '800',
+    fontFamily: FONT_FAMILIES.archivoBlack
   },
   copiedHint: {
     color: YELLOW,
     fontWeight: '800',
     marginTop: 6,
+    fontFamily: FONT_FAMILIES.archivoNarrow
   },
 });

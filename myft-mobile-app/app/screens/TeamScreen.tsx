@@ -4,10 +4,12 @@ import { View, Text, TouchableOpacity, FlatList, StyleSheet, Image } from 'react
 import { useRouter } from 'expo-router';
 import { useTournament } from '../../context/TournamentContext';
 import { getTeamLogo } from '../../assets/team_logos';  // ← import helper
+import { FONT_FAMILIES } from '@/assets/fonts';
 
 const CARD = '#00417D';
 const NAVY = '#00274C';
 const YELLOW = '#FFCB05';
+const TEXT = '#E9ECEF';
 
 export default function TeamScreen() {
   const router = useRouter();
@@ -74,11 +76,11 @@ export default function TeamScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: NAVY, padding: 16 },
-  header: { fontSize: 28, fontWeight: 'bold', color: NAVY, textAlign: 'center', marginBottom: 12 },
+  header: { fontSize: 28, fontWeight: 'bold', color: NAVY, textAlign: 'center', marginBottom: 12, fontFamily: FONT_FAMILIES.archivoBlack },
   toggle: { flexDirection: 'row', backgroundColor: CARD, borderRadius: 10, padding: 6, marginBottom: 12 },
   toggleBtn: { flex: 1, paddingVertical: 10, borderRadius: 8, alignItems: 'center' },
   toggleActive: { backgroundColor: YELLOW },
-  toggleText: { color: YELLOW, fontWeight: '600' },
+  toggleText: { color: YELLOW, fontWeight: '600', fontFamily: FONT_FAMILIES.archivoBlack },
   toggleTextActive: { color: NAVY },
 
   card: {
@@ -90,9 +92,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   cardText: { flex: 1, gap: 2 },
-  teamName: { color: YELLOW, fontWeight: 'bold', fontSize: 18, marginBottom: 4 },
-  meta: { color: '#D7E3F4', fontSize: 14 },
-  metaStrong: { color: YELLOW, fontWeight: '600' },
+  teamName: { color: YELLOW, fontWeight: 'bold', fontSize: 18, marginBottom: 4, fontFamily: FONT_FAMILIES.archivoBlack},
+  meta: { color: TEXT, fontSize: 14, fontFamily: FONT_FAMILIES.archivoNarrow },
+  metaStrong: { color: YELLOW, fontWeight: '600', fontFamily: FONT_FAMILIES.archivoBlack},
 
   logo: {
     width: 56,

@@ -6,12 +6,12 @@ import { useTournament } from '../../../context/TournamentContext';
 import { mapPlayersById, rosterTotalPoints } from '../../utils/fantasy';
 import { useAuth } from '../../../context/AuthContext';
 import { makeDeterministicUsers, type FakeUser } from './_fakeUsers';
+import { FONT_FAMILIES } from '@/assets/fonts';
 
 const CARD = '#00417D';
 const NAVY = '#00274C';
 const YELLOW = '#FFCB05';
 const TEXT = '#E9ECEF';
-const MUTED = '#A5B4C3';
 
 type FilterKey = 'division' | 'school' | 'position';
 
@@ -333,7 +333,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   toggleActive: { backgroundColor: YELLOW },
-  toggleText: { color: NAVY, fontWeight: '800' },
+  toggleText: { color: NAVY, fontWeight: '800', fontFamily: FONT_FAMILIES.archivoBlack},
 
   // Filters
   filterRow: {
@@ -343,16 +343,16 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     gap: 8,
   },
-  filterLabel: { color: YELLOW, fontWeight: '700', fontSize: 18, textAlign: 'center', marginRight: 4, marginBottom: 10},
+  filterLabel: { color: YELLOW, fontWeight: '700', fontSize: 18, textAlign: 'center', marginRight: 4, marginBottom: 10, fontFamily: FONT_FAMILIES.archivoBlack},
   filterBtn: {
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 8,
     backgroundColor: CARD,
   },
-  filterBtnActive: { backgroundColor: YELLOW },
-  filterBtnText: { color: TEXT, fontWeight: '800' },
-  filterBtnTextActive: { color: NAVY },
+  filterBtnActive: { backgroundColor: YELLOW, fontFamily: FONT_FAMILIES.archivoBlack },
+  filterBtnText: { color: TEXT, fontWeight: '800', fontFamily: FONT_FAMILIES.archivoBlack},
+  filterBtnTextActive: { color: NAVY, fontFamily: FONT_FAMILIES.archivoBlack},
 
   segWrap: {
     flexDirection: 'row',
@@ -389,9 +389,11 @@ const styles = StyleSheet.create({
   segText: {
     color: YELLOW,       // unselected label is yellow on blue track
     fontWeight: '700',
+    fontFamily: FONT_FAMILIES.archivoBlack
   },
   segTextActive: {
     color: NAVY,         // selected label turns navy on yellow pill
+    fontFamily: FONT_FAMILIES.archivoBlack
   },
 
   row: {
@@ -405,7 +407,7 @@ const styles = StyleSheet.create({
   rowMe: { borderWidth: 2, borderColor: YELLOW },
   rank: { width: 48, textAlign: 'left', color: TEXT, fontWeight: '900', fontSize: 16 },
   rankTop: { color: TEXT },
-  primary: { color: TEXT, fontWeight: '800', fontSize: 16 },
-  sub: { color: MUTED, fontSize: 12, marginTop: 2 },
-  points: { color: YELLOW, fontWeight: '900', fontSize: 18, marginLeft: 10 },
+  primary: { color: TEXT, fontWeight: '800', fontSize: 16, fontFamily: FONT_FAMILIES.archivoBlack },
+  sub: { color: TEXT, fontSize: 12, marginTop: 2, fontFamily: FONT_FAMILIES.archivoNarrow},
+  points: { color: YELLOW, fontWeight: '900', fontSize: 18, marginLeft: 10, fontFamily: FONT_FAMILIES.archivoBlack },
 });

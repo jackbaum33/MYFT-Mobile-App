@@ -13,13 +13,13 @@ import {
   ActionSheetIOS,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { FONT_FAMILIES } from '@/assets/fonts';
 import { useTournament } from '../../context/TournamentContext';
 
 const CARD = '#00417D';
 const NAVY = '#00274C';
 const YELLOW = '#FFCB05';
 const TEXT = '#E9ECEF';
-const MUTED = '#A5B4C3';
 const LINE = 'rgba(255,255,255,0.12)';
 
 type FilterKey = 'division' | 'school' | 'position' | null;
@@ -263,7 +263,7 @@ export default function FantasyScreen() {
         <Ionicons name="american-football-outline" size={48} color={YELLOW} />
         <Text style={styles.onboardTitle}>Welcome to MYFT 2025 Fantasy Football!</Text>
         <Text style={styles.onboardSub}>
-          Press continue to get started building your roster. Pick 4 Boys and 4 Girls.
+          Press continue to get started building your roster!
         </Text>
         <TouchableOpacity style={styles.cta} onPress={() => setHasOnboarded(true)}>
           <Text style={styles.ctaText}>Continue</Text>
@@ -445,64 +445,64 @@ const styles = StyleSheet.create({
   onboardOuter: {
     flex: 1, backgroundColor: NAVY, alignItems: 'center', justifyContent: 'center', padding: 20, marginTop: -50
   },
-  onboardTitle: { color: YELLOW, fontSize: 24, fontWeight: '900', textAlign: 'center', marginTop: 12 },
-  onboardSub: { color: TEXT, opacity: 0.9, textAlign: 'center', marginTop: 8 },
+  onboardTitle: { color: YELLOW, fontSize: 24, fontWeight: '900', textAlign: 'center', marginTop: 12, fontFamily: FONT_FAMILIES.archivoBlack },
+  onboardSub: { color: TEXT, opacity: 0.9, textAlign: 'center', marginTop: 8, fontFamily: FONT_FAMILIES.archivoNarrow},
   cta: {
     marginTop: 16, backgroundColor: YELLOW, paddingHorizontal: 18, paddingVertical: 12, borderRadius: 10,
   },
-  ctaText: { color: NAVY, fontWeight: '900' },
+  ctaText: { color: NAVY, fontWeight: '900', fontFamily: FONT_FAMILIES.archivoBlack },
 
   // Top bar
   topRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10 },
   counter: {
     backgroundColor: '#0b3c70', paddingHorizontal: 10, paddingVertical: 8, borderRadius: 10, borderWidth: 1, borderColor: LINE,
   },
-  counterText: { color: TEXT, fontWeight: '800' },
+  counterText: { color: TEXT, fontWeight: '800', fontFamily: FONT_FAMILIES.archivoBlack },
   saveBtn: { marginLeft: 'auto', flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: YELLOW, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 10 },
-  saveBtnText: { color: NAVY, fontWeight: '900' },
+  saveBtnText: { color: NAVY, fontWeight: '900', fontFamily: FONT_FAMILIES.archivoBlack },
 
   // Tabs
   toggleRow: { flexDirection: 'row', gap: 8, marginBottom: 12 },
   toggleBtn: { flex: 1, paddingVertical: 10, borderRadius: 10, backgroundColor: '#062a4e', alignItems: 'center' },
   toggleActive: { backgroundColor: '#0b3c70' },
-  toggleText: { color: MUTED, fontWeight: '800' },
-  toggleTextActive: { color: YELLOW },
+  toggleText: { color: TEXT, fontWeight: '800', fontFamily: FONT_FAMILIES.archivoBlack },
+  toggleTextActive: { color: YELLOW, fontFamily: FONT_FAMILIES.archivoBlack},
 
   // Filters
-  filterLabel: { color: YELLOW, fontWeight: '700', fontSize: 16, marginBottom: 8 },
+  filterLabel: { color: YELLOW, fontWeight: '700', fontSize: 16, marginBottom: 8, fontFamily: FONT_FAMILIES.archivoBlack },
   filterRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 8 },
   pill: { backgroundColor: '#062a4e', borderRadius: 999, paddingHorizontal: 12, paddingVertical: 8, borderWidth: 1, borderColor: LINE },
   pillActive: { backgroundColor: YELLOW, borderColor: 'rgba(0,0,0,0.12)' },
-  pillText: { color: TEXT, fontWeight: '800' },
-  pillTextActive: { color: NAVY },
+  pillText: { color: TEXT, fontWeight: '800', fontFamily: FONT_FAMILIES.archivoBlack },
+  pillTextActive: { color: NAVY, fontFamily: FONT_FAMILIES.archivoBlack},
 
   dropdown: {
     backgroundColor: CARD, borderRadius: 10, borderWidth: 1, borderColor: 'rgba(255,255,255,0.18)', padding: 8, marginBottom: 8,
   },
-  dropdownItem: { color: TEXT, paddingVertical: 10, fontWeight: '800' },
+  dropdownItem: { color: TEXT, paddingVertical: 10, fontWeight: '800', fontFamily: FONT_FAMILIES.archivoBlack },
 
   // Rows
   row: { flexDirection: 'row', alignItems: 'center', backgroundColor: CARD, borderRadius: 12, padding: 14, marginBottom: 10, borderWidth: 1, borderColor: LINE },
-  primary: { color: TEXT, fontWeight: '800', fontSize: 16 },
-  sub: { color: MUTED, fontSize: 12, marginTop: 2 },
-  points: { color: YELLOW, fontWeight: '900', fontSize: 16, marginLeft: 8 },
+  primary: { color: TEXT, fontWeight: '800', fontSize: 16, fontFamily: FONT_FAMILIES.archivoBlack },
+  sub: { color: TEXT, fontSize: 12, marginTop: 2, fontFamily: FONT_FAMILIES.archivoNarrow},
+  points: { color: YELLOW, fontWeight: '900', fontSize: 16, marginLeft: 8, fontFamily: FONT_FAMILIES.archivoBlack},
 
-  empty: { color: MUTED, textAlign: 'center', marginTop: 30 },
+  empty: { color: TEXT, textAlign: 'center', marginTop: 30 },
 
   // Modal
   backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'center', alignItems: 'center' },
   modalCard: { width: '88%', backgroundColor: NAVY, borderRadius: 16, padding: 16, alignItems: 'center', borderWidth: 1, borderColor: 'rgba(255,215,0,0.25)' },
-  modalTitle: { color: YELLOW, fontSize: 20, fontWeight: '900' },
-  modalMeta: { color: TEXT, marginTop: 6, marginBottom: 12 },
+  modalTitle: { color: YELLOW, fontSize: 20, fontWeight: '900', fontFamily: FONT_FAMILIES.archivoBlack },
+  modalMeta: { color: TEXT, marginTop: 6, marginBottom: 12, fontFamily: FONT_FAMILIES.archivoNarrow },
   statRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
-  statText: { color: TEXT, fontWeight: '800' },
+  statText: { color: TEXT, fontWeight: '800', fontFamily: FONT_FAMILIES.archivoBlack},
 
   addBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: YELLOW, paddingHorizontal: 14, paddingVertical: 10, borderRadius: 10, marginBottom: 8 },
-  addBtnText: { color: NAVY, fontWeight: '900' },
+  addBtnText: { color: NAVY, fontWeight: '900', fontFamily: FONT_FAMILIES.archivoBlack},
 
   removeBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#E74C3C', paddingHorizontal: 14, paddingVertical: 10, borderRadius: 10, marginBottom: 8 },
-  removeBtnText: { color: '#fff', fontWeight: '900' },
+  removeBtnText: { color: '#fff', fontWeight: '900', fontFamily: FONT_FAMILIES.archivoBlack },
 
   closeBtn: { paddingVertical: 8, paddingHorizontal: 10 },
-  closeBtnText: { color: TEXT, fontWeight: '700' },
+  closeBtnText: { color: TEXT, fontWeight: '700', fontFamily: FONT_FAMILIES.archivoBlack },
 });

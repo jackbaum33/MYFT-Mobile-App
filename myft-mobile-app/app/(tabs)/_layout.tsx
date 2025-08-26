@@ -1,19 +1,22 @@
 // app/(tabs)/_layout.tsx
 import { Tabs } from 'expo-router';
+import { useAppFonts } from "../../assets/fonts";
 import { AntDesign, Ionicons } from '@expo/vector-icons';
 import ProfileButton from '../utils/ProfileButton';
+import { FONT_FAMILIES } from '../../assets/fonts';
 
 const NAVY = '#00274C';
 const YELLOW = '#FFCB05';
 
 export default function TabLayout() {
+  const fontsLoaded = useAppFonts();
   return (
     <Tabs
       screenOptions={({ route }) => ({
         headerShown: true,
         headerStyle: { backgroundColor: NAVY, height: 50},
         headerTintColor: YELLOW,
-        headerTitleStyle: { color: YELLOW, fontWeight: 'bold', marginTop: -50, textAlign: 'center', marginLeft: 10 },
+        headerTitleStyle: { color: YELLOW, fontWeight: 'bold', marginTop: -50, textAlign: 'center', marginLeft: 10, fontFamily: FONT_FAMILIES.archivoBlack },
         headerRight: () => <ProfileButton />,
         tabBarActiveTintColor: YELLOW,
         tabBarInactiveTintColor: '#ffffff',
@@ -35,7 +38,7 @@ export default function TabLayout() {
         },
       })}
     >
-      <Tabs.Screen name="index" options={{ tabBarLabel: 'Home', title: '' }} />
+      <Tabs.Screen name="index" options={{ tabBarLabel: 'Home', title: '',}} />
       <Tabs.Screen name="schedule" options={{ tabBarLabel: 'Schedule', title: '' }} />
       <Tabs.Screen name="team" options={{ tabBarLabel: 'Teams', title: '' }} />
       <Tabs.Screen name="fantasy" options={{ tabBarLabel: 'Fantasy', title: '' }} />

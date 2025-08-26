@@ -3,10 +3,12 @@ import { View, Text, FlatList, StyleSheet, TouchableOpacity, Image } from 'react
 import { Stack, Link, useLocalSearchParams, useRouter } from 'expo-router';
 import { useTournament } from '../../../context/TournamentContext';
 import { getTeamLogo } from '../../../assets/team_logos';
+import { FONT_FAMILIES } from '@/assets/fonts';
 
 const CARD = '#00417D';
 const NAVY = '#00274C';
 const YELLOW = '#FFCB05';
+const TEXT = '#E9ECEF';
 
 export default function TeamDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -101,9 +103,9 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   headerText: { flex: 1 },
-  title: { color: YELLOW, fontWeight: 'bold', fontSize: 28, marginBottom: 6 },
-  meta: { color: '#D7E3F4', fontSize: 14, marginTop: 2 },
-  metaStrong: { color: YELLOW, fontWeight: '600' },
+  title: { color: YELLOW, fontWeight: 'bold', fontSize: 28, marginBottom: 6, fontFamily: FONT_FAMILIES.archivoBlack },
+  meta: { color: TEXT, fontSize: 14, marginTop: 2, fontFamily: FONT_FAMILIES.archivoNarrow},
+  metaStrong: { color: YELLOW, fontWeight: '600', fontFamily: FONT_FAMILIES.archivoBlack },
 
   logo: {
     width: 56,
@@ -121,7 +123,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
   },
-  playerName: { flex: 1, color: YELLOW, fontSize: 20, fontWeight: '600' },
-  playerMeta: { width: 60, textAlign: 'right', color: '#D7E3F4' },
-  playerPts: { width: 70, textAlign: 'right', color: YELLOW, fontWeight: '700' },
+  playerName: { flex: 1, color: YELLOW, fontSize: 20, fontWeight: '600', fontFamily: FONT_FAMILIES.archivoBlack },
+  playerMeta: { width: 60, textAlign: 'right', color: '#D7E3F4', fontFamily: FONT_FAMILIES.archivoNarrow},
+  playerPts: { width: 70, textAlign: 'right', color: YELLOW, fontWeight: '700', fontFamily: FONT_FAMILIES.archivoBlack },
 });
