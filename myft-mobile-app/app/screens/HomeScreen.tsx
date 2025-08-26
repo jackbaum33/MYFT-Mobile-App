@@ -397,7 +397,7 @@ const s = StyleSheet.create({
     borderColor: LINE,
   },
   title: { color: TEXT, fontSize: 16, fontWeight: '800', fontFamily: FONT_FAMILIES.archivoBlack},
-  meta: { color: MUTED, fontSize: 12, marginTop: 4, fontFamily: FONT_FAMILIES.archivoNarrow },
+  meta: { color: TEXT, fontSize: 12, marginTop: 4, fontFamily: FONT_FAMILIES.archivoNarrow },
 
   /* Board grid (in list footer) */
   boardGridWrap: { paddingHorizontal: 0, paddingBottom: 10, marginTop: 20 },
