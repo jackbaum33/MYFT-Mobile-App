@@ -83,7 +83,6 @@ export default function TeamDetailScreen() {
             >
               <TouchableOpacity style={styles.playerRow}>
                 <Text style={styles.playerName}>{item.name}</Text>
-                <Text style={styles.playerMeta}>{item.position}</Text>
                 <Text style={styles.playerPts}>{pts} pts</Text>
               </TouchableOpacity>
             </Link>

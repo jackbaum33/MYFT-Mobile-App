@@ -79,7 +79,7 @@ export default function UserLeaderboardDetail() {
               <View style={{ flex: 1 }}>
                 <Text style={s.primary} numberOfLines={1}>{item.name}</Text>
                 <Text style={s.sub} numberOfLines={1}>
-                {item.position}{playerIdToTeamName.get(item.id) ? ` • ${playerIdToTeamName.get(item.id)}` : ''}
+                {playerIdToTeamName.get(item.id) ? `${playerIdToTeamName.get(item.id)}` : ''}
                 </Text>
               </View>
               <Text style={s.points}>{item.fantasy} pts</Text>

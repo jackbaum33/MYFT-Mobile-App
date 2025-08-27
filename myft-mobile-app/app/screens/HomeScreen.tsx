@@ -72,7 +72,7 @@ const MEMBERS: Member[] = [
   { name: 'Lila Ellman',      line1: 'Co-Chair',                            email: 'ellmanl@umich.edu'  },
   { name: 'Josh Katz',        line1: 'Co-Chair',                            email: 'joshuaek@umich.edu' },
   { name: 'Levi Stein',       line1: 'Exective Advisor',                    email: 'steinlev@umich.edu' },
-  { name: 'Abby Kutin',       line1: 'Website Developer, Brand Strategist', email: 'kutin@umich.edu'    },
+  { name: 'Abby Kutin',       line1: 'Website Developer',                   email: 'kutin@umich.edu'    },
   { name: 'Viv Schlussel',    line1: 'Photography',                         email: 'vschluss@umich.edu' },
   { name: 'Shayna Foreman',   line1: 'Events',                              email: 'shaynapf@umich.edu' },
   { name: 'Isaac Schiffman',  line1: 'Recruitment',                         email: 'isaacsch@umich.edu' },

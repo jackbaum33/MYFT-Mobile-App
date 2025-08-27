@@ -117,7 +117,7 @@ export default function PlayerLeaderboardDetail() {
         <View style={s.headerCard}>
           <View>
             <Text style={s.name}>{p.name}</Text>
-            <Text style={s.meta}>{p.position} • {player.teamName}</Text>
+            <Text style={s.meta}>{player.teamName}</Text>
           </View>
           <Image source={logoSrc} style={s.logo} resizeMode="contain" />
         </View>

@@ -22,7 +22,7 @@ const YELLOW = '#FFCB05';
 const TEXT = '#E9ECEF';
 const LINE = 'rgba(255,255,255,0.12)';
 
-type FilterKey = 'division' | 'school' | 'position' | null;
+type FilterKey = 'division' | 'school' | null;
 
 function capitalize(s: string) {
   return s ? s.charAt(0).toUpperCase() + s.slice(1) : s;
@@ -43,7 +43,6 @@ export default function FantasyScreen() {
   const [activeFilter, setActiveFilter] = useState<FilterKey>(null);
   const [divisionSelected, setDivisionSelected] = useState<'boys' | 'girls' | null>(null);
   const [schoolSelected, setSchoolSelected] = useState<string | null>(null);
-  const [positionSelected, setPositionSelected] = useState<string | null>(null);
 
   const allPlayers = useMemo(
     () => teams.flatMap(t => t.players.map(p => ({ ...p, __team: t.name, __division: t.division } as any))),
@@ -53,10 +52,6 @@ export default function FantasyScreen() {
   const schoolOptions = useMemo(
     () => Array.from(new Set(teams.map(t => t.name))).sort(),
     [teams]
-  );
-  const positionOptions = useMemo(
-    () => Array.from(new Set(allPlayers.map(p => p.position))).sort(),
-    [allPlayers]
   );
 
   const maxBoys = 4;
@@ -72,11 +67,10 @@ export default function FantasyScreen() {
     let arr = [...allPlayers].map(p => ({ ...p, fantasy: calculatePoints(p) }));
     if (divisionSelected) arr = arr.filter(p => p.__division === divisionSelected);
     if (schoolSelected) arr = arr.filter(p => p.__team === schoolSelected);
-    if (positionSelected) arr = arr.filter(p => p.position === positionSelected);
     // always sort by fantasy desc
     arr.sort((a, b) => b.fantasy - a.fantasy);
     return arr;
-  }, [allPlayers, divisionSelected, schoolSelected, positionSelected, calculatePoints]);
+  }, [allPlayers, divisionSelected, schoolSelected, calculatePoints]);
 
   /** -------------------------
    *   "My Team" dataset
@@ -157,7 +151,7 @@ export default function FantasyScreen() {
     // If filter has a value, tapping its pill clears it
     if (key === 'division' && divisionSelected) { setDivisionSelected(null); return; }
     if (key === 'school' && schoolSelected) { setSchoolSelected(null); return; }
-    if (key === 'position' && positionSelected) { setPositionSelected(null); return; }
+    
 
     // Open chooser
     if (Platform.OS === 'ios') {
@@ -185,18 +179,6 @@ export default function FantasyScreen() {
           },
           idx => {
             if (idx > 0) setSchoolSelected(schoolOptions[idx - 1]);
-          },
-        );
-      } else {
-        ActionSheetIOS.showActionSheetWithOptions(
-          {
-            title: 'Select Position',
-            options: ['Cancel', ...positionOptions],
-            cancelButtonIndex: 0,
-            userInterfaceStyle: 'dark',
-          },
-          idx => {
-            if (idx > 0) setPositionSelected(positionOptions[idx - 1]);
           },
         );
       }
@@ -245,7 +227,7 @@ export default function FantasyScreen() {
         <View style={{ flex: 1 }}>
           <Text style={styles.primary} numberOfLines={1}>{item.name}</Text>
           <Text style={styles.sub} numberOfLines={1}>
-            {item.position} • {item.__team} • {capitalize(division)}
+            {item.__team} • {capitalize(division)}
           </Text>
         </View>
         <Text style={styles.points}>{item.fantasy} pts</Text>
@@ -322,11 +304,6 @@ export default function FantasyScreen() {
               active={!!schoolSelected}
               onPress={() => onPressFilter('school')}
             />
-            <Pill
-              label={`Position${positionSelected ? `: ${positionSelected}` : ''}`}
-              active={!!positionSelected}
-              onPress={() => onPressFilter('position')}
-            />
           </View>
 
           {/* Inline sheet for Android/others */}
@@ -341,12 +318,6 @@ export default function FantasyScreen() {
               {activeFilter === 'school' &&
                 schoolOptions.map(opt => (
                   <TouchableOpacity key={opt} onPress={() => { setSchoolSelected(opt); setActiveFilter(null); }}>
-                    <Text style={styles.dropdownItem}>{opt}</Text>
-                  </TouchableOpacity>
-                ))}
-              {activeFilter === 'position' &&
-                positionOptions.map(opt => (
-                  <TouchableOpacity key={opt} onPress={() => { setPositionSelected(opt); setActiveFilter(null); }}>
                     <Text style={styles.dropdownItem}>{opt}</Text>
                   </TouchableOpacity>
                 ))}
@@ -390,7 +361,7 @@ export default function FantasyScreen() {
               <>
                 <Text style={styles.modalTitle}>{detail.name}</Text>
                 <Text style={styles.modalMeta}>
-                  {detail.position} • {detail.__team} • {capitalize(detail.__division)}
+                  {detail.__team} • {capitalize(detail.__division)}
                 </Text>
 
                 <View style={styles.statRow}>

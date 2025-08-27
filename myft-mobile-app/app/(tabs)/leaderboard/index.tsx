@@ -95,9 +95,6 @@ export default function LeaderboardIndex() {
     if (schoolSelected) {
       arr = arr.filter(p => (playerIdToTeamName.get(p.id) ?? '') === schoolSelected);
     }
-    if (positionSelected) {
-      arr = arr.filter(p => p.position === positionSelected);
-    }
     return arr;
   }, [playersRanked, divisionSelected, schoolSelected, positionSelected, playerIdToDivision, playerIdToTeamName]);
 
@@ -106,10 +103,7 @@ export default function LeaderboardIndex() {
     () => Array.from(new Set(teams.map(t => t.name))).sort(),
     [teams]
   );
-  const positionOptions = useMemo(
-    () => Array.from(new Set(allPlayers.map(p => p.position))).sort(),
-    [allPlayers]
-  );
+
   const divisionOptions = ['boys', 'girls'];
 
   // Helpers to present native picker
@@ -120,7 +114,6 @@ export default function LeaderboardIndex() {
       let options: string[] = [];
       if (key === 'division') options = divisionOptions.map(titleCase);
       if (key === 'school') options = [...schoolOptions];
-      if (key === 'position') options = [...positionOptions];
 
       ActionSheetIOS.showActionSheetWithOptions(
         {
@@ -164,15 +157,6 @@ export default function LeaderboardIndex() {
             { text: 'Cancel', style: 'cancel' },
           ]
         );
-      } else {
-        Alert.alert(
-          'Select Position',
-          '',
-          [
-            ...positionOptions.map(opt => ({ text: opt, onPress: () => setPositionSelected(opt) })),
-            { text: 'Cancel', style: 'cancel' },
-          ]
-        );
       }
     }
   };
@@ -181,7 +165,6 @@ export default function LeaderboardIndex() {
   const onPressFilterButton = (key: FilterKey) => {
     if (key === 'division' && divisionSelected) { setDivisionSelected(null); return; }
     if (key === 'school'   && schoolSelected)   { setSchoolSelected(null);   return; }
-    if (key === 'position' && positionSelected) { setPositionSelected(null); return; }
     presentPicker(key);
   };
 
@@ -203,8 +186,7 @@ export default function LeaderboardIndex() {
           <Text style={rankStyle}>{index + 1}.</Text>
           <View style={{ flex: 1 }}>
             <Text style={styles.primary} numberOfLines={1}>{item.name}</Text>
-            <Text style={styles.sub} numberOfLines={1}>
-              {item.position}{school ? ` • ${school}` : ''}
+            <Text style={styles.sub} numberOfLines={1}>{school ? `${school}` : ''}
             </Text>
           </View>
           <Text style={styles.points}>{item.fantasy} pts</Text>
@@ -284,15 +266,6 @@ export default function LeaderboardIndex() {
             >
               <Text style={[styles.filterBtnText, schoolSelected && styles.filterBtnTextActive]}>
                 School{schoolSelected ? `: ${schoolSelected}` : ''}
-              </Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[styles.filterBtn, positionSelected && styles.filterBtnActive]}
-              onPress={() => onPressFilterButton('position')}
-            >
-              <Text style={[styles.filterBtnText, positionSelected && styles.filterBtnTextActive]}>
-                Position{positionSelected ? `: ${positionSelected}` : ''}
               </Text>
             </TouchableOpacity>
           </View>

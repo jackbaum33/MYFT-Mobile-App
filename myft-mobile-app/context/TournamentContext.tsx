@@ -1,22 +1,34 @@
 // context/TournamentContext.tsx
 import React, { createContext, useContext, useMemo, useState } from 'react';
-import { mockTeams } from '../app/data/mockData'; // adjust path if yours differs
+import { mockTeams } from '../app/data/mockData';
+import {
+  scheduleData,
+  statsForRender,
+  type PlayerGameStat,
+} from '../app/data/scheduleData';
 
 /** ---------- Types ---------- **/
 export type Division = 'boys' | 'girls';
+
+export type PlayerStats = {
+  touchdowns: number;
+  passingTDs: number;
+  shortReceptions: number;
+  mediumReceptions: number;
+  longReceptions: number;
+  catches: number;
+  flagsPulled: number;
+  sacks: number;
+  interceptions: number;
+  passingInterceptions: number;
+};
 
 export interface Player {
   id: string;
   name: string;
   division: Division;
-  position: string;
   teamId: string;
-  stats: {
-    touchdowns: number;
-    interceptions: number;
-    flagsPulled: number;
-    mvpAwards: number;
-  };
+  stats: PlayerStats; // <-- now filled by aggregating scheduleData
 }
 
 export interface Team {
@@ -24,7 +36,7 @@ export interface Team {
   name: string;
   division: Division;
   captain: string;
-  record: { wins: number; losses: number }; // <-- added to match your data
+  record: { wins: number; losses: number };
   players: Player[];
 }
 
@@ -40,27 +52,97 @@ type TournamentContextType = {
   calculatePoints: (p: Player) => number;
 };
 
-/** ---------- Context ---------- **/
-const TournamentContext = createContext<TournamentContextType | undefined>(undefined);
+/** ---------- Scoring Table ---------- **/
+const SCORING = {
+  touchdown: 6,
+  passingTD: 4,
+  shortReception: 1,
+  mediumReception: 2,
+  longReception: 4,
+  catch: 1,
+  flagGrab: 1,
+  sack: 3,
+  interception: 4,
+  passingInterception: -2,
+} as const;
 
-/** Normalize any incoming division strings (defensive) */
+/** ---------- Helpers ---------- **/
+const EMPTY: PlayerStats = {
+  touchdowns: 0,
+  passingTDs: 0,
+  shortReceptions: 0,
+  mediumReceptions: 0,
+  longReceptions: 0,
+  catches: 0,
+  flagsPulled: 0,
+  sacks: 0,
+  interceptions: 0,
+  passingInterceptions: 0,
+};
+
 const normDiv = (v: unknown): Division => {
   const s = String(v ?? '').toLowerCase();
-  if (s.startsWith('girl')) return 'girls';
+  if (s.startsWith('girl') || s === 'women' || s === 'female' || s === 'girls') return 'girls';
   return 'boys';
 };
 
+/** Sum a single game line into a totals object */
+const addLine = (totals: PlayerStats, line: PlayerGameStat) => {
+  totals.touchdowns            += line.touchdowns            ?? 0;
+  totals.passingTDs            += line.passingTDs            ?? 0;
+  totals.shortReceptions       += line.shortReceptions       ?? 0;
+  totals.mediumReceptions      += line.mediumReceptions      ?? 0;
+  totals.longReceptions        += line.longReceptions        ?? 0;
+  totals.catches               += line.catches               ?? 0;
+  totals.flagsPulled           += line.flagsPulled           ?? 0;
+  totals.sacks                 += line.sacks                 ?? 0;
+  totals.interceptions         += line.interceptions         ?? 0;
+  totals.passingInterceptions  += line.passingInterceptions  ?? 0;
+};
+
+/** Build a map of playerId -> aggregated PlayerStats from scheduleData (Live + Final only) */
+const buildStatsFromSchedule = (): Map<string, PlayerStats> => {
+  const map = new Map<string, PlayerStats>();
+
+  for (const day of scheduleData) {
+    for (const g of day.games) {
+      const box = statsForRender(g); // Live => liveStats, Final => finalBoxScore, Scheduled => undefined
+      if (!box) continue;
+
+      const allLines: PlayerGameStat[] = [...(box.team1 ?? []), ...(box.team2 ?? [])];
+      for (const line of allLines) {
+        const cur = map.get(line.playerId) ?? { ...EMPTY };
+        addLine(cur, line);
+        map.set(line.playerId, cur);
+      }
+    }
+  }
+  return map;
+};
+
+/** ---------- Context ---------- **/
+const TournamentContext = createContext<TournamentContextType | undefined>(undefined);
+
 /** ---------- Provider ---------- **/
 export const TournamentProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  // Normalize mock data to satisfy strict typing
-  const [teams] = useState<Team[]>(
-    () =>
-      mockTeams.map((t) => ({
-        ...t,
-        division: normDiv(t.division),
-        players: t.players.map((p) => ({ ...p, division: normDiv(p.division) })),
-      }))
-  );
+  /**
+   * Build teams from mockTeams for structure (ids, names, rosters),
+   * but replace each player's stats with the aggregation from scheduleData.
+   */
+  const [teams] = useState<Team[]>(() => {
+    const totalsByPlayer = buildStatsFromSchedule();
+
+    return mockTeams.map((t: any) => ({
+      ...t,
+      division: normDiv(t.division),
+      players: (t.players ?? []).map((p: any) => ({
+        ...p,
+        division: normDiv(p.division),
+        // use aggregated stats (or zeros if the player has no lines yet)
+        stats: totalsByPlayer.get(p.id) ?? { ...EMPTY },
+      })),
+    }));
+  });
 
   const [userRoster, setUserRoster] = useState<FantasyRoster>({ boys: [], girls: [] });
 
@@ -74,9 +156,22 @@ export const TournamentProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     });
   };
 
-  /** Simple fantasy scoring (adjust to your rules) */
-  const calculatePoints = (p: Player) =>
-    p.stats.touchdowns * 6 + p.stats.interceptions * -2 + p.stats.flagsPulled * 1 + p.stats.mvpAwards * 5;
+  /** New fantasy scoring */
+  const calculatePoints = (p: Player) => {
+    const s = p.stats;
+    return (
+      s.touchdowns * SCORING.touchdown +
+      s.passingTDs * SCORING.passingTD +
+      s.shortReceptions * SCORING.shortReception +
+      s.mediumReceptions * SCORING.mediumReception +
+      s.longReceptions * SCORING.longReception +
+      s.catches * SCORING.catch +
+      s.flagsPulled * SCORING.flagGrab +
+      s.sacks * SCORING.sack +
+      s.interceptions * SCORING.interception +
+      s.passingInterceptions * SCORING.passingInterception
+    );
+  };
 
   const value = useMemo(
     () => ({ teams, userRoster, updateRoster, calculatePoints }),

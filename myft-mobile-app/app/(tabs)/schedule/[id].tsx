@@ -17,7 +17,6 @@ import { getTeamLogo } from '../../../assets/team_logos';
 type Row = {
   playerId: string;
   name: string;
-  position: string;
   td: number;               // only TD shown in grid
   line: PlayerGameStat;     // full line for modal breakdown
 };
@@ -89,7 +88,6 @@ export default function GameDetail() {
       return {
         playerId: p.id,
         name: p.name,
-        position: p.position,
         td: l.touchdowns ?? 0,
         line: l,
       };
