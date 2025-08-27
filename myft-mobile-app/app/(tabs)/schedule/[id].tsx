@@ -195,7 +195,7 @@ export default function GameDetail() {
                 onPress={() => setDetail({ name: item.name, line: item.line })}
                 activeOpacity={0.85}
               >
-                <Text style={styles.detailBtnText}>Full Fantasy Breakdown</Text>
+                <Text style={styles.detailBtnText}>Game Breakdown</Text>
               </TouchableOpacity>
             </View>
           )}
