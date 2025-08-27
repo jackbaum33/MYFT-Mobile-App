@@ -1,14 +1,15 @@
 // app/(tabs)/schedule/[id].tsx
 import React, { useMemo, useState } from 'react';
-import { View, Text, StyleSheet, FlatList, Image, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, FlatList, Image, TouchableOpacity, Modal, Pressable } from 'react-native';
 import { Stack, useLocalSearchParams } from 'expo-router';
 import { FONT_FAMILIES } from '@/assets/fonts';
 import {
   findGameById,
   statsForRender,
-  derivedPoints,
   type PlayerGameStat,
   type Game,
+  derivedPoints,
+  SCORING,
 } from '../../data/scheduleData';
 import { useTournament } from '../../../context/TournamentContext';
 import { getTeamLogo } from '../../../assets/team_logos';
@@ -16,23 +17,23 @@ import { getTeamLogo } from '../../../assets/team_logos';
 type Row = {
   playerId: string;
   name: string;
-  td: number;
-  int: number;
-  flg: number;
-  mvp: number;
+  position: string;
+  td: number;               // only TD shown in grid
+  line: PlayerGameStat;     // full line for modal breakdown
 };
 
 const CARD = '#00417D';
 const NAVY = '#00274C';
 const TEXT = '#E9ECEF';
 const YELLOW = '#FFCB05';
-const CARD2  = '#00417D';
-const MUTED  = '#00417D';
+const LINE = 'rgba(255,255,255,0.18)';
 
 export default function GameDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { teams } = useTournament();
+
   const [side, setSide] = useState<'team1' | 'team2'>('team1');
+  const [detail, setDetail] = useState<{ name: string; line: PlayerGameStat } | null>(null);
 
   const found = useMemo(() => findGameById(id), [id]);
   if (!found) {
@@ -51,7 +52,7 @@ export default function GameDetail() {
     );
   }
 
-  const { game, day } = found;
+  const { game } = found;
 
   // resolve teams, names, captains, logos
   const t1 = teams.find(t => t.id === game.team1);
@@ -64,44 +65,72 @@ export default function GameDetail() {
   const logo1   = getTeamLogo(game.team1);
   const logo2   = getTeamLogo(game.team2);
 
-  // --- merge roster with this game's per-player lines (so all players show, even zeros)
+  // Merge roster with this game's per-player lines so all players appear (zeroed if no line yet)
   const merge = (teamId: string, which: 'team1' | 'team2'): Row[] => {
     const team = teams.find(t => t.id === teamId);
     const box = statsForRender(game);
-    const lines: PlayerGameStat[] =
-      which === 'team1' ? (box?.team1 ?? []) : (box?.team2 ?? []);
+    const lines: PlayerGameStat[] = which === 'team1' ? (box?.team1 ?? []) : (box?.team2 ?? []);
 
     const lineById = new Map(lines.map(l => [l.playerId, l]));
     return (team?.players ?? []).map(p => {
-      const l = lineById.get(p.id);
+      const l: PlayerGameStat = lineById.get(p.id) ?? {
+        playerId: p.id,
+        touchdowns: 0,
+        passingTDs: 0,
+        shortReceptions: 0,
+        mediumReceptions: 0,
+        longReceptions: 0,
+        catches: 0,
+        flagsPulled: 0,
+        sacks: 0,
+        interceptions: 0,
+        passingInterceptions: 0,
+      };
       return {
         playerId: p.id,
         name: p.name,
         position: p.position,
-        td:  l?.touchdowns    ?? 0,
-        int: l?.interceptions ?? 0,
-        flg: l?.flagsPulled   ?? 0,
-        mvp: l?.mvpAwards     ?? 0,
+        td: l.touchdowns ?? 0,
+        line: l,
       };
     });
   };
 
   const activeTeamId = side === 'team1' ? game.team1 : game.team2;
   const rows = merge(activeTeamId, side);
+  const activeTeamName = side === 'team1' ? name1 : name2;
+
+  // Compute per-player breakdown rows for modal (Metric | Count | Pts | Total)
+  const computeBreakdown = (line: PlayerGameStat) => {
+    const items = [
+      { key: 'TD',   label: 'Touchdowns',        count: line.touchdowns ?? 0,           mult: SCORING.touchdown },
+      { key: 'pTD',  label: 'Passing TDs',       count: line.passingTDs ?? 0,           mult: SCORING.passingTD },
+      { key: 'pINT', label: 'Passing INTs',      count: line.passingInterceptions ?? 0, mult: SCORING.passingInterception },
+      { key: 'C',    label: 'Catches',           count: line.catches ?? 0,              mult: SCORING.catch },
+      { key: 'sREC', label: 'Short Gain',        count: line.shortReceptions ?? 0,      mult: SCORING.shortReception },
+      { key: 'mREC', label: 'Medium Gain',       count: line.mediumReceptions ?? 0,     mult: SCORING.mediumReception },
+      { key: 'lREC', label: 'Long Gain',         count: line.longReceptions ?? 0,       mult: SCORING.longReception },
+      { key: 'FLG',  label: 'Flag Grabs',        count: line.flagsPulled ?? 0,          mult: SCORING.flagGrab },
+      { key: 'SACK', label: 'Sacks',             count: line.sacks ?? 0,                mult: SCORING.sack },
+      { key: 'INT',  label: 'Interceptions',     count: line.interceptions ?? 0,        mult: SCORING.interception },
+    ];
+    const withTotals = items.map(i => ({ ...i, subtotal: i.count * i.mult }));
+    const grandTotal = withTotals.reduce((s, i) => s + i.subtotal, 0);
+    return { rows: withTotals, grandTotal };
+  };
 
   return (
     <View style={styles.container}>
       <Stack.Screen
         options={{
-          // default back button will show the previous screen's title (e.g., "All Games")
           title: 'Box Score',
           headerStyle: { backgroundColor: NAVY },
           headerTintColor: YELLOW,
-          headerTitleStyle: { color: YELLOW, fontWeight: 'bold' },
+          headerTitleStyle: { color: YELLOW, fontWeight: 'bold', fontFamily: FONT_FAMILIES.archivoBlack },
         }}
       />
 
-      {/* score header */}
+      {/* Score header (time/field + two teams + fantasy totals) */}
       <View style={styles.headerCard}>
         <Text style={styles.subhead}>
           {game.time} • {game.field}
@@ -126,12 +155,11 @@ export default function GameDetail() {
           </View>
           <Text style={styles.score}>{derivedPoints(game, 'team2')}</Text>
         </View>
-
       </View>
 
       <Text style={styles.status}>{game.status}</Text>
 
-      {/* toggle which team box score to show */}
+      {/* Toggle which team box score to show */}
       <View style={styles.toggleRow}>
         <TouchableOpacity
           onPress={() => setSide('team1')}
@@ -151,16 +179,8 @@ export default function GameDetail() {
         </TouchableOpacity>
       </View>
 
-      {/* spreadsheet-like box */}
+      {/* Spreadsheet-like box: Player | TD | Full breakdown */}
       <View style={styles.tableCard}>
-        {/* header row */}
-        <View style={[styles.row, styles.headRow]}>
-          <Text style={[styles.hCell, styles.cName]}>Player</Text>
-          <Text style={[styles.hCell, styles.cNum]}>TD</Text>
-          <Text style={[styles.hCell, styles.cNum]}>INT</Text>
-          <Text style={[styles.hCell, styles.cNum]}>FLG</Text>
-          <Text style={[styles.hCell, styles.cNum]}>MVP</Text>
-        </View>
 
         <FlatList
           data={rows}
@@ -168,31 +188,86 @@ export default function GameDetail() {
           ItemSeparatorComponent={() => <View style={styles.rowSep} />}
           renderItem={({ item }) => (
             <View style={styles.row}>
-              {/* Wider name column so long names fit better */}
-              <Text
-                style={[styles.cell, styles.cName]}
-                numberOfLines={1}
-                ellipsizeMode="tail"
-              >
+              <Text style={[styles.cell, styles.cName]} numberOfLines={1} ellipsizeMode="tail">
                 {item.name}
               </Text>
-              <Text style={[styles.cell, styles.cNum]}>{item.td}</Text>
-              <Text style={[styles.cell, styles.cNum]}>{item.int}</Text>
-              <Text style={[styles.cell, styles.cNum]}>{item.flg}</Text>
-              <Text style={[styles.cell, styles.cNum]}>{item.mvp}</Text>
+
+              <TouchableOpacity
+                style={styles.detailBtn}
+                onPress={() => setDetail({ name: item.name, line: item.line })}
+                activeOpacity={0.85}
+              >
+                <Text style={styles.detailBtnText}>Full Fantasy Breakdown</Text>
+              </TouchableOpacity>
             </View>
           )}
         />
       </View>
+
+      {/* Modal: per-player full breakdown (matches player screen layout) */}
+      <Modal
+        visible={!!detail}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setDetail(null)}
+      >
+        <Pressable style={styles.backdrop} onPress={() => setDetail(null)}>
+          <Pressable style={styles.modalCard} onPress={(e) => e.stopPropagation()}>
+            {detail && (() => {
+              const { rows, grandTotal } = computeBreakdown(detail.line);
+              return (
+                <>
+                  <Text style={styles.modalTitle}>{detail.name}'s Stats</Text>
+
+                  <View style={[styles.row, styles.rowHead]}>
+                    <Text style={[styles.cellLabel, { flex: 1 }]}>Metric</Text>
+                    <Text style={[styles.cell, styles.right]}>Count</Text>
+                    <Text style={[styles.cell, styles.right]}>Pts</Text>
+                    <Text style={[styles.cell, styles.right]}>Total</Text>
+                  </View>
+
+                  <FlatList
+                    data={rows}
+                    keyExtractor={(r) => r.key}
+                    ItemSeparatorComponent={() => <View style={{ height: 8 }} />}
+                    renderItem={({ item }) => (
+                      <View style={styles.row}>
+                        <Text style={[styles.cellLabel, { flex: 1 }]} numberOfLines={1}>{item.label}</Text>
+                        <Text style={[styles.cell, styles.right]}>{item.count}</Text>
+                        <Text style={[styles.cell, styles.right]}>{item.mult}</Text>
+                        <Text style={[styles.cell, styles.right, styles.totalCell]}>{item.subtotal}</Text>
+                      </View>
+                    )}
+                    ListFooterComponent={
+                      <View style={[styles.row, styles.footerRow]}>
+                        <Text style={[styles.cellLabel, { flex: 1 }]}>Total</Text>
+                        <Text style={[styles.cell, styles.right]} />
+                        <Text style={[styles.cell, styles.right]} />
+                        <Text style={[styles.cell, styles.right]} />
+                        <Text style={[styles.cell, styles.right, styles.totalCell]}>{grandTotal}</Text>
+                      </View>
+                    }
+                  />
+
+                  <TouchableOpacity style={styles.closeBtn} onPress={() => setDetail(null)}>
+                    <Text style={styles.closeBtnText}>Close</Text>
+                  </TouchableOpacity>
+                </>
+              );
+            })()}
+          </Pressable>
+        </Pressable>
+      </Modal>
     </View>
   );
 }
 
+/** styles **/
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: NAVY, padding: 12 },
 
   headerCard: { backgroundColor: CARD, borderRadius: 12, padding: 12, marginBottom: 12 },
-  subhead: { color: TEXT, textAlign: 'left', marginBottom: 10, fontWeight: '700', fontFamily: FONT_FAMILIES.archivoBlack},
+  subhead: { color: TEXT, textAlign: 'left', marginBottom: 10, fontWeight: '700', fontFamily: FONT_FAMILIES.archivoBlack },
 
   teamRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 6 },
   logo: {
@@ -209,19 +284,43 @@ const styles = StyleSheet.create({
   toggleBtn: { flex: 1, paddingVertical: 8, borderRadius: 8, backgroundColor: '#062a4e', alignItems: 'center' },
   toggleActive: { backgroundColor: CARD },
   toggleText: { color: TEXT, fontWeight: '700', fontFamily: FONT_FAMILIES.archivoBlack },
-  toggleTextActive: { color: YELLOW, fontFamily: FONT_FAMILIES.archivoBlack},
+  toggleTextActive: { color: YELLOW, fontFamily: FONT_FAMILIES.archivoBlack },
 
   tableCard: { flex: 1, backgroundColor: CARD, borderRadius: 12, padding: 10 },
-  headRow: { backgroundColor: CARD, borderRadius: 8, marginBottom: 6 },
-  row: { flexDirection: 'row', alignItems: 'center', backgroundColor: CARD, borderRadius: 8, paddingVertical: 10, paddingHorizontal: 12 },
+  headRow: { backgroundColor: '#0a3a68', borderRadius: 8, marginBottom: 6 },
+  row: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#0a3a68', borderRadius: 8, paddingVertical: 10, paddingHorizontal: 12 },
   rowSep: { height: 8 },
-  hCell: { color: YELLOW, fontWeight: '800', fontFamily: FONT_FAMILIES.archivoBlack},
-  cell: { color: YELLOW, fontWeight: '700', fontFamily: FONT_FAMILIES.archivoBlack },
+  hCell: { color: YELLOW, fontWeight: '800', fontFamily: FONT_FAMILIES.archivoBlack },
+  cell: { color: TEXT, fontWeight: '800', width: 60, fontFamily: FONT_FAMILIES.archivoBlack },
 
-  // column widths — make name wider so long names fit
-  cName: { flex: 1.8 },
-  cPos:  { width: 52, textAlign: 'center', color: TEXT, fontWeight: '800', fontFamily: FONT_FAMILIES.archivoBlack },
-  cNum:  { width: 54, textAlign: 'center' },
+  // column widths
+  cName: { flex: 1.6, fontSize: 12, fontFamily: FONT_FAMILIES.archivoBlack },
+  cNum:  { width: 64, textAlign: 'center' },
+  cAction: { width: 132 },
+
+  detailBtn: {
+    backgroundColor: YELLOW,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  detailBtnText: { color: NAVY, fontWeight: '900', fontFamily: FONT_FAMILIES.archivoBlack, fontSize: 12 },
+
+  // Modal (matches player screen)
+  backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'center', alignItems: 'center' },
+  modalCard: { width: '92%', maxHeight: '80%', backgroundColor: NAVY, borderRadius: 16, padding: 16, borderWidth: 1, borderColor: LINE },
+  modalTitle: { color: YELLOW, fontWeight: '900', fontSize: 18, marginBottom: 10, fontFamily: FONT_FAMILIES.archivoBlack, textAlign: 'center' },
+
+  rowHead: { backgroundColor: '#0f4a85', marginBottom: 8 },
+  footerRow: { marginTop: 10, backgroundColor: '#0f4a85', borderRadius: 8 },
+
+  cellLabel: { color: YELLOW, fontWeight: '800', fontFamily: FONT_FAMILIES.archivoBlack },
+  right: { textAlign: 'right' as const },
+  totalCell: { color: YELLOW },
+
+  closeBtn: { alignSelf: 'center', marginTop: 12, paddingHorizontal: 16, paddingVertical: 10, borderRadius: 10, backgroundColor: YELLOW },
+  closeBtnText: { color: NAVY, fontWeight: '900', fontFamily: FONT_FAMILIES.archivoBlack },
 
   empty: { color: YELLOW, textAlign: 'center' },
 });

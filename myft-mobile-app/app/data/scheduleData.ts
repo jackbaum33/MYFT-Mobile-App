@@ -2,20 +2,29 @@
 export type Gender = 'men' | 'women';
 export type GameStatus = 'Scheduled' | 'Live' | 'Final';
 
+export type TeamId = 'michigan' | 'maryland' | 'yeshiva' | 'binghamton';
+
+/** New per-player, per-game line with all fantasy categories */
 export type PlayerGameStat = {
   playerId: string;
-  touchdowns: number;
-  interceptions: number;
-  flagsPulled: number;
-  mvpAwards: number;
+
+  // Scoring buckets
+  touchdowns: number;           // non-passing TDs
+  passingTDs: number;           // thrown TDs
+  shortReceptions: number;      // short yardage receptions
+  mediumReceptions: number;     // medium yardage receptions
+  longReceptions: number;       // long yardage receptions
+  catches: number;              // receptions (base 1 pt / catch)
+  flagsPulled: number;          // flag grabs
+  sacks: number;                // defensive sacks
+  interceptions: number;        // defensive INTs made
+  passingInterceptions: number; // interceptions thrown (negative)
 };
 
 export type PerSide = {
   team1: PlayerGameStat[];
   team2: PlayerGameStat[];
 };
-
-export type TeamId = 'michigan' | 'maryland' | 'yeshiva' | 'binghamton';
 
 export type Game = {
   id: string;
@@ -26,7 +35,7 @@ export type Game = {
   field: string;
   status: GameStatus;
 
-  // Always present
+  // Always present (can be empty arrays)
   liveStats: PerSide;
   finalBoxScore: PerSide;
 };
@@ -37,15 +46,26 @@ export type DaySchedule = {
   games: Game[];
 };
 
+const emptyLine = (playerId: string): PlayerGameStat => ({
+  playerId,
+  touchdowns: 0,
+  passingTDs: 0,
+  shortReceptions: 0,
+  mediumReceptions: 0,
+  longReceptions: 0,
+  catches: 0,
+  flagsPulled: 0,
+  sacks: 0,
+  interceptions: 0,
+  passingInterceptions: 0,
+});
+
 const emptyPerSide = (): PerSide => ({ team1: [], team2: [] });
 
 let gid = 1;
 const g = () => `g${gid++}`;
 
-// Seed with some games. Every game has liveStats + finalBoxScore.
-// For Scheduled: both empty.
-// For Live: liveStats filled, finalBoxScore empty.
-// For Final: finalBoxScore filled (and liveStats can mirror or be empty).
+/** Seed with some games using the new fields */
 export const scheduleData: DaySchedule[] = [
   {
     label: 'APR 4',
@@ -61,12 +81,12 @@ export const scheduleData: DaySchedule[] = [
         status: 'Live',
         liveStats: {
           team1: [
-            { playerId: 'p1', touchdowns: 3, interceptions: 0, flagsPulled: 1, mvpAwards: 1 },
-            { playerId: 'p2', touchdowns: 1, interceptions: 0, flagsPulled: 2, mvpAwards: 0 },
+            { ...emptyLine('p1'), touchdowns: 2, passingTDs: 1, catches: 3, shortReceptions: 1, flagsPulled: 1 },
+            { ...emptyLine('p2'), catches: 4, mediumReceptions: 2, touchdowns: 1 },
           ],
           team2: [
-            { playerId: 'p3', touchdowns: 2, interceptions: 1, flagsPulled: 0, mvpAwards: 0 },
-            { playerId: 'p4', touchdowns: 0, interceptions: 0, flagsPulled: 3, mvpAwards: 0 },
+            { ...emptyLine('p3'), touchdowns: 1, interceptions: 1, sacks: 1, catches: 2 },
+            { ...emptyLine('p4'), flagsPulled: 3, interceptions: 0, sacks: 1, catches: 1 },
           ],
         },
         finalBoxScore: emptyPerSide(),
@@ -79,15 +99,15 @@ export const scheduleData: DaySchedule[] = [
         time: '09:45 AM',
         field: 'Field B',
         status: 'Final',
-        liveStats: emptyPerSide(), // could mirror final if you prefer
+        liveStats: emptyPerSide(),
         finalBoxScore: {
           team1: [
-            { playerId: 'p5', touchdowns: 2, interceptions: 0, flagsPulled: 1, mvpAwards: 1 },
-            { playerId: 'p6', touchdowns: 1, interceptions: 0, flagsPulled: 0, mvpAwards: 0 },
+            { ...emptyLine('p5'), touchdowns: 2, catches: 5, longReceptions: 1, flagsPulled: 1 },
+            { ...emptyLine('p6'), touchdowns: 1, catches: 3, mediumReceptions: 1 },
           ],
           team2: [
-            { playerId: 'p7', touchdowns: 2, interceptions: 0, flagsPulled: 2, mvpAwards: 0 },
-            { playerId: 'p8', touchdowns: 0, interceptions: 1, flagsPulled: 3, mvpAwards: 0 },
+            { ...emptyLine('p7'), touchdowns: 2, catches: 4, shortReceptions: 2 },
+            { ...emptyLine('p8'), interceptions: 1, catches: 1, passingInterceptions: 0 },
           ],
         },
       },
@@ -99,16 +119,6 @@ export const scheduleData: DaySchedule[] = [
       {
         id: g(), gender: 'women', team1: 'binghamton', team2: 'yeshiva',
         time: '11:15 AM', field: 'Field B', status: 'Scheduled',
-        liveStats: emptyPerSide(), finalBoxScore: emptyPerSide(),
-      },
-      {
-        id: g(), gender: 'men', team1: 'michigan', team2: 'maryland',
-        time: '12:00 PM', field: 'Field C', status: 'Scheduled',
-        liveStats: emptyPerSide(), finalBoxScore: emptyPerSide(),
-      },
-      {
-        id: g(), gender: 'women', team1: 'yeshiva', team2: 'binghamton',
-        time: '12:45 PM', field: 'Field A', status: 'Scheduled',
         liveStats: emptyPerSide(), finalBoxScore: emptyPerSide(),
       },
     ],
@@ -123,20 +133,46 @@ export const scheduleData: DaySchedule[] = [
       { id: g(), gender: 'women', team1: 'yeshiva',    team2: 'binghamton', time: '11:15 AM', field: 'Field A', status: 'Scheduled', liveStats: emptyPerSide(), finalBoxScore: emptyPerSide() },
     ],
   },
-  {
-    label: 'APR 6',
-    date: '2025-04-06',
-    games: [
-      { id: g(), gender: 'men',   team1: 'michigan',   team2: 'maryland',   time: '09:00 AM', field: 'Field A', status: 'Scheduled', liveStats: emptyPerSide(), finalBoxScore: emptyPerSide() },
-      { id: g(), gender: 'women', team1: 'yeshiva',    team2: 'binghamton', time: '09:45 AM', field: 'Field B', status: 'Scheduled', liveStats: emptyPerSide(), finalBoxScore: emptyPerSide() },
-      { id: g(), gender: 'men',   team1: 'maryland',   team2: 'michigan',   time: '10:30 AM', field: 'Field C', status: 'Scheduled', liveStats: emptyPerSide(), finalBoxScore: emptyPerSide() },
-      { id: g(), gender: 'women', team1: 'binghamton', team2: 'yeshiva',    time: '11:15 AM', field: 'Field A', status: 'Scheduled', liveStats: emptyPerSide(), finalBoxScore: emptyPerSide() },
-    ],
-  },
 ];
 
-/** UTILITIES **/
+/** ========= Helpers ========= */
 
+export const statsForRender = (g: Game): PerSide | undefined =>
+  g.status === 'Final' ? g.finalBoxScore
+  : g.status === 'Live' ? g.liveStats
+  : undefined;
+
+/** Scoring table */
+export const SCORING = {
+  touchdown: 6,
+  passingTD: 4,
+  shortReception: 1,
+  mediumReception: 2,
+  longReception: 4,
+  catch: 1,
+  flagGrab: 1,
+  sack: 3,
+  interception: 4,
+  passingInterception: -2,
+};
+
+/** Calculate fantasy points for a single line */
+export function pointsForLine(line: PlayerGameStat): number {
+  return (
+    line.touchdowns * SCORING.touchdown +
+    line.passingTDs * SCORING.passingTD +
+    line.shortReceptions * SCORING.shortReception +
+    line.mediumReceptions * SCORING.mediumReception +
+    line.longReceptions * SCORING.longReception +
+    line.catches * SCORING.catch +
+    line.flagsPulled * SCORING.flagGrab +
+    line.sacks * SCORING.sack +
+    line.interceptions * SCORING.interception +
+    line.passingInterceptions * SCORING.passingInterception
+  );
+}
+
+/** Find a game by id */
 export const findGameById = (id?: string) => {
   if (!id) return null;
   for (const day of scheduleData) {
@@ -146,22 +182,7 @@ export const findGameById = (id?: string) => {
   return null;
 };
 
-// Which stat bucket should the UI render?
-export const statsForRender = (g: Game): PerSide | undefined =>
-  g.status === 'Final' ? g.finalBoxScore
-  : g.status === 'Live' ? g.liveStats
-  : undefined;
-
-// Touchdowns × 7 from the appropriate bucket
-export const derivedPoints = (g: Game, side: 'team1'|'team2') => {
-  const box = statsForRender(g);
-  if (!box) return '-';
-  const arr = side === 'team1' ? box.team1 : box.team2;
-  const tds = (arr ?? []).reduce((sum, l) => sum + (l.touchdowns || 0), 0);
-  return String(tds * 7);
-};
-
-/** LIFECYCLE HELPERS (simple in-memory; replace with API later) **/
+/** Update helpers (in-memory mocks) */
 
 export function setGameStatus(gameId: string, next: GameStatus) {
   for (const day of scheduleData) {
@@ -169,7 +190,6 @@ export function setGameStatus(gameId: string, next: GameStatus) {
     if (!g) continue;
 
     if (next === 'Final') {
-      // snapshot live into final on finalize
       g.finalBoxScore = {
         team1: [...g.liveStats.team1],
         team2: [...g.liveStats.team2],
@@ -180,6 +200,14 @@ export function setGameStatus(gameId: string, next: GameStatus) {
   }
   return null;
 }
+
+export const derivedPoints = (g: Game, side: 'team1' | 'team2'): string => {
+  const box = statsForRender(g);
+  if (!box) return '-';
+  const arr = side === 'team1' ? box.team1 : box.team2;
+  const totalTDs = (arr ?? []).reduce((sum, line) => sum + (line.touchdowns ?? 0), 0);
+  return String(totalTDs * 7);
+};
 
 export function applyLiveStat(
   gameId: string,
@@ -194,13 +222,14 @@ export function applyLiveStat(
     const bucket = team === 'team1' ? g.liveStats.team1 : g.liveStats.team2;
     let line = bucket.find(l => l.playerId === playerId);
     if (!line) {
-      line = { playerId, touchdowns: 0, interceptions: 0, flagsPulled: 0, mvpAwards: 0 };
+      line = emptyLine(playerId);
       bucket.push(line);
     }
-    if (patch.touchdowns != null)    line.touchdowns    = patch.touchdowns;
-    if (patch.interceptions != null) line.interceptions = patch.interceptions;
-    if (patch.flagsPulled != null)   line.flagsPulled   = patch.flagsPulled;
-    if (patch.mvpAwards != null)     line.mvpAwards     = patch.mvpAwards;
+
+    // Apply only provided fields
+    for (const k of Object.keys(patch) as (keyof PlayerGameStat)[]) {
+      (line as any)[k] = (patch as any)[k];
+    }
     return line;
   }
   return null;

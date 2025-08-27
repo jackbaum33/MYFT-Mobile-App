@@ -1,9 +1,9 @@
 // app/(tabs)/leaderboard/player/[id].tsx
-import React, { useMemo } from 'react';
-import { View, Text, StyleSheet, FlatList, Image } from 'react-native';
+import React, { useMemo, useState } from 'react';
+import { View, Text, StyleSheet, Image, Modal, Pressable, TouchableOpacity, FlatList } from 'react-native';
 import { Stack, useLocalSearchParams } from 'expo-router';
 import { useTournament } from '../../../../context/TournamentContext';
-import { scheduleData, statsForRender } from '../../../data/scheduleData';
+import { scheduleData, statsForRender, SCORING, pointsForLine } from '../../../data/scheduleData';
 import { getTeamLogo } from '../../../../assets/team_logos';
 import { FONT_FAMILIES } from '@/assets/fonts';
 
@@ -11,20 +11,31 @@ const CARD = '#00417D';
 const NAVY = '#00274C';
 const YELLOW = '#FFCB05';
 const TEXT = '#E9ECEF';
+const LINE = 'rgba(255,255,255,0.18)';
 
-type Line = {
-  key: string;
-  day: string;
-  vs: string;
-  td: number;
-  int: number;
-  flg: number;
-  mvp: number;
+type Totals = {
+  touchdowns: number;
+  passingTDs: number;
+  shortReceptions: number;
+  mediumReceptions: number;
+  longReceptions: number;
+  catches: number;
+  flagsPulled: number;
+  sacks: number;
+  interceptions: number;
+  passingInterceptions: number;
+};
+
+const EMPTY_TOTALS: Totals = {
+  touchdowns: 0, passingTDs: 0, shortReceptions: 0, mediumReceptions: 0, longReceptions: 0,
+  catches: 0, flagsPulled: 0, sacks: 0, interceptions: 0, passingInterceptions: 0,
 };
 
 export default function PlayerLeaderboardDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { teams, calculatePoints } = useTournament(); // 👈 now pulling calculatePoints
+  const { teams } = useTournament();
+
+  const [showBreakdown, setShowBreakdown] = useState(false);
 
   const player = useMemo(() => {
     for (const t of teams) {
@@ -34,50 +45,58 @@ export default function PlayerLeaderboardDetail() {
     return null;
   }, [teams, id]);
 
-  const fantasyPoints = useMemo(() => {
-    if (!player) return 0;
-    return calculatePoints(player.player);
-  }, [player, calculatePoints]);
+  // Aggregate the player's lines across Live/Final games
+  const aggregated = useMemo(() => {
+    if (!id) return { totals: EMPTY_TOTALS, totalPoints: 0 };
 
-  const lines: Line[] = useMemo(() => {
-    if (!id) return [];
-    const out: Line[] = [];
+    const totals: Totals = { ...EMPTY_TOTALS };
+    let points = 0;
+
     for (const day of scheduleData) {
       for (const g of day.games) {
         const box = statsForRender(g);
         if (!box) continue;
-        const from1 = box.team1.find(l => l.playerId === id);
-        if (from1) {
-          out.push({
-            key: `${g.id}-t1`,
-            day: day.label,
-            vs: g.team2.charAt(0).toUpperCase() + g.team2.slice(1),
-            td: from1.touchdowns, int: from1.interceptions, flg: from1.flagsPulled, mvp: from1.mvpAwards,
-          });
-        }
-        const from2 = box.team2.find(l => l.playerId === id);
-        if (from2) {
-          out.push({
-            key: `${g.id}-t2`,
-            day: day.label,
-            vs: g.team1.charAt(0).toUpperCase() + g.team1.slice(1),
-            td: from2.touchdowns, int: from2.interceptions, flg: from2.flagsPulled, mvp: from2.mvpAwards,
-          });
+
+        const lines = [
+          ...box.team1.filter(l => l.playerId === id),
+          ...box.team2.filter(l => l.playerId === id),
+        ];
+
+        for (const line of lines) {
+          totals.touchdowns += line.touchdowns;
+          totals.passingTDs += line.passingTDs;
+          totals.shortReceptions += line.shortReceptions;
+          totals.mediumReceptions += line.mediumReceptions;
+          totals.longReceptions += line.longReceptions;
+          totals.catches += line.catches;
+          totals.flagsPulled += line.flagsPulled;
+          totals.sacks += line.sacks;
+          totals.interceptions += line.interceptions;
+          totals.passingInterceptions += line.passingInterceptions;
+
+          points += pointsForLine(line);
         }
       }
     }
-    return out;
+    return { totals, totalPoints: points };
   }, [id]);
 
-  const totals = useMemo(() => {
-    return lines.reduce(
-      (acc, r) => {
-        acc.td += r.td; acc.int += r.int; acc.flg += r.flg; acc.mvp += r.mvp;
-        return acc;
-      },
-      { td: 0, int: 0, flg: 0, mvp: 0 }
-    );
-  }, [lines]);
+  // Rows for the breakdown modal
+  const breakdownRows = useMemo(() => {
+    const rows = [
+      { key: 'TD',   label: 'Touchdowns',        count: aggregated.totals.touchdowns,           mult: SCORING.touchdown },
+      { key: 'pTD',  label: 'Passing TDs',       count: aggregated.totals.passingTDs,           mult: SCORING.passingTD },
+      { key: 'pINT', label: 'Passing INTs',      count: aggregated.totals.passingInterceptions, mult: SCORING.passingInterception },
+      { key: 'C',    label: 'Catches',           count: aggregated.totals.catches,              mult: SCORING.catch },
+      { key: 'sREC', label: 'Short Gain',        count: aggregated.totals.shortReceptions,      mult: SCORING.shortReception },
+      { key: 'mREC', label: 'Medium Gain',       count: aggregated.totals.mediumReceptions,     mult: SCORING.mediumReception },
+      { key: 'lREC', label: 'Long Gain',         count: aggregated.totals.longReceptions,       mult: SCORING.longReception },
+      { key: 'FLG',  label: 'Flag Grabs',        count: aggregated.totals.flagsPulled,          mult: SCORING.flagGrab },
+      { key: 'SACK', label: 'Sacks',             count: aggregated.totals.sacks,                mult: SCORING.sack },
+      { key: 'INT',  label: 'Interceptions',     count: aggregated.totals.interceptions,        mult: SCORING.interception },
+    ];
+    return rows.map(r => ({ ...r, subtotal: r.count * r.mult }));
+  }, [aggregated]);
 
   if (!player) {
     return (
@@ -96,71 +115,84 @@ export default function PlayerLeaderboardDetail() {
       <Stack.Screen options={{ title: `${p.name}` }} />
 
       <View style={s.container}>
-        {/* Header / totals */}
+        {/* Header */}
         <View style={s.headerCard}>
           <View>
             <Text style={s.name}>{p.name}</Text>
-            <Text style={s.meta}>{p.position}</Text>
+            <Text style={s.meta}>{p.position} • {player.teamName}</Text>
           </View>
           <Image source={logoSrc} style={s.logo} resizeMode="contain" />
         </View>
 
-        <Text style={s.statsTitle}>Total Stats</Text>
-        <View style={s.headerCard}>
-          <View style={s.totalsRow}>
-            <StatBlock label="TD"  value={totals.td} />
-            <StatBlock label="INT" value={totals.int} />
-            <StatBlock label="FLG" value={totals.flg} />
-            <StatBlock label="MVP" value={totals.mvp} />
-          </View>
-        </View>
-
-        {/* Box score by game */}
-        <Text style={s.gameBreakdownTitle}>Game Breakdown</Text>
-        <View style={s.tableCard}>
-          <View style={[s.row, s.headRow]}>
-            <Text style={[s.hCell, s.cVs]}>Vs</Text>
-            <Text style={[s.hCell, s.cNum]}>TD</Text>
-            <Text style={[s.hCell, s.cNum]}>INT</Text>
-            <Text style={[s.hCell, s.cNum]}>FLG</Text>
-            <Text style={[s.hCell, s.cNum]}>MVP</Text>
-          </View>
-          <FlatList
-            data={lines}
-            keyExtractor={(r) => r.key}
-            ItemSeparatorComponent={() => <View style={s.rowSep} />}
-            renderItem={({ item }) => (
-              <View style={s.row}>
-                <Text style={[s.cell, s.cVs]} numberOfLines={1}>{item.vs}</Text>
-                <Text style={[s.cell, s.cNum]}>{item.td}</Text>
-                <Text style={[s.cell, s.cNum]}>{item.int}</Text>
-                <Text style={[s.cell, s.cNum]}>{item.flg}</Text>
-                <Text style={[s.cell, s.cNum]}>{item.mvp}</Text>
-              </View>
-            )}
-          />
+        {/* Total points + breakdown button */}
+        <View style={s.bottomCard}>
+          <Text style={s.bottomText}>Total Fantasy Points: {aggregated.totalPoints}</Text>
+          <TouchableOpacity style={s.breakdownBtn} onPress={() => setShowBreakdown(true)} activeOpacity={0.9}>
+            <Text style={s.breakdownBtnText}>See Stat Breakdown</Text>
+          </TouchableOpacity>
         </View>
       </View>
 
-      {/* Bottom card for fantasy points */}
-      <View style={s.bottomCard}>
-        <Text style={s.bottomText}>Total Points: {fantasyPoints}</Text>
-      </View>
-    </View>
-  );
-}
+      {/* Breakdown modal */}
+      // app/(tabs)/leaderboard/player/[id].tsx
+...
+      {/* Breakdown modal */}
+      <Modal
+        visible={showBreakdown}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowBreakdown(false)}
+      >
+        <Pressable style={s.backdrop} onPress={() => setShowBreakdown(false)}>
+          <Pressable style={s.modalCard} onPress={(e) => e.stopPropagation()}>
+          <Text style={s.modalTitle}>{p.name}'s Stats</Text>
 
-function StatBlock({ label, value }: { label: string; value: number }) {
-  return (
-    <View style={s.statBlock}>
-      <Text style={s.statVal}>{value}</Text>
-      <Text style={s.statLbl}>{label}</Text>
+            <View style={[s.row, s.rowHead]}>
+              <Text style={[s.cellLabel, { flex: 1 }]}>Metric</Text>
+              <Text style={[s.cell, s.right]}>Count</Text>
+              <Text style={[s.cell, s.right]}>Pts</Text>
+              <Text style={[s.cell, s.right]}>Total</Text>
+            </View>
+
+            <FlatList
+              data={breakdownRows}
+              keyExtractor={(r) => r.key}
+              ItemSeparatorComponent={() => <View style={{ height: 8 }} />}
+              renderItem={({ item }) => (
+                <View style={s.row}>
+                  <Text style={[s.cellLabel, { flex: 1 }]} numberOfLines={1}>{item.label}</Text>
+                  <Text style={[s.cell, s.right]}>{item.count}</Text>
+                  <Text style={[s.cell, s.right]}>{item.mult}</Text>
+                  <Text style={[s.cell, s.right, s.totalCell]}>{item.subtotal}</Text>
+                </View>
+              )}
+              ListFooterComponent={
+                <View style={[s.row, s.footerRow]}>
+                  <Text style={[s.cellLabel, { flex: 1 }]}>Total Points</Text>
+                  <Text style={[s.cell, s.right]} />
+                  <Text style={[s.cell, s.right]} />
+                  <Text style={[s.cell, s.right]} />
+                  <Text style={[s.cell, s.right, s.totalCell]}>{aggregated.totalPoints}</Text>
+                </View>
+              }
+            />
+
+            {/* Close button */}
+            <TouchableOpacity style={s.closeBtn} onPress={() => setShowBreakdown(false)}>
+              <Text style={s.closeBtnText}>Close</Text>
+            </TouchableOpacity>
+          </Pressable>
+        </Pressable>
+      </Modal>
+...
+
     </View>
   );
 }
 
 const s = StyleSheet.create({
   container: { flex: 1, padding: 12 },
+
   headerCard: {
     backgroundColor: CARD,
     borderRadius: 12,
@@ -171,35 +203,53 @@ const s = StyleSheet.create({
     justifyContent: 'space-between',
   },
   name: { color: YELLOW, fontWeight: '900', fontSize: 20, fontFamily: FONT_FAMILIES.archivoBlack },
-  statsTitle: { color: YELLOW, fontWeight: '900', fontSize: 20, marginBottom: 10, marginLeft: 5 },
-  gameBreakdownTitle: { color: YELLOW, fontWeight: '900', fontSize: 20, marginBottom: 10, marginLeft: 5 },
   meta: { color: TEXT, marginTop: 4, fontFamily: FONT_FAMILIES.archivoNarrow },
-  totalsRow: { flexDirection: 'row', gap: 10, marginTop: 10 },
-  statBlock: {
-    backgroundColor: '#0a3a68',
+
+  bottomCard: {
+    backgroundColor: CARD,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: LINE,
+    borderRadius: 12,
+  },
+  bottomText: { color: YELLOW, fontWeight: '900', fontSize: 18, textAlign: 'center', fontFamily: FONT_FAMILIES.archivoBlack },
+  breakdownBtn: {
+    marginTop: 10,
+    alignSelf: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
     borderRadius: 10,
-    paddingVertical: 10,
-    paddingHorizontal: 14,
-    alignItems: 'center',
-    flex: 1,
+    backgroundColor: YELLOW,
   },
-  statVal: { color: YELLOW, fontWeight: '900', fontSize: 18, fontFamily: FONT_FAMILIES.archivoBlack},
-  statLbl: { color: TEXT, fontWeight: '700', marginTop: 2, fontFamily: FONT_FAMILIES.archivoBlack },
-  tableCard: { flex: 1, backgroundColor: CARD, borderRadius: 12, padding: 10 },
-  headRow: { backgroundColor: '#0a3a68', borderRadius: 8, marginBottom: 6 },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#0a3a68',
-    borderRadius: 8,
+  breakdownBtnText: { color: NAVY, fontWeight: '900', fontFamily: FONT_FAMILIES.archivoBlack },
+
+  // Modal
+  backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'center', alignItems: 'center' },
+  modalCard: { width: '90%', maxHeight: '80%', backgroundColor: NAVY, borderRadius: 16, padding: 16, borderWidth: 1, borderColor: LINE },
+  modalTitle: { color: YELLOW, fontWeight: '900', fontSize: 18, marginBottom: 10, fontFamily: FONT_FAMILIES.archivoBlack, textAlign: 'center' },
+
+  row: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#0a3a68', borderRadius: 8, paddingVertical: 10, paddingHorizontal: 12 },
+  rowHead: { backgroundColor: '#0f4a85', marginBottom: 8 },
+  footerRow: { marginTop: 10, backgroundColor: '#0f4a85' },
+
+  cellLabel: { color: YELLOW, fontWeight: '800', fontFamily: FONT_FAMILIES.archivoBlack },
+  cell: { color: TEXT, fontWeight: '800', width: 60, fontFamily: FONT_FAMILIES.archivoBlack },
+  right: { textAlign: 'right' as const },
+  totalCell: { color: YELLOW },
+  closeBtn: {
+    alignSelf: 'center',
+    marginTop: 12,
+    paddingHorizontal: 16,
     paddingVertical: 10,
-    paddingHorizontal: 12,
+    borderRadius: 10,
+    backgroundColor: YELLOW,
   },
-  rowSep: { height: 8 },
-  hCell: { color: YELLOW, fontWeight: '800', fontFamily: FONT_FAMILIES.archivoBlack },
-  cell: { color: YELLOW, fontWeight: '700', fontFamily: FONT_FAMILIES.archivoBlack },
-  cVs: { flex: 1 },
-  cNum: { width: 52, textAlign: 'center' },
+  closeBtnText: {
+    color: NAVY,
+    fontWeight: '900',
+    fontFamily: FONT_FAMILIES.archivoBlack,
+  },
+
   logo: {
     width: 56,
     height: 56,
@@ -208,15 +258,4 @@ const s = StyleSheet.create({
     borderColor: 'rgba(255,215,0,0.25)',
     backgroundColor: 'rgba(0,0,0,0.08)',
   },
-  // Bottom fantasy points card
-  bottomCard: {
-    backgroundColor: CARD,
-    padding: 14,
-    borderTopWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
-    marginHorizontal: 10, // 👈 adds space on left/right
-    borderRadius: 12,     // 👈 rounded look
-    marginBottom: 20,     // space from bottom of screen
-  },
-  bottomText: { color: YELLOW, fontWeight: '900', fontSize: 18, textAlign: 'center', fontFamily: FONT_FAMILIES.archivoBlack },
 });
