@@ -68,7 +68,7 @@ const g = () => `g${gid++}`;
 /** Seed with some games using the new fields */
 export const scheduleData: DaySchedule[] = [
   {
-    label: 'APR 4',
+    label: 'NOV 7',
     date: '2025-04-04',
     games: [
       {
@@ -124,7 +124,7 @@ export const scheduleData: DaySchedule[] = [
     ],
   },
   {
-    label: 'APR 5',
+    label: 'NOV 8',
     date: '2025-04-05',
     games: [
       { id: g(), gender: 'men',   team1: 'maryland',   team2: 'michigan',   time: '09:00 AM', field: 'Field A', status: 'Scheduled', liveStats: emptyPerSide(), finalBoxScore: emptyPerSide() },

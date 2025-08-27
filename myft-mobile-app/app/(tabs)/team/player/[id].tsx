@@ -133,47 +133,61 @@ export default function PlayerLeaderboardDetail() {
 
       {/* Breakdown modal */}
       <Modal
-        visible={showBreakdown}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setShowBreakdown(false)}
-      >
-        <Pressable style={s.backdrop} onPress={() => setShowBreakdown(false)}>
-          <Pressable style={s.modalCard} onPress={(e) => e.stopPropagation()}>
-            <Text style={s.modalTitle}>Stat Breakdown</Text>
+  visible={showBreakdown}
+  transparent
+  animationType="fade"
+  onRequestClose={() => setShowBreakdown(false)}
+>
+  <Pressable style={s.backdrop} onPress={() => setShowBreakdown(false)}>
+    <Pressable style={s.modalCard} onPress={(e) => e.stopPropagation()}>
+      {/* Top: Player — Team + Close */}
+      <View style={s.modalTopRow}>
+        <Text style={s.modalDropdownTitle}>
+          {p?.name}'s Stats
+        </Text>
+      </View>
 
-            <View style={[s.rowHead, s.row]}>
-              <Text style={[s.cellLabel, { flex: 1 }]}>Metric</Text>
-              <Text style={[s.cell, s.right]}>Count</Text>
-              <Text style={[s.cell, s.right]}>Pts</Text>
-              <Text style={[s.cell, s.right]}>Total</Text>
-            </View>
+      {/* Header row */}
+      <View style={[s.row, s.rowHead]}>
+        <Text style={[s.cellLabel, { flex: 1 }]}>Metric</Text>
+        <Text style={[s.cell, s.right]}>Count</Text>
+        <Text style={[s.cell, s.right]}>Pts</Text>
+        <Text style={[s.cell, s.right]}>Total</Text>
+      </View>
 
-            <FlatList
-              data={breakdownRows}
-              keyExtractor={(r) => r.key}
-              ItemSeparatorComponent={() => <View style={{ height: 8 }} />}
-              renderItem={({ item }) => (
-                <View style={s.row}>
-                  <Text style={[s.cellLabel, { flex: 1 }]} numberOfLines={1}>{item.label}</Text>
-                  <Text style={[s.cell, s.right]}>{item.count}</Text>
-                  <Text style={[s.cell, s.right]}>{item.mult}</Text>
-                  <Text style={[s.cell, s.right, s.totalCell]}>{item.subtotal}</Text>
-                </View>
-              )}
-              ListFooterComponent={
-                <View style={[s.row, s.footerRow]}>
-                  <Text style={[s.cellLabel, { flex: 1 }]}>Total Points</Text>
-                  <Text style={[s.cell, s.right]} />
-                  <Text style={[s.cell, s.right]} />
-                  <Text style={[s.cell, s.right]} />
-                  <Text style={[s.cell, s.right, s.totalCell]}>{aggregated.totalPoints}</Text>
-                </View>
-              }
-            />
-          </Pressable>
-        </Pressable>
-      </Modal>
+      {/* Breakdown rows */}
+      <FlatList
+        data={breakdownRows}
+        keyExtractor={(r) => r.key}
+        ItemSeparatorComponent={() => <View style={{ height: 8 }} />}
+        renderItem={({ item }) => (
+          <View style={s.row}>
+            <Text style={[s.cellLabel, { flex: 1 }]} numberOfLines={1}>{item.label}</Text>
+            <Text style={[s.cell, s.right]}>{item.count}</Text>
+            <Text style={[s.cell, s.right]}>{item.mult}</Text>
+            <Text style={[s.cell, s.right, s.totalCell]}>{item.subtotal}</Text>
+          </View>
+        )}
+        ListFooterComponent={
+          <View style={[s.row, s.footerRow]}>
+            <Text style={[s.cellLabel, { flex: 1 }]}>Total Points</Text>
+            <Text style={[s.cell, s.right]} />
+            <Text style={[s.cell, s.right]} />
+            <Text style={[s.cell, s.right]} />
+            <Text style={[s.cell, s.right, s.totalCell]}>{aggregated.totalPoints}</Text>
+          </View>
+        }
+      />
+      <TouchableOpacity
+          onPress={() => setShowBreakdown(false)}
+          style={s.modalCloseBtn}
+          hitSlop={{ top: 8, right: 8, bottom: 8, left: 8 }}
+        >
+          <Text style={s.modalCloseText}>Close</Text>
+        </TouchableOpacity>
+    </Pressable>
+  </Pressable>
+</Modal>
     </View>
   );
 }
@@ -214,16 +228,28 @@ const s = StyleSheet.create({
   // Modal
   backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'center', alignItems: 'center' },
   modalCard: { width: '90%', maxHeight: '80%', backgroundColor: NAVY, borderRadius: 16, padding: 16, borderWidth: 1, borderColor: LINE },
-  modalTitle: { color: YELLOW, fontWeight: '900', fontSize: 18, marginBottom: 10, fontFamily: FONT_FAMILIES.archivoBlack },
+  modalTitle: { color: YELLOW, fontWeight: '900', fontSize: 18, marginBottom: 10, fontFamily: FONT_FAMILIES.archivoBlack, },
 
   row: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#0a3a68', borderRadius: 8, paddingVertical: 10, paddingHorizontal: 12 },
   rowHead: { backgroundColor: '#0f4a85', marginBottom: 8 },
   footerRow: { marginTop: 10, backgroundColor: '#0f4a85' },
 
-  cellLabel: { color: YELLOW, fontWeight: '800', fontFamily: FONT_FAMILIES.archivoBlack },
+  cellLabel: { color: YELLOW, fontWeight: '800', fontFamily: FONT_FAMILIES.archivoBlack, },
   cell: { color: TEXT, fontWeight: '800', width: 60, fontFamily: FONT_FAMILIES.archivoBlack },
   right: { textAlign: 'right' as const },
   totalCell: { color: YELLOW },
+modalTopRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 10 },
+modalDropdownTitle: { flex: 1, color: YELLOW, fontWeight: '900', fontSize: 18, fontFamily: FONT_FAMILIES.archivoBlack, textAlign: 'center'},
+modalCloseBtn: {
+  alignSelf: 'center',
+  marginTop: 12,
+  paddingHorizontal: 16,
+  paddingVertical: 10,
+  borderRadius: 10,
+  backgroundColor: YELLOW,
+},
+modalCloseText: { color: NAVY, fontWeight: '900', fontFamily: FONT_FAMILIES.archivoBlack },
+
 
   logo: {
     width: 56,
