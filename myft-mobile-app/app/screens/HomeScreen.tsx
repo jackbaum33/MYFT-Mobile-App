@@ -1,9 +1,11 @@
 // app/screens/HomeScreen.tsx
-import React, { useMemo, useState, useCallback } from 'react';
-import { listenScheduleByRange, type ScheduleEvent } from '../../services/schedule';
+import React, { useMemo, useState, useCallback, useEffect } from 'react';
+import { collection, query, orderBy, Timestamp, getDocs } from 'firebase/firestore';
+import { db } from '../../services/firebase';
 import {
   View,
   Text,
+  ActivityIndicator,
   StyleSheet,
   SectionList,
   TouchableOpacity,
@@ -32,24 +34,21 @@ const WEBSITE_URL = 'https://www.themyft.com';
 const INSTAGRAM_URL = 'https://www.instagram.com/myft.25/';
 const PHOTOS_URL = 'https://drive.google.com/drive/u/1/folders/1oKW8z7r-OTg8ANJswUAz7qVBn-gIfl3v';
 
-type ScheduleItem = {
-  id: string;
-  date: string | Date;
+type ScheduleDoc = {
   title: string;
   location: string;
   address: string;
+  startAt: Timestamp; // Firestore Timestamp
 };
 
-const SCHEDULE: ScheduleItem[] = [
-  { id: 'evt-1', date: '2025-08-28T09:00:00', title: 'Sam Lukashok',          location: 'Main Field',  address: '123 Tournament Way, Cityville, NY 10001' },
-  { id: 'evt-2', date: '2025-08-28T10:00:00', title: 'Sam Lukashok – Round 1',location: 'Fields A–D',  address: '200 Sports Complex Rd, Cityville, NY 10002' },
-  { id: 'evt-3', date: '2025-08-28T14:00:00', title: 'Sam Lukashok',          location: 'Field B',     address: '200 Sports Complex Rd, Cityville, NY 10002' },
-  { id: 'evt-4', date: '2025-08-29T09:00:00', title: 'Sam Lukashok – Round 2',location: 'Fields A–D',  address: '200 Sports Complex Rd, Cityville, NY 10002' },
-  { id: 'evt-5', date: '2025-08-29T15:30:00', title: 'Sam Lukashok',          location: 'Main Field',  address: '123 Tournament Way, Cityville, NY 10001' },
-  { id: 'evt-6', date: '2025-08-30T11:00:00', title: 'Sam Lukashok',          location: 'Main Field',  address: '123 Tournament Way, Cityville, NY 10001' },
-  { id: 'evt-7', date: '2025-08-30T15:00:00', title: 'Sam Lukashok',          location: 'Main Field',  address: '123 Tournament Way, Cityville, NY 10001' },
-  { id: 'evt-8', date: '2025-08-30T17:00:00', title: 'Sam Lukashok',          location: 'Main Stage',  address: '500 Celebration Ave, Cityville, NY 10003' },
-];
+export type ScheduleItem = {
+  id: string;
+  title: string;
+  location: string;
+  address: string;
+  when: Date; // derived from Timestamp for UI
+};
+
 
 /* ==== BOARD GRID ==== */
 const boardPics: Record<string, any> = {
@@ -160,17 +159,47 @@ const BoardGrid = React.memo(function BoardGrid({
 ========================================= */
 
 export default function HomeScreen() {
-  const [selectedEvent, setSelectedEvent] = useState<(ScheduleItem & { when: Date }) | null>(null);
+  const [events, setEvents] = useState<ScheduleItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedEvent, setSelectedEvent] = useState<ScheduleItem | null>(null);
   const [selectedMember, setSelectedMember] = useState<Member | null>(null);
   const [copied, setCopied] = useState(false);
 
-  const sections = useMemo(() => {
-    const normalized = SCHEDULE
-      .map(it => ({ ...it, when: new Date(it.date) }))
-      .sort((a, b) => a.when.getTime() - b.when.getTime());
+useEffect(() => {
+  let mounted = true;
 
-    const byDay = new Map<string, typeof normalized>();
-    for (const it of normalized) {
+  (async () => {
+    try {
+      const q = query(collection(db, 'schedule'), orderBy('startAt', 'asc'));
+      const snap = await getDocs(q); // <— one-time fetch
+
+      if (!mounted) return;
+      const list: ScheduleItem[] = snap.docs.map((d) => {
+        const data = d.data() as ScheduleDoc;
+        return {
+          id: d.id,
+          title: data.title,
+          location: data.location,
+          address: data.address,
+          when: data.startAt.toDate(), // Timestamp -> Date
+        };
+      });
+      setEvents(list);
+    } catch (e) {
+      console.warn('getDocs failed:', e);
+    } finally {
+      if (mounted) setLoading(false);
+    }
+  })();
+
+  return () => { mounted = false; };
+}, []);
+
+
+  // Build sections from `events` (was previously from SCHEDULE)
+  const sections = useMemo(() => {
+    const byDay = new Map<string, ScheduleItem[]>();
+    for (const it of events) {
       const y = it.when.getFullYear();
       const m = String(it.when.getMonth() + 1).padStart(2, '0');
       const d = String(it.when.getDate()).padStart(2, '0');
@@ -179,22 +208,24 @@ export default function HomeScreen() {
       byDay.get(key)!.push(it);
     }
 
-    return Array.from(byDay.entries()).map(([key, items]) => {
-      const sample = items[0].when;
-      const title = sample.toLocaleDateString(undefined, {
-        weekday: 'long',
-        month: 'short',
-        day: 'numeric',
+    return Array.from(byDay.entries())
+      .sort(([a], [b]) => (a < b ? -1 : 1))
+      .map(([key, items]) => {
+        const sample = items[0].when;
+        const title = sample.toLocaleDateString(undefined, {
+          weekday: 'long',
+          month: 'short',
+          day: 'numeric',
+        });
+        return { key, title, data: items };
       });
-      return { key, title, data: items };
-    });
-  }, []);
+  }, [events]);
 
   const open = useCallback(async (url: string) => {
     try { await Linking.openURL(url); } catch {}
   }, []);
 
-  const openInMaps = useCallback((event: ScheduleItem & { when: Date }) => {
+  const openInMaps = useCallback((event: ScheduleItem) => {
     const encoded = encodeURIComponent(event.address || `${event.location} ${event.title}`);
     const url = Platform.select({
       ios: `http://maps.apple.com/?q=${encoded}`,
@@ -212,7 +243,7 @@ export default function HomeScreen() {
     } catch {}
   }, []);
 
-  const renderItem = useCallback(({ item }: { item: ScheduleItem & { when: Date } }) => {
+  const renderItem = useCallback(({ item }: { item: ScheduleItem }) => {
     const time = item.when.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
     return (
       <TouchableOpacity style={s.card} onPress={() => setSelectedEvent(item)} activeOpacity={0.85}>
@@ -230,7 +261,6 @@ export default function HomeScreen() {
     </View>
   ), []);
 
-  // Header that scrolls with the list
   const ListHeader = useCallback(() => (
     <View style={s.headerContainer}>
       <Text style={s.header}>Welcome to the official MYFT 2025 App!</Text>
@@ -241,14 +271,17 @@ export default function HomeScreen() {
     </View>
   ), []);
 
-  // Stable press handler passed to BoardGrid (prevents board re-renders)
-  const onPressMember = useCallback((m: Member) => {
-    setSelectedMember(m);
-  }, []);
+  const onPressMember = useCallback((m: Member) => setSelectedMember(m), []);
 
   return (
     <View style={s.outer}>
-      {/* Scrollable content */}
+      {/* Optional: simple loading */}
+      {loading && events.length === 0 ? (
+        <View style={{ paddingTop: 40 }}>
+          <ActivityIndicator size="small" color={YELLOW} />
+        </View>
+      ) : null}
+
       <SectionList
         sections={sections}
         keyExtractor={(item: any) => item.id}
@@ -257,9 +290,8 @@ export default function HomeScreen() {
         stickySectionHeadersEnabled
         ItemSeparatorComponent={() => <View style={s.sep} />}
         SectionSeparatorComponent={() => <View style={s.sectionSep} />}
-        contentContainerStyle={[s.listPad, { paddingBottom: 110 }]} // room for fixed footer
+        contentContainerStyle={[s.listPad, { paddingBottom: 110 }]}
         ListHeaderComponent={ListHeader}
-        // Pass a memoized component so it doesn't update with unrelated state
         ListFooterComponent={<BoardGrid members={MEMBERS} onPressMember={onPressMember} />}
         showsVerticalScrollIndicator={false}
       />
