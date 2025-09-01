@@ -1,5 +1,6 @@
 // app/screens/HomeScreen.tsx
 import React, { useMemo, useState, useCallback } from 'react';
+import { listenScheduleByRange, type ScheduleEvent } from '../../services/schedule';
 import {
   View,
   Text,
