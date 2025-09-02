@@ -134,7 +134,7 @@ export default function Login() {
             style={s.avatarImg}
           />
         </TouchableOpacity>
-
+        <Text style={s.iconTitle}>Click icon to add or change photo!</Text>
         <TextInput
           placeholder="Display name"
           placeholderTextColor="#c9d6e2"
@@ -177,6 +177,7 @@ const s = StyleSheet.create({
   },
   header: { color: YELLOW, fontSize: 24, fontWeight: '900', textAlign: 'center', fontFamily: FONT_FAMILIES.archivoBlack, marginBottom: 15},
   title: { color: YELLOW, fontSize: 20, fontWeight: '900', marginBottom: 6, textAlign: 'center', fontFamily: FONT_FAMILIES.archivoBlack },
+  iconTitle: { color: YELLOW, fontSize: 15, fontWeight: '900', marginBottom: 6, textAlign: 'center', fontFamily: FONT_FAMILIES.archivoBlack },
   sub: { color: TEXT, opacity: 0.9, textAlign: 'center', marginBottom: 12, fontFamily: FONT_FAMILIES.archivoNarrow },
 
   avatar: {
