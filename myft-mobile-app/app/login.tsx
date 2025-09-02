@@ -5,7 +5,7 @@ import {
 import * as ImagePicker from 'expo-image-picker';
 import { Stack, useRouter } from 'expo-router';
 import { signInAnonymously, onAuthStateChanged } from 'firebase/auth';
-import { auth } from '../services/firebase';
+import { auth } from '../services/firebaseConfig';
 import { createUserProfile, userExists } from '../services/users';
 import { FONT_FAMILIES } from '@/assets/fonts';
 
@@ -62,7 +62,7 @@ export default function Login() {
           uid: uid!,
           displayName: displayName.trim(),
           username: username.trim(),
-          photoUri: photo ?? undefined,
+          photoUrl: photo ?? undefined,
         });
       }
 
@@ -79,7 +79,9 @@ export default function Login() {
   return (
     <View style={s.container}>
       <Stack.Screen options={{ title: 'Welcome' }} />
-
+      <Text style={s.header}>
+        Welcome to the MYFT App!
+      </Text>
       <View style={s.card}>
         <Text style={s.title}>Create your profile</Text>
         <Text style={s.sub}>This is a one-time setup. You’ll stay signed in.</Text>
@@ -132,6 +134,7 @@ const s = StyleSheet.create({
     borderWidth: 1,
     borderColor: LINE,
   },
+  header: { color: YELLOW, fontSize: 24, fontWeight: '900', textAlign: 'center', fontFamily: FONT_FAMILIES.archivoBlack, marginBottom: 15},
   title: { color: YELLOW, fontSize: 20, fontWeight: '900', marginBottom: 6, textAlign: 'center', fontFamily: FONT_FAMILIES.archivoBlack },
   sub: { color: TEXT, opacity: 0.9, textAlign: 'center', marginBottom: 12, fontFamily: FONT_FAMILIES.archivoNarrow },
 

@@ -1,68 +1,41 @@
-// services/users.ts
-import { doc, getDoc, serverTimestamp, setDoc } from 'firebase/firestore';
-import { db, storage } from './firebase';
-import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
+// services/users.ts (shape reference)
+import { db } from '@/services/firebaseConfig';
+import { doc, getDoc, setDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
+import type { AppUser } from '@/context/AuthContext';
 
-export type UserDoc = {
+export async function getUser(uid: string): Promise<AppUser | null> {
+  const ref = doc(db, 'users', uid);
+  const snap = await getDoc(ref);
+  return snap.exists() ? (snap.data() as AppUser) : null;
+}
+
+export async function userExists(uid: string): Promise<boolean> {
+  const ref = doc(db, 'users', uid);
+  const snap = await getDoc(ref);
+  return snap.exists();
+}
+
+export async function createUserProfile(input: {
   uid: string;
   displayName: string;
   username: string;
-  photoUrl: string | null;
-  boys_roster: string[];
-  girls_roster: string[];
-  createdAt: any;
-};
-
-export async function userExists(uid: string) {
-  const d = await getDoc(doc(db, 'users', uid));
-  return d.exists();
-}
-
-export async function getUser(uid: string) {
-  const d = await getDoc(doc(db, 'users', uid));
-  return d.exists() ? (d.data() as UserDoc) : null;
-}
-
-/** Upload avatar to `users/{uid}/avatar.jpg` and return a download URL */
-export async function uploadAvatar(uid: string, localUri: string): Promise<string> {
-  // localUri => blob
-  const res = await fetch(localUri);
-  const blob = await res.blob();
-
-  const path = `users/${uid}/avatar.jpg`;
-  const storageRef = ref(storage, path);
-  await uploadBytes(storageRef, blob, { contentType: 'image/jpeg' });
-  return await getDownloadURL(storageRef);
-}
-
-/** Create user profile (idempotent) */
-export async function createUserProfile(params: {
-  uid: string;
-  displayName: string;
-  username: string;
-  photoUri?: string | null;
+  photoUrl?: string;      // URL after upload (Login can pass undefined initially)
 }) {
-  const { uid, displayName, username, photoUri } = params;
-
-  let photoUrl: string | null = null;
-  if (photoUri) {
-    try {
-      photoUrl = await uploadAvatar(uid, photoUri);
-    } catch (e) {
-      console.warn('[users] avatar upload failed, continuing without photo:', e);
-    }
-  }
-
-  const payload: UserDoc = {
-    uid,
-    displayName,
-    username: username.toLowerCase(), // normalize
-    photoUrl,
+  const ref = doc(db, 'users', input.uid);
+  const payload: AppUser = {
+    uid: input.uid,
+    displayName: input.displayName,
+    username: input.username,
+    photoUrl: input.photoUrl,
     boys_roster: [],
     girls_roster: [],
-    createdAt: serverTimestamp(),
+    points: 0,
   };
-
-  await setDoc(doc(db, 'users', uid), payload, { merge: true });
+  await setDoc(ref, { ...payload, createdAt: serverTimestamp(), updatedAt: serverTimestamp() });
   return payload;
+}
+
+export async function updateUserProfile(uid: string, partial: Partial<AppUser>) {
+  const ref = doc(db, 'users', uid);
+  await updateDoc(ref, { ...partial, updatedAt: serverTimestamp() });
 }

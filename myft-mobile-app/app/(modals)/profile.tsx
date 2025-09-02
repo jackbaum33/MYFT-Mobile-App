@@ -32,7 +32,7 @@ export default function ProfileScreen() {
 
   const [displayName, setDisplayName] = useState(user?.displayName ?? '');
   const [username, setUsername] = useState(user?.username ?? '');
-  const [photoUri, setPhotoUri] = useState<string | undefined>(user?.photoUri ?? undefined);
+  const [photoUri, setPhotoUri] = useState<string | undefined>(user?.photoUrl ?? undefined);
 
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -45,8 +45,8 @@ export default function ProfileScreen() {
   useEffect(() => {
     setDisplayName(user?.displayName ?? '');
     setUsername(user?.username ?? '');
-    setPhotoUri(user?.photoUri ?? undefined);
-  }, [user?.displayName, user?.username, user?.photoUri]);
+    setPhotoUri(user?.photoUrl ?? undefined);
+  }, [user?.displayName, user?.username, user?.photoUrl]);
 
   // ---------- Permission helpers ----------
   const ensureLibraryPermission = async (): Promise<boolean> => {
@@ -88,7 +88,7 @@ export default function ProfileScreen() {
     });
     if (!res.canceled) {
       const uri = res.assets[0].uri;
-      await updateUser({ photoUri: uri });
+      await updateUser({ photoUrl: uri });
       setPhotoUri(uri);
     }
   };
@@ -102,7 +102,7 @@ export default function ProfileScreen() {
     });
     if (!res.canceled) {
       const uri = res.assets[0].uri;
-      await updateUser({ photoUri: uri });
+      await updateUser({ photoUrl: uri });
       setPhotoUri(uri);
     }
   };
@@ -116,7 +116,7 @@ export default function ProfileScreen() {
             text: 'Remove Photo',
             style: 'destructive',
             onPress: async () => {
-              await updateUser({ photoUri: undefined });
+              await updateUser({ photoUrl: undefined });
               setPhotoUri(undefined);
             },
           }

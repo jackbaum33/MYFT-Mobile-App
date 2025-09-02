@@ -1,8 +1,15 @@
+// app/_layout.tsx
 import React, { useEffect, useState } from 'react';
 import { Slot, useRouter, useSegments } from 'expo-router';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { StatusBar } from 'react-native';
 import { onAuthStateChanged } from 'firebase/auth';
-import { auth } from '../services/firebase';
+
+import { auth } from '../services/firebaseConfig';
 import { getUser } from '../services/users';
+
+import { AuthProvider } from '../context/AuthContext';          // ⬅️ add
+import { TournamentProvider } from '../context/TournamentContext';
 
 export default function RootLayout() {
   const router = useRouter();
@@ -11,29 +18,37 @@ export default function RootLayout() {
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (u) => {
-      // Are we on the login route already?
-      const inLogin = segments[0] === 'login'; // since app/login.tsx -> '/login'
+      const first = Array.isArray(segments) && segments.length > 0 ? segments[0] : undefined;
+      const inLogin = first === 'login';
 
       if (!u) {
-        // No auth → send to login
         if (!inLogin) router.replace('/login');
         setReady(true);
         return;
       }
 
-      // Have auth, ensure profile exists
       const profile = await getUser(u.uid);
       if (!profile) {
         if (!inLogin) router.replace('/login');
-      } else {
-        // If user is on /login but already has a profile, take them to app
-        if (inLogin) router.replace('/');
+      } else if (inLogin) {
+        router.replace('/');
       }
       setReady(true);
     });
+
     return unsub;
   }, [router, segments]);
 
   if (!ready) return null;
-  return <Slot />;
+
+  return (
+    <AuthProvider>
+      <TournamentProvider>
+        <SafeAreaView style={{ flex: 1, backgroundColor: '#00274C' }}>
+          <StatusBar barStyle="light-content" backgroundColor="#001F3F" />
+          <Slot />
+        </SafeAreaView>
+      </TournamentProvider>
+    </AuthProvider>
+  );
 }

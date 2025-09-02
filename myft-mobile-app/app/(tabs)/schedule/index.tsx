@@ -76,7 +76,7 @@ export default function ScheduleIndex() {
           title: 'All Games',
           headerStyle: { backgroundColor: NAVY },
           headerTintColor: YELLOW,
-          headerTitleStyle: { color: YELLOW, fontWeight: 'bold' },
+          headerTitleStyle: { color: YELLOW, fontWeight: 'bold', fontFamily: FONT_FAMILIES.archivoBlack },
         }}
       />
 
