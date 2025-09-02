@@ -16,11 +16,10 @@ export type AppUser = {
   photoUrl?: string;           // stored URL in storage (optional)
   boys_roster: string[];       // array of player IDs
   girls_roster: string[];      // array of player IDs
-  points?: number;             // optional if you still track it
 };
 
 type UpdateUserInput = Partial<
-  Pick<AppUser, 'displayName' | 'username' | 'photoUrl' | 'boys_roster' | 'girls_roster' | 'points'>
+  Pick<AppUser, 'displayName' | 'username' | 'photoUrl' | 'boys_roster' | 'girls_roster'>
 >;
 
 type AuthContextType = {
@@ -39,7 +38,6 @@ type AuthContextType = {
 
   /** Back-compat helpers used in older screens */
   updateDisplayName: (displayName: string) => Promise<void>;
-  updatePoints: (points: number) => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -107,7 +105,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   /** Backwards-compat helpers */
   const updateDisplayName = (displayName: string) => updateUser({ displayName });
-  const updatePoints = (points: number) => updateUser({ points });
 
   const value = useMemo<AuthContextType>(
     () => ({
@@ -118,7 +115,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       refresh,
       updateUser,
       updateDisplayName,
-      updatePoints,
     }),
     [user, loading]
   );

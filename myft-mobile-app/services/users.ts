@@ -29,7 +29,6 @@ export async function createUserProfile(input: {
     photoUrl: input.photoUrl,
     boys_roster: [],
     girls_roster: [],
-    points: 0,
   };
   await setDoc(ref, { ...payload, createdAt: serverTimestamp(), updatedAt: serverTimestamp() });
   return payload;
