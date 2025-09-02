@@ -20,12 +20,16 @@ import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import * as Clipboard from 'expo-clipboard';
 import { useAuth } from '../../context/AuthContext';
+import { auth } from '@/services/firebaseConfig';
+import { storage } from '@/services/firebaseConfig';
+import { ref, uploadBytes, getDownloadURL /*, deleteObject*/ } from 'firebase/storage';
 
 const CARD = '#00417D';
 const NAVY = '#00274C';
 const YELLOW = '#FFCB05';
 const TEXT = '#E9ECEF';
 const LINE = 'rgba(255,255,255,0.25)';
+const DEFAULT_AVATAR = require('@/assets/images/default-avatar.png');
 
 export default function ProfileScreen() {
   const { user, updateUser } = useAuth();
@@ -33,14 +37,15 @@ export default function ProfileScreen() {
   const [displayName, setDisplayName] = useState(user?.displayName ?? '');
   const [username, setUsername] = useState(user?.username ?? '');
   const [photoUri, setPhotoUri] = useState<string | undefined>(user?.photoUrl ?? undefined);
-
+  const [photo, setPhoto] = useState<string | null>(null);
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [avatarOpen, setAvatarOpen] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [uploading, setUploading] = useState(false);
 
-  const MEDIA_IMAGE: any =
-  (ImagePicker as any).MediaType?.Image;
+  // Expo SDK uses string union for mediaTypes; Images shortcut is fine
+  const MEDIA_IMAGE: any = (ImagePicker as any).MediaType?.Image;
 
   useEffect(() => {
     setDisplayName(user?.displayName ?? '');
@@ -56,10 +61,14 @@ export default function ProfileScreen() {
       const req = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (req.status === 'granted') return true;
     }
-    Alert.alert('Allow Photo Access','To choose a profile photo, please allow access to your photo library.',[
-      { text: 'Not now', style: 'cancel' },
-      { text: 'Open Settings', onPress: () => Linking.openSettings() },
-    ]);
+    Alert.alert(
+      'Allow Photo Access',
+      'To choose a profile photo, please allow access to your photo library.',
+      [
+        { text: 'Not now', style: 'cancel' },
+        { text: 'Open Settings', onPress: () => Linking.openSettings() },
+      ]
+    );
     return false;
   };
 
@@ -70,11 +79,47 @@ export default function ProfileScreen() {
       const req = await ImagePicker.requestCameraPermissionsAsync();
       if (req.status === 'granted') return true;
     }
-    Alert.alert('Allow Camera Access','To take a profile photo, please allow camera access.',[
-      { text: 'Not now', style: 'cancel' },
-      { text: 'Open Settings', onPress: () => Linking.openSettings() },
-    ]);
+    Alert.alert(
+      'Allow Camera Access',
+      'To take a profile photo, please allow camera access.',
+      [
+        { text: 'Not now', style: 'cancel' },
+        { text: 'Open Settings', onPress: () => Linking.openSettings() },
+      ]
+    );
     return false;
+  };
+
+  // ---------- Upload helper (Storage -> Firestore photoUrl) ----------
+  const uploadAndSavePhoto = async (localUri: string) => {
+    const uid = auth.currentUser?.uid;
+    if (!uid) {
+      Alert.alert('Not signed in', 'Please sign in again.');
+      return;
+    }
+    try {
+      setUploading(true);
+
+      // Fetch the local file into a Blob (Expo compatible)
+      const resp = await fetch(localUri);
+      const blob = await resp.blob();
+
+      const objectRef = ref(storage, `users/${uid}/avatar.jpg`);
+      await uploadBytes(objectRef, blob);
+      const downloadUrl = await getDownloadURL(objectRef);
+
+      // Update Firestore user doc
+      await updateUser({ photoUrl: downloadUrl });
+
+      // Update local UI
+      setPhotoUri(downloadUrl);
+      setAvatarOpen(false);
+    } catch (e: any) {
+      console.warn('[profile] upload photo failed:', e);
+      Alert.alert('Upload failed', e?.message ?? 'Please try again.');
+    } finally {
+      setUploading(false);
+    }
   };
 
   // ---------- Photo actions ----------
@@ -88,8 +133,7 @@ export default function ProfileScreen() {
     });
     if (!res.canceled) {
       const uri = res.assets[0].uri;
-      await updateUser({ photoUrl: uri });
-      setPhotoUri(uri);
+      await uploadAndSavePhoto(uri);
     }
   };
 
@@ -102,13 +146,12 @@ export default function ProfileScreen() {
     });
     if (!res.canceled) {
       const uri = res.assets[0].uri;
-      await updateUser({ photoUrl: uri });
-      setPhotoUri(uri);
+      await uploadAndSavePhoto(uri);
     }
   };
 
   const changePhoto = () => {
-    Alert.alert('Change Photo','Pick a source',[
+    const actions: any[] = [
       { text: 'Camera', onPress: takeWithCamera },
       { text: 'Photo Library', onPress: pickFromLibrary },
       photoUri
@@ -116,16 +159,23 @@ export default function ProfileScreen() {
             text: 'Remove Photo',
             style: 'destructive',
             onPress: async () => {
+              // Optional: also delete from Storage:
+              // try {
+              //   const uid = auth.currentUser?.uid;
+              //   if (uid) await deleteObject(ref(storage, `users/${uid}/avatar.jpg`));
+              // } catch {}
               await updateUser({ photoUrl: undefined });
               setPhotoUri(undefined);
             },
           }
         : undefined,
       { text: 'Cancel', style: 'cancel' },
-    ].filter(Boolean) as any);
+    ].filter(Boolean);
+
+    Alert.alert('Change Photo', 'Pick a source', actions);
   };
 
-  // ---------- Save edits ----------
+  // ---------- Save edits (writes to Firestore via AuthContext) ----------
   const onSave = async () => {
     try {
       setSaving(true);
@@ -165,9 +215,9 @@ export default function ProfileScreen() {
           headerTitleStyle: { color: YELLOW, fontWeight: 'bold' },
         }}
       />
-     <TouchableOpacity style={s.modalCloseX} onPress={() => router.back()}>
-                <Ionicons name="close" size={26} color={TEXT} />
-     </TouchableOpacity>
+      <TouchableOpacity style={s.modalCloseX} onPress={() => router.back()}>
+        <Ionicons name="close" size={26} color={TEXT} />
+      </TouchableOpacity>
 
       <KeyboardAvoidingView
         style={s.outer}
@@ -183,7 +233,10 @@ export default function ProfileScreen() {
                   <Image source={{ uri: photoUri }} style={s.avatar} />
                 ) : (
                   <View style={[s.avatar, s.avatarPlaceholder]}>
-                    <Ionicons name="person-outline" size={40} color={YELLOW} />
+                    <Image
+                    source={photo ? { uri: photo } : DEFAULT_AVATAR}
+                    style={s.avatarImg}
+                    />
                   </View>
                 )}
               </TouchableOpacity>
@@ -287,14 +340,17 @@ export default function ProfileScreen() {
                   <Image source={{ uri: photoUri }} style={s.modalAvatarImg} />
                 ) : (
                   <View style={[s.modalAvatarImg, s.modalPlaceholder]}>
-                    <Ionicons name="person-outline" size={84} color={YELLOW} />
+                    <Image
+                    source={photo ? { photoUrl: photo } : DEFAULT_AVATAR}
+                    style={s.avatarImg}
+                    />
                   </View>
                 )}
               </View>
 
-              <TouchableOpacity style={s.bigBtn} onPress={changePhoto}>
+              <TouchableOpacity style={s.bigBtn} onPress={changePhoto} disabled={uploading}>
                 <Ionicons name="camera-outline" size={20} color={NAVY} />
-                <Text style={s.bigBtnText}>Change Photo</Text>
+                <Text style={s.bigBtnText}>{uploading ? 'Uploading…' : 'Change Photo'}</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -337,6 +393,7 @@ const s = StyleSheet.create({
     paddingVertical: 8,
     borderRadius: 8,
   },
+  avatarImg: { width: '100%', height: '100%' },
   smallBtnText: { color: NAVY, fontWeight: '900', fontSize: 12, fontFamily: FONT_FAMILIES.archivoBlack},
 
   field: { marginTop: 10 },

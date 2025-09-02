@@ -1,10 +1,19 @@
 import React, { useState } from 'react';
 import {
-  View, Text, TextInput, StyleSheet, Image, TouchableOpacity, Alert, ActivityIndicator,
+  View,
+  Text,
+  TextInput,
+  StyleSheet,
+  Image,
+  TouchableOpacity,
+  Alert,
+  ActivityIndicator,
+  ActionSheetIOS,
+  Platform,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { Stack, useRouter } from 'expo-router';
-import { signInAnonymously, onAuthStateChanged } from 'firebase/auth';
+import { signInAnonymously } from 'firebase/auth';
 import { auth } from '../services/firebaseConfig';
 import { createUserProfile, userExists } from '../services/users';
 import { FONT_FAMILIES } from '@/assets/fonts';
@@ -15,6 +24,8 @@ const YELLOW = '#FFCB05';
 const TEXT = '#E9ECEF';
 const LINE = 'rgba(255,255,255,0.2)';
 
+const DEFAULT_AVATAR = require('@/assets/images/default-avatar.png');
+
 export default function Login() {
   const router = useRouter();
   const [displayName, setDisplayName] = useState('');
@@ -22,8 +33,7 @@ export default function Login() {
   const [photo, setPhoto] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
-  // Pick image
-  const pickImage = async () => {
+  const chooseFromLibrary = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
       Alert.alert('Permission required', 'Please allow photo library access.');
@@ -40,6 +50,43 @@ export default function Login() {
     }
   };
 
+  const takePhoto = async () => {
+    const { status } = await ImagePicker.requestCameraPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Permission required', 'Please allow camera access.');
+      return;
+    }
+    const result = await ImagePicker.launchCameraAsync({
+      allowsEditing: true,
+      quality: 0.8,
+      aspect: [1, 1],
+    });
+    if (!result.canceled) {
+      setPhoto(result.assets[0].uri);
+    }
+  };
+
+  const pickImage = () => {
+    if (Platform.OS === 'ios') {
+      ActionSheetIOS.showActionSheetWithOptions(
+        {
+          options: ['Cancel', 'Take Photo', 'Choose from Library'],
+          cancelButtonIndex: 0,
+        },
+        (buttonIndex) => {
+          if (buttonIndex === 1) takePhoto();
+          else if (buttonIndex === 2) chooseFromLibrary();
+        }
+      );
+    } else {
+      Alert.alert('Select Photo', 'Choose a source', [
+        { text: 'Camera', onPress: takePhoto },
+        { text: 'Library', onPress: chooseFromLibrary },
+        { text: 'Cancel', style: 'cancel' },
+      ]);
+    }
+  };
+
   const handleContinue = async () => {
     if (!displayName.trim() || !username.trim()) {
       Alert.alert('Missing info', 'Please enter a display name and username.');
@@ -48,25 +95,22 @@ export default function Login() {
 
     setBusy(true);
     try {
-      // Ensure we have an auth user (anonymous is fine)
       let uid: string | null = auth.currentUser?.uid ?? null;
       if (!uid) {
         const cred = await signInAnonymously(auth);
         uid = cred.user.uid;
       }
 
-      // If this uid already has a profile, skip creation and go home
       const exists = await userExists(uid!);
       if (!exists) {
         await createUserProfile({
           uid: uid!,
           displayName: displayName.trim(),
           username: username.trim(),
-          photoUrl: photo ?? undefined,
+          photoUrl: photo || undefined,
         });
       }
 
-      // Go to tabs root
       router.replace('/');
     } catch (e: any) {
       console.warn('[login] failed:', e);
@@ -79,19 +123,16 @@ export default function Login() {
   return (
     <View style={s.container}>
       <Stack.Screen options={{ title: 'Welcome' }} />
-      <Text style={s.header}>
-        Welcome to the MYFT App!
-      </Text>
+      <Text style={s.header}>Welcome to the MYFT App!</Text>
       <View style={s.card}>
         <Text style={s.title}>Create your profile</Text>
-        <Text style={s.sub}>This is a one-time setup. You’ll stay signed in.</Text>
+        <Text style={s.sub}>This is a one-time setup. You'll stay signed in.</Text>
 
         <TouchableOpacity style={s.avatar} onPress={pickImage} activeOpacity={0.9}>
-          {photo ? (
-            <Image source={{ uri: photo }} style={s.avatarImg} />
-          ) : (
-            <Text style={s.avatarHint}>Tap to add photo</Text>
-          )}
+          <Image
+            source={photo ? { uri: photo } : DEFAULT_AVATAR}
+            style={s.avatarImg}
+          />
         </TouchableOpacity>
 
         <TextInput

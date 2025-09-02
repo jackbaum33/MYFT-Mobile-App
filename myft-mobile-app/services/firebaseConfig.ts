@@ -17,7 +17,7 @@ const firebaseConfig = {
   appId: process.env.EXPO_PUBLIC_FIREBASE_APP_ID,
 };
 
-const app = getApps().length ? getApps()[0]! : initializeApp(firebaseConfig);
+export const app = getApps().length ? getApps()[0]! : initializeApp(firebaseConfig);
 
 // Simple auth without custom persistence - Firebase will handle it automatically
 export const auth = initializeAuth(app, {
