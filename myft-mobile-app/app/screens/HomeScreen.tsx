@@ -1,7 +1,7 @@
 // app/screens/HomeScreen.tsx
 import React, { useMemo, useState, useCallback, useEffect } from 'react';
-import { collection, query, orderBy, Timestamp, getDocs } from 'firebase/firestore';
-import { db } from '../../services/firebase';
+import { Timestamp } from 'firebase/firestore';
+import { getSchedule } from '../../services/db';
 import {
   View,
   Text,
@@ -165,36 +165,46 @@ export default function HomeScreen() {
   const [selectedMember, setSelectedMember] = useState<Member | null>(null);
   const [copied, setCopied] = useState(false);
 
-useEffect(() => {
-  let mounted = true;
-
-  (async () => {
-    try {
-      const q = query(collection(db, 'schedule'), orderBy('startAt', 'asc'));
-      const snap = await getDocs(q); // <— one-time fetch
-
-      if (!mounted) return;
-      const list: ScheduleItem[] = snap.docs.map((d) => {
-        const data = d.data() as ScheduleDoc;
-        return {
-          id: d.id,
-          title: data.title,
-          location: data.location,
-          address: data.address,
-          when: data.startAt.toDate(), // Timestamp -> Date
-        };
-      });
-      setEvents(list);
-    } catch (e) {
-      console.warn('getDocs failed:', e);
-    } finally {
-      if (mounted) setLoading(false);
-    }
-  })();
-
-  return () => { mounted = false; };
-}, []);
-
+  useEffect(() => {
+    let mounted = true;
+  
+    (async () => {
+      try {
+        const docs = await getSchedule(); // <- helper returns raw docs
+        if (!mounted) return;
+  
+        // Normalize into UI shape
+        const list: ScheduleItem[] = docs.map((d: any) => {
+          const startAt = d.startAt;
+          const when =
+            // Firestore Timestamp (mobile/web SDK)
+            typeof startAt?.toDate === 'function'
+              ? startAt.toDate()
+              // string 'YYYY-MM-DD' or ISO datetime
+              : typeof startAt === 'string'
+                ? new Date(startAt.length <= 10 ? `${startAt}T00:00:00` : startAt)
+                // fallback (server timestamps or bad data)
+                : new Date();
+  
+          return {
+            id: d.id,
+            title: d.title ?? '',
+            location: d.location ?? '',
+            address: d.address ?? '',
+            when,
+          };
+        }).sort((a, b) => a.when.getTime() - b.when.getTime());
+  
+        setEvents(list);
+      } catch (e) {
+        console.warn('[HomeScreen] getSchedule failed:', e);
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    })();
+  
+    return () => { mounted = false; };
+  }, []);
 
   // Build sections from `events` (was previously from SCHEDULE)
   const sections = useMemo(() => {

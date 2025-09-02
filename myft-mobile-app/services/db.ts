@@ -7,9 +7,17 @@ import {
     collection,
     getDocs,
     query,
+    orderBy,
     where,
   } from 'firebase/firestore';
   import { db } from './firebase';
+
+  export type ScheduleDoc = {
+    title: string;
+    location: string;
+    address: string;
+    startAt: any; // Firestore Timestamp (or string if you store as string)
+  };
   
   /* ========================
      USERS
@@ -80,8 +88,12 @@ import {
      SCHEDULE
   ======================== */
   
-  export async function getSchedule() {
-    const snap = await getDocs(collection(db, 'schedule'));
-    return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+  export async function getSchedule(): Promise<Array<{ id: string } & ScheduleDoc>> {
+    const q = query(collection(db, 'schedule'), orderBy('startAt', 'asc'));
+    const snap = await getDocs(q);
+    return snap.docs.map((d) => ({
+      id: d.id,
+      ...(d.data() as ScheduleDoc),
+    }));
   }
   
