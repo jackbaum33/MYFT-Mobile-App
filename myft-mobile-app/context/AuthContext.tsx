@@ -1,5 +1,5 @@
 // context/AuthContext.tsx
-import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import React, { createContext, useContext, useEffect, useMemo, useState, useCallback } from 'react';
 import { onAuthStateChanged, signInAnonymously, signOut } from 'firebase/auth';
 import { auth } from '@/services/firebaseConfig';
 import {
@@ -26,7 +26,7 @@ type AuthContextType = {
   // profile
   refresh: () => Promise<void>;
   updateUser: (partial: UpdateUserInput) => Promise<void>;
-
+  refreshUser: () => Promise<void>;
   // back-compat
   updateDisplayName: (displayName: string) => Promise<void>;
 };
@@ -60,6 +60,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return unsub;
   }, []);
 
+  
+
   // Manually refresh Firestore profile
   const refresh = async () => {
     if (!uid) return;
@@ -92,6 +94,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setUser((prev) => (prev ? { ...prev, ...partial } : prev));
   };
 
+  const refreshUser = useCallback(async () => {
+    if (auth.currentUser) {
+      const userData = await getUserDoc(auth.currentUser.uid);
+      setUser(userData);
+    }
+  }, []);
+
   // Back-compat helper
   const updateDisplayName = (displayName: string) => updateUser({ displayName });
 
@@ -102,6 +111,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       loginAnonymously,
       logout,
       refresh,
+      refreshUser,
       updateUser,
       updateDisplayName,
     }),

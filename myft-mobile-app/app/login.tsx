@@ -10,6 +10,8 @@ import {
   ActivityIndicator,
   ActionSheetIOS,
   Platform,
+  KeyboardAvoidingView,
+  ScrollView,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { Stack, useRouter } from 'expo-router';
@@ -109,9 +111,22 @@ export default function Login() {
           username: username.trim(),
           photoUrl: photo || undefined,
         });
+        
+        // Wait for the profile to be created and verify it exists
+        let retries = 0;
+        const maxRetries = 10;
+        while (retries < maxRetries) {
+          const profileExists = await userExists(uid!);
+          if (profileExists) {
+            break;
+          }
+          await new Promise(resolve => setTimeout(resolve, 500));
+          retries++;
+        }
       }
 
-      router.replace('/');
+      // Navigate with a replace and force refresh
+      router.replace('/(tabs)' as any);
     } catch (e: any) {
       console.warn('[login] failed:', e);
       Alert.alert('Sign-in failed', e?.message ?? 'Please try again.');
@@ -121,53 +136,72 @@ export default function Login() {
   };
 
   return (
-    <View style={s.container}>
+    <KeyboardAvoidingView 
+      style={s.container} 
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 60 : 0}
+    >
       <Stack.Screen options={{ title: 'Welcome' }} />
-      <Text style={s.header}>Welcome to the MYFT App!</Text>
-      <View style={s.card}>
-        <Text style={s.title}>Create your profile</Text>
-        <Text style={s.sub}>This is a one-time setup. You'll stay signed in.</Text>
+      <ScrollView 
+        contentContainerStyle={s.scrollContent}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+      >
+        <Text style={s.header}>Welcome to the MYFT App!</Text>
+        <View style={s.card}>
+          <Text style={s.title}>Create your profile</Text>
+          <Text style={s.sub}>This is a one-time setup. You'll stay signed in.</Text>
 
-        <TouchableOpacity style={s.avatar} onPress={pickImage} activeOpacity={0.9}>
-          <Image
-            source={photo ? { uri: photo } : DEFAULT_AVATAR}
-            style={s.avatarImg}
+          <TouchableOpacity style={s.avatar} onPress={pickImage} activeOpacity={0.9}>
+            <Image
+              source={photo ? { uri: photo } : DEFAULT_AVATAR}
+              style={s.avatarImg}
+            />
+          </TouchableOpacity>
+          <Text style={s.iconTitle}>Click icon to add or change photo!</Text>
+          <TextInput
+            placeholder="Display name"
+            placeholderTextColor="#c9d6e2"
+            value={displayName}
+            onChangeText={setDisplayName}
+            style={s.input}
           />
-        </TouchableOpacity>
-        <Text style={s.iconTitle}>Click icon to add or change photo!</Text>
-        <TextInput
-          placeholder="Display name"
-          placeholderTextColor="#c9d6e2"
-          value={displayName}
-          onChangeText={setDisplayName}
-          style={s.input}
-        />
-        <TextInput
-          placeholder="Username"
-          placeholderTextColor="#c9d6e2"
-          autoCapitalize="none"
-          value={username}
-          onChangeText={setUsername}
-          style={s.input}
-        />
+          <TextInput
+            placeholder="Username"
+            placeholderTextColor="#c9d6e2"
+            autoCapitalize="none"
+            value={username}
+            onChangeText={setUsername}
+            style={s.input}
+          />
 
-        <TouchableOpacity
-          style={[s.btn, busy && { opacity: 0.8 }]}
-          onPress={handleContinue}
-          disabled={busy}
-          activeOpacity={0.9}
-        >
-          {busy ? <ActivityIndicator color={NAVY} /> : <Text style={s.btnText}>Save & Continue</Text>}
-        </TouchableOpacity>
-      </View>
-    </View>
+          <TouchableOpacity
+            style={[s.btn, busy && { opacity: 0.8 }]}
+            onPress={handleContinue}
+            disabled={busy}
+            activeOpacity={0.9}
+          >
+            {busy ? <ActivityIndicator color={NAVY} /> : <Text style={s.btnText}>Save & Continue</Text>}
+          </TouchableOpacity>
+        </View>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
 const AVATAR = 120;
 
 const s = StyleSheet.create({
-  container: { flex: 1, backgroundColor: NAVY, padding: 16, justifyContent: 'center' },
+  container: { 
+    flex: 1, 
+    backgroundColor: NAVY,
+  },
+  scrollContent: {
+    flexGrow: 1,
+    padding: 16,
+    justifyContent: 'center',
+    minHeight: '100%',
+  },
   card: {
     backgroundColor: CARD,
     borderRadius: 16,
@@ -175,10 +209,37 @@ const s = StyleSheet.create({
     borderWidth: 1,
     borderColor: LINE,
   },
-  header: { color: YELLOW, fontSize: 24, fontWeight: '900', textAlign: 'center', fontFamily: FONT_FAMILIES.archivoBlack, marginBottom: 15},
-  title: { color: YELLOW, fontSize: 20, fontWeight: '900', marginBottom: 6, textAlign: 'center', fontFamily: FONT_FAMILIES.archivoBlack },
-  iconTitle: { color: YELLOW, fontSize: 15, fontWeight: '900', marginBottom: 6, textAlign: 'center', fontFamily: FONT_FAMILIES.archivoBlack },
-  sub: { color: TEXT, opacity: 0.9, textAlign: 'center', marginBottom: 12, fontFamily: FONT_FAMILIES.archivoNarrow },
+  header: { 
+    color: YELLOW, 
+    fontSize: 24, 
+    fontWeight: '900', 
+    textAlign: 'center', 
+    fontFamily: FONT_FAMILIES.archivoBlack, 
+    marginBottom: 15
+  },
+  title: { 
+    color: YELLOW, 
+    fontSize: 20, 
+    fontWeight: '900', 
+    marginBottom: 6, 
+    textAlign: 'center', 
+    fontFamily: FONT_FAMILIES.archivoBlack 
+  },
+  iconTitle: { 
+    color: YELLOW, 
+    fontSize: 15, 
+    fontWeight: '900', 
+    marginBottom: 6, 
+    textAlign: 'center', 
+    fontFamily: FONT_FAMILIES.archivoBlack 
+  },
+  sub: { 
+    color: TEXT, 
+    opacity: 0.9, 
+    textAlign: 'center', 
+    marginBottom: 12, 
+    fontFamily: FONT_FAMILIES.archivoNarrow 
+  },
 
   avatar: {
     alignSelf: 'center',
@@ -215,5 +276,9 @@ const s = StyleSheet.create({
     alignItems: 'center',
     marginTop: 6,
   },
-  btnText: { color: NAVY, fontWeight: '900', fontFamily: FONT_FAMILIES.archivoBlack },
+  btnText: { 
+    color: NAVY, 
+    fontWeight: '900', 
+    fontFamily: FONT_FAMILIES.archivoBlack 
+  },
 });

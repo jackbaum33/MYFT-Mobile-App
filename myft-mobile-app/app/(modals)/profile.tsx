@@ -1,5 +1,5 @@
 // app/(tabs)/profile.tsx
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -13,8 +13,9 @@ import {
   KeyboardAvoidingView,
   Modal,
   Linking,
+  ActivityIndicator,
 } from 'react-native';
-import { Stack, router } from 'expo-router';
+import { Stack, router, useFocusEffect } from 'expo-router';
 import { FONT_FAMILIES } from '@/assets/fonts';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
@@ -32,7 +33,7 @@ const LINE = 'rgba(255,255,255,0.25)';
 const DEFAULT_AVATAR = require('@/assets/images/default-avatar.png');
 
 export default function ProfileScreen() {
-  const { user, updateUser } = useAuth();
+  const { user, updateUser, refreshUser } = useAuth(); // Added refreshUser
 
   const [displayName, setDisplayName] = useState(user?.displayName ?? '');
   const [username, setUsername] = useState(user?.username ?? '');
@@ -43,15 +44,74 @@ export default function ProfileScreen() {
   const [avatarOpen, setAvatarOpen] = useState(false);
   const [copied, setCopied] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   // Expo SDK uses string union for mediaTypes; Images shortcut is fine
   const MEDIA_IMAGE: any = (ImagePicker as any).MediaType?.Image;
 
+  // Load user data function
+  const loadUserData = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      // Check if user is authenticated
+      if (!auth.currentUser) {
+        throw new Error('No authenticated user');
+      }
+
+      // Refresh user data from Firebase
+      if (refreshUser) {
+        await refreshUser();
+      }
+      
+      // Wait a bit for the context to update
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+    } catch (err: any) {
+      console.error('Failed to load user data:', err);
+      setError(err.message || 'Failed to load profile');
+    } finally {
+      setLoading(false);
+    }
+  }, [refreshUser]);
+
+  // Update local state when user data changes
   useEffect(() => {
-    setDisplayName(user?.displayName ?? '');
-    setUsername(user?.username ?? '');
-    setPhotoUri(user?.photoUrl ?? undefined);
-  }, [user?.displayName, user?.username, user?.photoUrl]);
+    if (user) {
+      setDisplayName(user.displayName ?? '');
+      setUsername(user.username ?? '');
+      setPhotoUri(user.photoUrl ?? undefined);
+      setLoading(false);
+    }
+  }, [user?.displayName, user?.username, user?.photoUrl, user]);
+
+  // Load data on component mount
+  useEffect(() => {
+    loadUserData();
+  }, [loadUserData]);
+
+  // Reload data when screen comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      loadUserData();
+    }, [loadUserData])
+  );
+
+  // Listen for auth state changes
+  useEffect(() => {
+    const unsubscribe = auth.onAuthStateChanged(async (authUser) => {
+      if (authUser) {
+        await loadUserData();
+      } else {
+        setLoading(false);
+        setError('Not authenticated');
+      }
+    });
+
+    return unsubscribe;
+  }, [loadUserData]);
 
   // ---------- Permission helpers ----------
   const ensureLibraryPermission = async (): Promise<boolean> => {
@@ -114,6 +174,9 @@ export default function ProfileScreen() {
       // Update local UI
       setPhotoUri(downloadUrl);
       setAvatarOpen(false);
+      
+      // Refresh user data to ensure consistency
+      await loadUserData();
     } catch (e: any) {
       console.warn('[profile] upload photo failed:', e);
       Alert.alert('Upload failed', e?.message ?? 'Please try again.');
@@ -159,13 +222,14 @@ export default function ProfileScreen() {
             text: 'Remove Photo',
             style: 'destructive',
             onPress: async () => {
-              // Optional: also delete from Storage:
-              // try {
-              //   const uid = auth.currentUser?.uid;
-              //   if (uid) await deleteObject(ref(storage, `users/${uid}/avatar.jpg`));
-              // } catch {}
-              await updateUser({ photoUrl: undefined });
-              setPhotoUri(undefined);
+              try {
+                await updateUser({ photoUrl: undefined });
+                setPhotoUri(undefined);
+                await loadUserData();
+                setAvatarOpen(false);
+              } catch (e: any) {
+                Alert.alert('Error', 'Failed to remove photo');
+              }
             },
           }
         : undefined,
@@ -185,6 +249,10 @@ export default function ProfileScreen() {
       });
       setEditing(false);
       Alert.alert('Saved', 'Your profile has been updated.');
+      // Refresh data after save
+      await loadUserData();
+    } catch (error: any) {
+      Alert.alert('Error', 'Failed to save profile changes');
     } finally {
       setSaving(false);
     }
@@ -204,6 +272,50 @@ export default function ProfileScreen() {
       setTimeout(() => setCopied(false), 1200);
     } catch {}
   };
+
+  // Loading state
+  if (loading) {
+    return (
+      <>
+        <Stack.Screen
+          options={{
+            title: 'Profile',
+            headerStyle: { backgroundColor: NAVY },
+            headerTintColor: YELLOW,
+            headerTitleStyle: { color: YELLOW, fontWeight: 'bold' },
+          }}
+        />
+        <View style={[s.outer, { justifyContent: 'center', alignItems: 'center' }]}>
+          <ActivityIndicator size="large" color={YELLOW} />
+          <Text style={[s.value, { marginTop: 16 }]}>Loading profile...</Text>
+        </View>
+      </>
+    );
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <>
+        <Stack.Screen
+          options={{
+            title: 'Profile',
+            headerStyle: { backgroundColor: NAVY },
+            headerTintColor: YELLOW,
+            headerTitleStyle: { color: YELLOW, fontWeight: 'bold' },
+          }}
+        />
+        <View style={[s.outer, { justifyContent: 'center', alignItems: 'center', padding: 20 }]}>
+          <Text style={[s.value, { color: '#ff6b6b', textAlign: 'center', marginBottom: 16 }]}>
+            Error: {error}
+          </Text>
+          <TouchableOpacity style={s.actionBtn} onPress={loadUserData}>
+            <Text style={s.actionText}>Retry</Text>
+          </TouchableOpacity>
+        </View>
+      </>
+    );
+  }
 
   return (
     <>
@@ -234,8 +346,8 @@ export default function ProfileScreen() {
                 ) : (
                   <View style={[s.avatar, s.avatarPlaceholder]}>
                     <Image
-                    source={photo ? { uri: photo } : DEFAULT_AVATAR}
-                    style={s.avatarImg}
+                      source={DEFAULT_AVATAR}
+                      style={s.avatarImg}
                     />
                   </View>
                 )}
@@ -341,8 +453,8 @@ export default function ProfileScreen() {
                 ) : (
                   <View style={[s.modalAvatarImg, s.modalPlaceholder]}>
                     <Image
-                    source={photo ? { photoUrl: photo } : DEFAULT_AVATAR}
-                    style={s.avatarImg}
+                      source={DEFAULT_AVATAR}
+                      style={s.avatarImg}
                     />
                   </View>
                 )}
