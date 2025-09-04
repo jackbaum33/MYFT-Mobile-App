@@ -226,6 +226,7 @@ export const TournamentProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     return (
       s.touchdowns * SCORING.touchdown +
       s.passingTDs * SCORING.passingTD +
+      s.minimalReceptions * SCORING.minimalReception +
       s.shortReceptions * SCORING.shortReception +
       s.mediumReceptions * SCORING.mediumReception +
       s.longReceptions * SCORING.longReception +
