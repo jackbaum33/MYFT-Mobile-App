@@ -3,9 +3,13 @@ import React, { useMemo, useState } from 'react';
 import { View, Text, StyleSheet, Image, Modal, Pressable, TouchableOpacity, FlatList } from 'react-native';
 import { Stack, useLocalSearchParams } from 'expo-router';
 import { useTournament } from '../../../../context/TournamentContext';
-import { scheduleData, statsForRender, SCORING, pointsForLine } from '../../../data/scheduleData';
 import { getTeamLogo } from '../../../../assets/team_logos';
 import { FONT_FAMILIES } from '@/assets/fonts';
+
+const SCORING = {
+  touchdown: 6, passingTD: 4, shortReception: 1, mediumReception: 2, longReception: 4,
+  catch: 1, flagGrab: 1, sack: 3, interception: 4, passingInterception: -2,
+};
 
 const CARD = '#00417D';
 const NAVY = '#00274C';
@@ -13,91 +17,90 @@ const YELLOW = '#FFCB05';
 const TEXT = '#E9ECEF';
 const LINE = 'rgba(255,255,255,0.18)';
 
-type Totals = {
-  touchdowns: number;
-  passingTDs: number;
-  shortReceptions: number;
-  mediumReceptions: number;
-  longReceptions: number;
-  catches: number;
-  flagsPulled: number;
-  sacks: number;
-  interceptions: number;
-  passingInterceptions: number;
-};
+// --- helpers ---
+const toSlug = (s: string) =>
+  s.trim().toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '').replace(/-+/g, '-');
 
-const EMPTY_TOTALS: Totals = {
-  touchdowns: 0, passingTDs: 0, shortReceptions: 0, mediumReceptions: 0, longReceptions: 0,
-  catches: 0, flagsPulled: 0, sacks: 0, interceptions: 0, passingInterceptions: 0,
-};
+const humanizeSlug = (slug: string) =>
+  slug.split('-').map(w => (w ? w[0].toUpperCase() + w.slice(1) : '')).join(' ');
 
 export default function PlayerLeaderboardDetail() {
-  const { id } = useLocalSearchParams<{ id: string }>();
-  const { teams } = useTournament();
-
+  const { id: rawParam } = useLocalSearchParams<{ id: string }>();
+  const { teams, calculatePoints } = useTournament();
   const [showBreakdown, setShowBreakdown] = useState(false);
 
+  // Build quick lookups from context
+  const { players, teamNameById } = useMemo(() => {
+    const allPlayers = teams.flatMap(t => t.players);
+    const teamMap = new Map<string, string>();
+    for (const t of teams) teamMap.set(t.id, t.name);
+    return { players: allPlayers, teamNameById: teamMap };
+  }, [teams]);
+
+  // Resolve the route param to a player from context
   const player = useMemo(() => {
-    for (const t of teams) {
-      const p = t.players.find(pl => pl.id === id);
-      if (p) return { player: p, teamName: t.name, teamId: t.id };
-    }
-    return null;
-  }, [teams, id]);
+    if (!rawParam) return null;
+    const raw = decodeURIComponent(Array.isArray(rawParam) ? rawParam[0] : rawParam);
+    const normalized = toSlug(raw);
 
-  // Aggregate the player's lines across Live/Final games
-  const aggregated = useMemo(() => {
-    if (!id) return { totals: EMPTY_TOTALS, totalPoints: 0 };
+    // 1) exact id match
+    let p = players.find(pl => pl.id === raw);
+    // 2) normalized id match
+    if (!p) p = players.find(pl => pl.id === normalized);
+    // 3) last resort: normalize both sides and compare
+    if (!p) p = players.find(pl => toSlug(pl.id) === normalized);
 
-    const totals: Totals = { ...EMPTY_TOTALS };
-    let points = 0;
+    return p ?? null;
+  }, [rawParam, players]);
 
-    for (const day of scheduleData) {
-      for (const g of day.games) {
-        const box = statsForRender(g);
-        if (!box) continue;
+  const displayName = useMemo(() => {
+    if (player) return player.name;
+    if (!rawParam) return 'Player';
+    const raw = Array.isArray(rawParam) ? rawParam[0] : rawParam;
+    return humanizeSlug(toSlug(raw));
+  }, [player, rawParam]);
 
-        const lines = [
-          ...box.team1.filter(l => l.playerId === id),
-          ...box.team2.filter(l => l.playerId === id),
-        ];
+  // Team name/logo from context
+  const teamName = useMemo(() => (player ? teamNameById.get(player.teamId) ?? '' : ''), [player, teamNameById]);
+  const logoSrc = getTeamLogo(player?.teamId ?? '');
 
-        for (const line of lines) {
-          totals.touchdowns += line.touchdowns;
-          totals.passingTDs += line.passingTDs;
-          totals.shortReceptions += line.shortReceptions;
-          totals.mediumReceptions += line.mediumReceptions;
-          totals.longReceptions += line.longReceptions;
-          totals.catches += line.catches;
-          totals.flagsPulled += line.flagsPulled;
-          totals.sacks += line.sacks;
-          totals.interceptions += line.interceptions;
-          totals.passingInterceptions += line.passingInterceptions;
+  // Pull counts from aggregated stats in context
+  const counts = useMemo(() => {
+    const s = player?.stats;
+    return {
+      touchdowns: s?.touchdowns ?? 0,
+      passingTDs: s?.passingTDs ?? 0,
+      shortReceptions: s?.shortReceptions ?? 0,
+      mediumReceptions: s?.mediumReceptions ?? 0,
+      longReceptions: s?.longReceptions ?? 0,
+      catches: s?.catches ?? 0,
+      flagsPulled: s?.flagsPulled ?? 0,
+      sacks: s?.sacks ?? 0,
+      interceptions: s?.interceptions ?? 0,
+      passingInterceptions: s?.passingInterceptions ?? 0,
+    };
+  }, [player]);
 
-          points += pointsForLine(line);
-        }
-      }
-    }
-    return { totals, totalPoints: points };
-  }, [id]);
+  // Total fantasy points via context scorer
+  const totalPoints = useMemo(() => (player ? calculatePoints(player) : 0), [player, calculatePoints]);
 
-  // Rows for the breakdown modal
   const breakdownRows = useMemo(() => {
     const rows = [
-      { key: 'TD',   label: 'Touchdowns',        count: aggregated.totals.touchdowns,           mult: SCORING.touchdown },
-      { key: 'pTD',  label: 'Passing TDs',       count: aggregated.totals.passingTDs,           mult: SCORING.passingTD },
-      { key: 'pINT', label: 'Passing INTs',      count: aggregated.totals.passingInterceptions, mult: SCORING.passingInterception },
-      { key: 'C',    label: 'Catches',           count: aggregated.totals.catches,              mult: SCORING.catch },
-      { key: 'sREC', label: 'Short Gain',        count: aggregated.totals.shortReceptions,      mult: SCORING.shortReception },
-      { key: 'mREC', label: 'Medium Gain',       count: aggregated.totals.mediumReceptions,     mult: SCORING.mediumReception },
-      { key: 'lREC', label: 'Long Gain',         count: aggregated.totals.longReceptions,       mult: SCORING.longReception },
-      { key: 'FLG',  label: 'Flag Grabs',        count: aggregated.totals.flagsPulled,          mult: SCORING.flagGrab },
-      { key: 'SACK', label: 'Sacks',             count: aggregated.totals.sacks,                mult: SCORING.sack },
-      { key: 'INT',  label: 'Interceptions',     count: aggregated.totals.interceptions,        mult: SCORING.interception },
+      { key: 'TD',   label: 'Touchdowns',        count: counts.touchdowns,           mult: SCORING.touchdown },
+      { key: 'pTD',  label: 'Passing TDs',       count: counts.passingTDs,           mult: SCORING.passingTD },
+      { key: 'pINT', label: 'Passing INTs',      count: counts.passingInterceptions, mult: SCORING.passingInterception },
+      { key: 'C',    label: 'Catches',           count: counts.catches,              mult: SCORING.catch },
+      { key: 'sREC', label: 'Short Gain',        count: counts.shortReceptions,      mult: SCORING.shortReception },
+      { key: 'mREC', label: 'Medium Gain',       count: counts.mediumReceptions,     mult: SCORING.mediumReception },
+      { key: 'lREC', label: 'Long Gain',         count: counts.longReceptions,       mult: SCORING.longReception },
+      { key: 'FLG',  label: 'Flag Grabs',        count: counts.flagsPulled,          mult: SCORING.flagGrab },
+      { key: 'SACK', label: 'Sacks',             count: counts.sacks,                mult: SCORING.sack },
+      { key: 'INT',  label: 'Interceptions',     count: counts.interceptions,        mult: SCORING.interception },
     ];
     return rows.map(r => ({ ...r, subtotal: r.count * r.mult }));
-  }, [aggregated]);
+  }, [counts]);
 
+  // Loading/empty states (no network now, so just “not found” if player missing)
   if (!player) {
     return (
       <View style={[s.container, { justifyContent: 'center', alignItems: 'center' }]}>
@@ -107,26 +110,23 @@ export default function PlayerLeaderboardDetail() {
     );
   }
 
-  const { player: p } = player;
-  const logoSrc = getTeamLogo(player.teamId);
-
   return (
     <View style={{ flex: 1, backgroundColor: NAVY }}>
-      <Stack.Screen options={{ title: `${p.name}` }} />
+      <Stack.Screen options={{ title: displayName }} />
 
       <View style={s.container}>
         {/* Header */}
         <View style={s.headerCard}>
           <View>
-            <Text style={s.name}>{p.name}</Text>
-            <Text style={s.meta}>{player.teamName}</Text>
+            <Text style={s.name}>{displayName}</Text>
+            <Text style={s.meta}>{teamName}</Text>
           </View>
           <Image source={logoSrc} style={s.logo} resizeMode="contain" />
         </View>
 
-        {/* Total points + breakdown button */}
+        {/* Total points + breakdown */}
         <View style={s.bottomCard}>
-          <Text style={s.bottomText}>Total Fantasy Points: {aggregated.totalPoints}</Text>
+          <Text style={s.bottomText}>Total Fantasy Points: {totalPoints}</Text>
           <TouchableOpacity style={s.breakdownBtn} onPress={() => setShowBreakdown(true)} activeOpacity={0.9}>
             <Text style={s.breakdownBtnText}>See Stat Breakdown</Text>
           </TouchableOpacity>
@@ -142,7 +142,7 @@ export default function PlayerLeaderboardDetail() {
       >
         <Pressable style={s.backdrop} onPress={() => setShowBreakdown(false)}>
           <Pressable style={s.modalCard} onPress={(e) => e.stopPropagation()}>
-          <Text style={s.modalTitle}>{p.name}'s Stats</Text>
+            <Text style={s.modalTitle}>{displayName}'s Stats</Text>
 
             <View style={[s.row, s.rowHead]}>
               <Text style={[s.cellLabel, { flex: 1 }]}>Metric</Text>
@@ -169,89 +169,42 @@ export default function PlayerLeaderboardDetail() {
                   <Text style={[s.cell, s.right]} />
                   <Text style={[s.cell, s.right]} />
                   <Text style={[s.cell, s.right]} />
-                  <Text style={[s.cell, s.right, s.totalCell]}>{aggregated.totalPoints}</Text>
+                  <Text style={[s.cell, s.right, s.totalCell]}>{totalPoints}</Text>
                 </View>
               }
             />
 
-            {/* Close button */}
             <TouchableOpacity style={s.closeBtn} onPress={() => setShowBreakdown(false)}>
               <Text style={s.closeBtnText}>Close</Text>
             </TouchableOpacity>
           </Pressable>
         </Pressable>
       </Modal>
-
     </View>
   );
 }
 
+/* styles unchanged */
 const s = StyleSheet.create({
   container: { flex: 1, padding: 12 },
-
-  headerCard: {
-    backgroundColor: CARD,
-    borderRadius: 12,
-    padding: 14,
-    marginBottom: 12,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
+  headerCard: { backgroundColor: CARD, borderRadius: 12, padding: 14, marginBottom: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   name: { color: YELLOW, fontWeight: '900', fontSize: 20, fontFamily: FONT_FAMILIES.archivoBlack },
   meta: { color: TEXT, marginTop: 4, fontFamily: FONT_FAMILIES.archivoNarrow },
-
-  bottomCard: {
-    backgroundColor: CARD,
-    padding: 14,
-    borderWidth: 1,
-    borderColor: LINE,
-    borderRadius: 12,
-  },
+  bottomCard: { backgroundColor: CARD, padding: 14, borderWidth: 1, borderColor: LINE, borderRadius: 12 },
   bottomText: { color: YELLOW, fontWeight: '900', fontSize: 18, textAlign: 'center', fontFamily: FONT_FAMILIES.archivoBlack },
-  breakdownBtn: {
-    marginTop: 10,
-    alignSelf: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 10,
-    backgroundColor: YELLOW,
-  },
+  breakdownBtn: { marginTop: 10, alignSelf: 'center', paddingHorizontal: 16, paddingVertical: 10, borderRadius: 10, backgroundColor: YELLOW },
   breakdownBtnText: { color: NAVY, fontWeight: '900', fontFamily: FONT_FAMILIES.archivoBlack },
-
-  // Modal
   backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'center', alignItems: 'center' },
   modalCard: { width: '90%', maxHeight: '80%', backgroundColor: NAVY, borderRadius: 16, padding: 16, borderWidth: 1, borderColor: LINE },
   modalTitle: { color: YELLOW, fontWeight: '900', fontSize: 18, marginBottom: 10, fontFamily: FONT_FAMILIES.archivoBlack, textAlign: 'center' },
-
   row: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#0a3a68', borderRadius: 8, paddingVertical: 10, paddingHorizontal: 12 },
   rowHead: { backgroundColor: '#0f4a85', marginBottom: 8 },
   footerRow: { marginTop: 10, backgroundColor: '#0f4a85' },
-
   cellLabel: { color: YELLOW, fontWeight: '800', fontFamily: FONT_FAMILIES.archivoBlack },
   cell: { color: TEXT, fontWeight: '800', width: 60, fontFamily: FONT_FAMILIES.archivoBlack },
   right: { textAlign: 'right' as const },
   totalCell: { color: YELLOW },
-  closeBtn: {
-    alignSelf: 'center',
-    marginTop: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 10,
-    backgroundColor: YELLOW,
-  },
-  closeBtnText: {
-    color: NAVY,
-    fontWeight: '900',
-    fontFamily: FONT_FAMILIES.archivoBlack,
-  },
-
-  logo: {
-    width: 56,
-    height: 56,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: 'rgba(255,215,0,0.25)',
-    backgroundColor: 'rgba(0,0,0,0.08)',
-  },
+  closeBtn: { alignSelf: 'center', marginTop: 12, paddingHorizontal: 16, paddingVertical: 10, borderRadius: 10, backgroundColor: YELLOW },
+  closeBtnText: { color: NAVY, fontWeight: '900', fontFamily: FONT_FAMILIES.archivoBlack },
+  logo: { width: 56, height: 56, borderRadius: 8, borderWidth: 1, borderColor: 'rgba(255,215,0,0.25)', backgroundColor: 'rgba(0,0,0,0.08)' },
 });

@@ -1,11 +1,7 @@
 // context/TournamentContext.tsx
-import React, { createContext, useContext, useMemo, useState } from 'react';
-import { mockTeams } from '../app/data/mockData';
-import {
-  scheduleData,
-  statsForRender,
-  type PlayerGameStat,
-} from '../app/data/scheduleData';
+import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import { collection, getDocs } from 'firebase/firestore';
+import { db } from '@/services/firebaseConfig';
 
 /** ---------- Types ---------- **/
 export type Division = 'boys' | 'girls';
@@ -28,7 +24,7 @@ export interface Player {
   name: string;
   division: Division;
   teamId: string;
-  stats: PlayerStats; // <-- now filled by aggregating scheduleData
+  stats: PlayerStats;
 }
 
 export interface Team {
@@ -82,42 +78,45 @@ const EMPTY: PlayerStats = {
 
 const normDiv = (v: unknown): Division => {
   const s = String(v ?? '').toLowerCase();
-  if (s.startsWith('girl') || s === 'women' || s === 'female' || s === 'girls') return 'girls';
+  if (s.includes('girl') || s.includes('women') || s.includes('female')) return 'girls';
   return 'boys';
 };
 
-/** Sum a single game line into a totals object */
-const addLine = (totals: PlayerStats, line: PlayerGameStat) => {
-  totals.touchdowns            += line.touchdowns            ?? 0;
-  totals.passingTDs            += line.passingTDs            ?? 0;
-  totals.shortReceptions       += line.shortReceptions       ?? 0;
-  totals.mediumReceptions      += line.mediumReceptions      ?? 0;
-  totals.longReceptions        += line.longReceptions        ?? 0;
-  totals.catches               += line.catches               ?? 0;
-  totals.flagsPulled           += line.flagsPulled           ?? 0;
-  totals.sacks                 += line.sacks                 ?? 0;
-  totals.interceptions         += line.interceptions         ?? 0;
-  totals.passingInterceptions  += line.passingInterceptions  ?? 0;
+// “michigan-boys-1” | “michigan_boys_1” -> "Michigan"
+const schoolFromTeamId = (teamId?: string) => {
+  if (!teamId) return '';
+  const slug = String(teamId).trim().replace(/_/g, '-');
+  const first = slug.split('-')[0] ?? '';
+  return first ? first.charAt(0).toUpperCase() + first.slice(1) : '';
 };
 
-/** Build a map of playerId -> aggregated PlayerStats from scheduleData (Live + Final only) */
-const buildStatsFromSchedule = (): Map<string, PlayerStats> => {
-  const map = new Map<string, PlayerStats>();
+// Pull a readable player name from assorted possible fields or fallback to ID
+const resolvePlayerName = (data: any, fallbackId: string) =>
+  data?.name ??
+  data?.fullName ??
+  data?.displayName ??
+  data?.playerName ??
+  fallbackId
+    .split('-')
+    .map((w: string) => (w ? w[0].toUpperCase() + w.slice(1) : ''))
+    .join(' ');
 
-  for (const day of scheduleData) {
-    for (const g of day.games) {
-      const box = statsForRender(g); // Live => liveStats, Final => finalBoxScore, Scheduled => undefined
-      if (!box) continue;
-
-      const allLines: PlayerGameStat[] = [...(box.team1 ?? []), ...(box.team2 ?? [])];
-      for (const line of allLines) {
-        const cur = map.get(line.playerId) ?? { ...EMPTY };
-        addLine(cur, line);
-        map.set(line.playerId, cur);
-      }
-    }
-  }
-  return map;
+// Convert seasonTotals array -> PlayerStats
+// Expected order: [0..9] categories, [10] total OR [11] total (we ignore total here and compute)
+const statsFromSeasonTotals = (arr?: number[]): PlayerStats => {
+  const a = Array.isArray(arr) ? arr : [];
+  return {
+    touchdowns: a[0] ?? 0,
+    passingTDs: a[1] ?? 0,
+    shortReceptions: a[2] ?? 0,
+    mediumReceptions: a[3] ?? 0,
+    longReceptions: a[4] ?? 0,
+    catches: a[5] ?? 0,
+    flagsPulled: a[6] ?? 0,
+    sacks: a[7] ?? 0,
+    interceptions: a[8] ?? 0,
+    passingInterceptions: a[9] ?? 0,
+  };
 };
 
 /** ---------- Context ---------- **/
@@ -125,28 +124,102 @@ const TournamentContext = createContext<TournamentContextType | undefined>(undef
 
 /** ---------- Provider ---------- **/
 export const TournamentProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  /**
-   * Build teams from mockTeams for structure (ids, names, rosters),
-   * but replace each player's stats with the aggregation from scheduleData.
-   */
-  const [teams] = useState<Team[]>(() => {
-    const totalsByPlayer = buildStatsFromSchedule();
-
-    return mockTeams.map((t: any) => ({
-      ...t,
-      division: normDiv(t.division),
-      players: (t.players ?? []).map((p: any) => ({
-        ...p,
-        division: normDiv(p.division),
-        // use aggregated stats (or zeros if the player has no lines yet)
-        stats: totalsByPlayer.get(p.id) ?? { ...EMPTY },
-      })),
-    }));
-  });
-
+  const [teams, setTeams] = useState<Team[]>([]);
   const [userRoster, setUserRoster] = useState<FantasyRoster>({ boys: [], girls: [] });
 
-  /** Toggle add/remove a player from a division list (safe, no undefined.includes) */
+  // Load teams + players from Firestore once on mount
+  useEffect(() => {
+    let active = true;
+
+    (async () => {
+      try {
+        // --- 1) Load teams (optional; we can still derive names without it)
+        const teamsSnap = await getDocs(collection(db, 'teams'));
+        // Build a quick lookup of teamId -> {name, division, captain, record}
+        const teamMeta = new Map<
+          string,
+          { name: string; division: Division; captain: string; record: { wins: number; losses: number } }
+        >();
+
+        teamsSnap.forEach((d) => {
+          const data = d.data() as any;
+          const division: Division = data?.division ? normDiv(data.division) : normDiv(d.id);
+          teamMeta.set(d.id, {
+            name: data?.name || schoolFromTeamId(d.id),
+            division,
+            captain: data?.captain ?? '',
+            record: data?.record ?? { wins: 0, losses: 0 },
+          });
+        });
+
+        // --- 2) Load players
+        const playersSnap = await getDocs(collection(db, 'players'));
+        const playersByTeam = new Map<string, Player[]>();
+
+        playersSnap.forEach((d) => {
+          const data = d.data() as any;
+
+          const teamId: string =
+            data?.team_id ?? data?.teamID ?? data?.teamId ?? '';
+
+          if (!teamId) return; // skip malformed rows
+
+          const name = resolvePlayerName(data, d.id);
+          const stats = statsFromSeasonTotals(data?.seasonTotals);
+
+          // Prefer team division if available; else infer from teamId slug
+          const teamDiv = teamMeta.get(teamId)?.division ?? normDiv(teamId);
+
+          const player: Player = {
+            id: d.id,
+            name,
+            division: teamDiv,
+            teamId,
+            stats,
+          };
+
+          const list = playersByTeam.get(teamId) ?? [];
+          list.push(player);
+          playersByTeam.set(teamId, list);
+        });
+
+        // --- 3) Produce Team[] shape expected by the app
+        const teamIds = Array.from(
+          new Set<string>([
+            ...playersByTeam.keys(),
+            ...Array.from(teamMeta.keys()),
+          ])
+        );
+
+        const builtTeams: Team[] = teamIds.map((tid) => {
+          const meta = teamMeta.get(tid);
+          const players = (playersByTeam.get(tid) ?? []).sort((a, b) =>
+            a.name.localeCompare(b.name)
+          );
+
+          return {
+            id: tid,
+            name: meta?.name ?? schoolFromTeamId(tid),
+            division: meta?.division ?? normDiv(tid),
+            captain: meta?.captain ?? '',
+            record: meta?.record ?? { wins: 0, losses: 0 },
+            players,
+          };
+        });
+
+        if (active) setTeams(builtTeams);
+      } catch (e) {
+        console.warn('[TournamentContext] failed to load Firestore data:', e);
+        if (active) setTeams([]); // fail safely
+      }
+    })();
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  /** Toggle add/remove a player from a division list */
   const updateRoster = (division: Division, playerId: string) => {
     setUserRoster((prev) => {
       const list = prev[division] ?? [];
@@ -156,7 +229,7 @@ export const TournamentProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     });
   };
 
-  /** New fantasy scoring */
+  /** Fantasy scoring based on Player.stats */
   const calculatePoints = (p: Player) => {
     const s = p.stats;
     return (

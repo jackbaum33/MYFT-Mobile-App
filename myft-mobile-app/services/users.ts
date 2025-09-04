@@ -1,5 +1,12 @@
 // services/users.ts
-import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
+import {
+  collection,
+  doc,
+  getDoc,
+  getDocs,
+  setDoc,
+  updateDoc,
+} from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { db, storage } from './firebaseConfig';
 
@@ -17,105 +24,96 @@ export async function userExists(uid: string): Promise<boolean> {
   return d.exists();
 }
 
-/** Upload a local file:// image to Storage and return a https download URL. */
+/**
+ * Upload a local image URI to Firebase Storage and return its download URL.
+ * Accepts file://, content:// (Android), or http(s):// (passes through).
+ */
 async function uploadAvatarForUid(uid: string, localUri: string): Promise<string> {
-  try {
-    console.log('Starting image upload for uid:', uid, 'URI:', localUri);
-    
-    // Turn local file into a Blob that Firebase can upload
-    const resp = await fetch(localUri);
-    const blob = await resp.blob();
+  // If already a remote URL, just return it
+  if (/^https?:\/\//i.test(localUri)) return localUri;
 
-    console.log('Blob created, size:', blob.size, 'type:', blob.type);
+  // Fetch the local file as a Blob for uploadBytes()
+  const resp = await fetch(localUri);
+  const blob = await resp.blob();
 
-    const objectRef = ref(storage, `users/${uid}/avatar.jpg`);
-    await uploadBytes(objectRef, blob);
-    
-    const downloadURL = await getDownloadURL(objectRef);
-    console.log('Image uploaded successfully, URL:', downloadURL);
-    
-    return downloadURL;
-  } catch (error) {
-    console.error('Error in uploadAvatarForUid:', error);
-    throw error;
-  }
+  // Guess a mime (Blob.type is usually set correctly by fetch)
+  const contentType = blob.type || 'image/jpeg';
+
+  // Timestamped filename to avoid CDN caching old avatars
+  const ts = Date.now();
+  const objectRef = ref(storage, `users/${uid}/avatar_${ts}.jpg`);
+
+  await uploadBytes(objectRef, blob, { contentType });
+  return await getDownloadURL(objectRef);
 }
 
+/** Create a user doc (merging if exists). Uploads photo if a local URI is provided. */
 export async function createUserProfile(input: {
   uid: string;
   displayName: string;
   username: string;
-  photoUrl?: string; // may be a local file:// uri, or undefined
+  photoUrl?: string; // local uri or remote URL; optional
 }): Promise<void> {
-  const { uid, displayName, username } = input;
-  let finalPhotoUrl: string | undefined = undefined;
+  const { uid, displayName, username, photoUrl } = input;
 
-  console.log('Creating user profile with input:', input);
-
+  let finalPhotoUrl: string | undefined;
   try {
-    if (input.photoUrl) {
-      if (input.photoUrl.startsWith('file:')) {
-        console.log('Detected local file URI, uploading to Firebase Storage...');
-        finalPhotoUrl = await uploadAvatarForUid(uid, input.photoUrl);
-      } else if (/^https?:\/\//.test(input.photoUrl)) {
-        console.log('Using existing remote URL');
-        finalPhotoUrl = input.photoUrl; // already a remote URL
-      } else {
-        // Handle content:// URIs (Android) or other local URIs
-        console.log('Detected local URI (non-file), attempting upload...');
-        finalPhotoUrl = await uploadAvatarForUid(uid, input.photoUrl);
-      }
+    if (photoUrl) {
+      // Upload if local; passthrough if already remote
+      finalPhotoUrl = await uploadAvatarForUid(uid, photoUrl);
     }
-  } catch (e: any) {
-    console.warn('[createUserProfile] photo upload failed:', e?.code, e?.message);
-    console.warn('Full error:', e);
-    // Continue without a photo
+  } catch (e) {
+    console.warn('[createUserProfile] avatar upload failed, continuing without photo:', e);
   }
 
   const docRef = doc(db, 'users', uid);
-  const profileData: any = {
+  const profile: Partial<UserProfile> = {
     uid,
     displayName,
     username,
     boys_roster: [],
     girls_roster: [],
+    ...(finalPhotoUrl ? { photoUrl: finalPhotoUrl } : {}),
   };
 
-  // Only add photoUrl if it exists (Firestore doesn't accept undefined)
-  if (finalPhotoUrl) {
-    profileData.photoUrl = finalPhotoUrl;
-  }
-
-  console.log('Saving profile data to Firestore:', profileData);
-
-  await setDoc(docRef, profileData, { merge: true });
-  console.log('Profile saved successfully');
+  await setDoc(docRef, profile, { merge: true });
 }
 
+/** Get a single user profile */
 export async function getUser(uid: string): Promise<UserProfile | null> {
   const d = await getDoc(doc(db, 'users', uid));
   return d.exists() ? (d.data() as UserProfile) : null;
 }
 
-export async function updateUserProfile(uid: string, partial: Partial<UserProfile>): Promise<void> {
+/** Update parts of a user profile. If photoUrl is a local URI, it will be uploaded first. */
+export async function updateUserProfile(
+  uid: string,
+  partial: Partial<UserProfile>
+): Promise<void> {
   const docRef = doc(db, 'users', uid);
 
-  // If caller passed a local file path for photoUrl, upload first
-  let payload = { ...partial } as any;
+  const payload: Partial<UserProfile> = { ...partial };
+
+  // If a new photoUrl is provided and appears local, upload first
   try {
     if (typeof partial.photoUrl === 'string') {
-      if (partial.photoUrl.startsWith('file:') || 
-          partial.photoUrl.startsWith('content:') || 
-          !partial.photoUrl.startsWith('http')) {
-        const url = await uploadAvatarForUid(uid, partial.photoUrl);
-        payload.photoUrl = url;
+      const isRemote = /^https?:\/\//i.test(partial.photoUrl);
+      const looksLocal = partial.photoUrl.startsWith('file:') || partial.photoUrl.startsWith('content:') || !isRemote;
+      if (looksLocal) {
+        payload.photoUrl = await uploadAvatarForUid(uid, partial.photoUrl);
       }
     }
-  } catch (e: any) {
-    console.warn('[updateUserProfile] photo upload failed:', e?.code, e?.message);
-    // fallback: remove photoUrl from payload if upload failed
-    delete payload.photoUrl;
+  } catch (e) {
+    console.warn('[updateUserProfile] avatar upload failed, skipping photoUrl update:', e);
+    // ensure we don’t send a broken photoUrl to Firestore
+    delete (payload as any).photoUrl;
   }
 
-  await updateDoc(docRef, payload);
+  await updateDoc(docRef, payload as any);
+}
+
+/** List ALL users (for leaderboard) */
+export async function listUsers(): Promise<UserProfile[]> {
+  const snap = await getDocs(collection(db, 'users'));
+  return snap.docs.map(d => d.data() as UserProfile);
 }
