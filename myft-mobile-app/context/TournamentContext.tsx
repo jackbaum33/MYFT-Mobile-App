@@ -9,7 +9,7 @@ export type Division = 'boys' | 'girls';
 export type PlayerStats = {
   touchdowns: number;
   passingTDs: number;
-  minimalReceptions: number,
+  minimalReceptions: number;
   shortReceptions: number;
   mediumReceptions: number;
   longReceptions: number;
@@ -32,7 +32,7 @@ export interface Team {
   id: string;
   name: string;
   division: Division;
-  captain: string;
+  captain: string; // <-- we’ll populate this from Firestore captain_name
   record: { wins: number; losses: number };
   players: Player[];
 }
@@ -45,7 +45,7 @@ export interface FantasyRoster {
 type TournamentContextType = {
   teams: Team[];
   userRoster: FantasyRoster;
-  updateRoster: (division: Division, playerId: string) => void; // toggle add/remove
+  updateRoster: (division: Division, playerId: string) => void;
   calculatePoints: (p: Player) => number;
 };
 
@@ -65,7 +65,6 @@ export const SCORING = {
 } as const;
 
 /** ---------- Helpers ---------- **/
-
 const normDiv = (v: unknown): Division => {
   const s = String(v ?? '').toLowerCase();
   if (s.includes('girl') || s.includes('women') || s.includes('female')) return 'girls';
@@ -80,7 +79,7 @@ const schoolFromTeamId = (teamId?: string) => {
   return first ? first.charAt(0).toUpperCase() + first.slice(1) : '';
 };
 
-// Pull a readable player name from assorted possible fields or fallback to ID
+// Pick a readable player name from various fields or fallback to slug
 const resolvePlayerName = (data: any, fallbackId: string) =>
   data?.name ??
   data?.fullName ??
@@ -92,7 +91,6 @@ const resolvePlayerName = (data: any, fallbackId: string) =>
     .join(' ');
 
 // Convert seasonTotals array -> PlayerStats
-// Expected order: [0..9] categories, [10] total OR [11] total (we ignore total here and compute)
 const statsFromSeasonTotals = (arr?: number[]): PlayerStats => {
   const a = Array.isArray(arr) ? arr : [];
   return {
@@ -124,9 +122,8 @@ export const TournamentProvider: React.FC<{ children: React.ReactNode }> = ({ ch
 
     (async () => {
       try {
-        // --- 1) Load teams (optional; we can still derive names without it)
+        /** 1) Teams metadata */
         const teamsSnap = await getDocs(collection(db, 'teams'));
-        // Build a quick lookup of teamId -> {name, division, captain, record}
         const teamMeta = new Map<
           string,
           { name: string; division: Division; captain: string; record: { wins: number; losses: number } }
@@ -138,27 +135,23 @@ export const TournamentProvider: React.FC<{ children: React.ReactNode }> = ({ ch
           teamMeta.set(d.id, {
             name: data?.name || schoolFromTeamId(d.id),
             division,
-            captain: data?.captain ?? '',
+            // ✅ prefer captain_name, fall back to captain
+            captain: data?.captain_name ?? data?.captain ?? '',
             record: data?.record ?? { wins: 0, losses: 0 },
           });
         });
 
-        // --- 2) Load players
+        /** 2) Players */
         const playersSnap = await getDocs(collection(db, 'players'));
         const playersByTeam = new Map<string, Player[]>();
 
         playersSnap.forEach((d) => {
           const data = d.data() as any;
-
-          const teamId: string =
-            data?.team_id ?? data?.teamID ?? data?.teamId ?? '';
-
-          if (!teamId) return; // skip malformed rows
+          const teamId: string = data?.team_id ?? data?.teamID ?? data?.teamId ?? '';
+          if (!teamId) return;
 
           const name = resolvePlayerName(data, d.id);
           const stats = statsFromSeasonTotals(data?.seasonTotals);
-
-          // Prefer team division if available; else infer from teamId slug
           const teamDiv = teamMeta.get(teamId)?.division ?? normDiv(teamId);
 
           const player: Player = {
@@ -174,25 +167,16 @@ export const TournamentProvider: React.FC<{ children: React.ReactNode }> = ({ ch
           playersByTeam.set(teamId, list);
         });
 
-        // --- 3) Produce Team[] shape expected by the app
-        const teamIds = Array.from(
-          new Set<string>([
-            ...playersByTeam.keys(),
-            ...Array.from(teamMeta.keys()),
-          ])
-        );
-
+        /** 3) Build Team[] */
+        const teamIds = Array.from(new Set([...playersByTeam.keys(), ...teamMeta.keys()]));
         const builtTeams: Team[] = teamIds.map((tid) => {
           const meta = teamMeta.get(tid);
-          const players = (playersByTeam.get(tid) ?? []).sort((a, b) =>
-            a.name.localeCompare(b.name)
-          );
-
+          const players = (playersByTeam.get(tid) ?? []).sort((a, b) => a.name.localeCompare(b.name));
           return {
             id: tid,
             name: meta?.name ?? schoolFromTeamId(tid),
             division: meta?.division ?? normDiv(tid),
-            captain: meta?.captain ?? '',
+            captain: meta?.captain ?? '', // ✅ will now contain captain_name value
             record: meta?.record ?? { wins: 0, losses: 0 },
             players,
           };
@@ -201,7 +185,7 @@ export const TournamentProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         if (active) setTeams(builtTeams);
       } catch (e) {
         console.warn('[TournamentContext] failed to load Firestore data:', e);
-        if (active) setTeams([]); // fail safely
+        if (active) setTeams([]);
       }
     })();
 
