@@ -1,7 +1,7 @@
 // app/(tabs)/leaderboard/index.tsx
 import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, Platform, ActionSheetIOS, Alert } from 'react-native';
-import { Stack, Link, router } from 'expo-router'; // <-- add router
+import { Stack, Link, router } from 'expo-router';
 import { useTournament } from '../../../context/TournamentContext';
 import { mapPlayersById, rosterTotalPoints } from '../../utils/fantasy';
 import { useAuth } from '../../../context/AuthContext';
@@ -163,7 +163,6 @@ export default function LeaderboardIndex() {
     if (index <= 2) rankStyle = [styles.rank, { color: TEXT }] as any;
     const isMe = signedIn?.uid && item.uid === signedIn.uid;
 
-    // Use router.push to navigate while keeping TouchableOpacity styling intact
     const onPress = () =>
       router.push({ pathname: '/(tabs)/leaderboard/user/[id]', params: { id: item.uid } });
 
@@ -205,6 +204,41 @@ export default function LeaderboardIndex() {
         </TouchableOpacity>
       </View>
 
+      {/* ✅ Restored filter pills for Players view */}
+      {mode === 'players' && (
+        <View style={styles.filterRow}>
+          <TouchableOpacity
+            onPress={() => onPressFilterButton('division')}
+            style={[styles.filterBtn, !!divisionSelected && styles.filterBtnActive]}
+            activeOpacity={0.9}
+          >
+            <Text style={[styles.filterBtnText, !!divisionSelected && styles.filterBtnTextActive]}>
+              {`Division${divisionSelected ? `: ${titleCase(divisionSelected)}` : ''}`}
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            onPress={() => onPressFilterButton('school')}
+            style={[styles.filterBtn, !!schoolSelected && styles.filterBtnActive]}
+            activeOpacity={0.9}
+          >
+            <Text style={[styles.filterBtnText, !!schoolSelected && styles.filterBtnTextActive]}>
+              {`School${schoolSelected ? `: ${schoolSelected}` : ''}`}
+            </Text>
+          </TouchableOpacity>
+
+          {(divisionSelected || schoolSelected) && (
+            <TouchableOpacity
+              onPress={() => { setDivisionSelected(null); setSchoolSelected(null); }}
+              style={styles.filterBtn}
+              activeOpacity={0.9}
+            >
+              <Text style={styles.filterBtnText}>Clear</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+      )}
+
       {mode === 'players' ? (
         <FlatList
           data={filteredPlayers}
@@ -216,7 +250,7 @@ export default function LeaderboardIndex() {
       ) : (
         <FlatList
           data={usersRanked}
-          keyExtractor={(u, i) => u.uid ?? `${u.username}-${i}`} // robust unique key
+          keyExtractor={(u, i) => u.uid ?? `${u.username}-${i}`}
           renderItem={renderUser}
           contentContainerStyle={{ paddingBottom: 24 }}
           showsVerticalScrollIndicator={false}
