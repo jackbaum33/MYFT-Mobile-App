@@ -2,14 +2,9 @@
 import React, { useMemo, useState } from 'react';
 import { View, Text, StyleSheet, Image, Modal, Pressable, TouchableOpacity, FlatList } from 'react-native';
 import { Stack, useLocalSearchParams } from 'expo-router';
-import { useTournament } from '../../../../context/TournamentContext';
+import { useTournament, SCORING } from '../../../../context/TournamentContext';
 import { getTeamLogo } from '../../../../assets/team_logos';
 import { FONT_FAMILIES } from '@/assets/fonts';
-
-const SCORING = {
-  touchdown: 6, passingTD: 4, shortReception: 1, mediumReception: 2, longReception: 4,
-  catch: 1, flagGrab: 1, sack: 3, interception: 4, passingInterception: -2,
-};
 
 const CARD = '#00417D';
 const NAVY = '#00274C';
@@ -70,6 +65,7 @@ export default function PlayerLeaderboardDetail() {
     return {
       touchdowns: s?.touchdowns ?? 0,
       passingTDs: s?.passingTDs ?? 0,
+      minimalReceptions: s?.minimalReceptions ?? 0,
       shortReceptions: s?.shortReceptions ?? 0,
       mediumReceptions: s?.mediumReceptions ?? 0,
       longReceptions: s?.longReceptions ?? 0,
@@ -86,16 +82,17 @@ export default function PlayerLeaderboardDetail() {
 
   const breakdownRows = useMemo(() => {
     const rows = [
-      { key: 'TD',   label: 'Touchdowns',        count: counts.touchdowns,           mult: SCORING.touchdown },
-      { key: 'pTD',  label: 'Passing TDs',       count: counts.passingTDs,           mult: SCORING.passingTD },
-      { key: 'pINT', label: 'Passing INTs',      count: counts.passingInterceptions, mult: SCORING.passingInterception },
-      { key: 'C',    label: 'Catches',           count: counts.catches,              mult: SCORING.catch },
-      { key: 'sREC', label: 'Short Gain',        count: counts.shortReceptions,      mult: SCORING.shortReception },
-      { key: 'mREC', label: 'Medium Gain',       count: counts.mediumReceptions,     mult: SCORING.mediumReception },
-      { key: 'lREC', label: 'Long Gain',         count: counts.longReceptions,       mult: SCORING.longReception },
-      { key: 'FLG',  label: 'Flag Grabs',        count: counts.flagsPulled,          mult: SCORING.flagGrab },
-      { key: 'SACK', label: 'Sacks',             count: counts.sacks,                mult: SCORING.sack },
-      { key: 'INT',  label: 'Interceptions',     count: counts.interceptions,        mult: SCORING.interception },
+      { key: 'TD',       label: 'Touchdowns',          count: counts.touchdowns,           mult: SCORING.touchdown },
+      { key: 'pTD',      label: 'Passing TDs',         count: counts.passingTDs,           mult: SCORING.passingTD },
+      { key: 'pINT',     label: 'Passing INTs',        count: counts.passingInterceptions, mult: SCORING.passingInterception },
+      { key: 'C',        label: 'Catches',             count: counts.catches,              mult: SCORING.catch },
+      { key: 'minREC',   label: 'Minimal Gain',        count: counts.minimalReceptions,    mult: SCORING.minimalReception },
+      { key: 'sREC',     label: 'Short Gain',          count: counts.shortReceptions,      mult: SCORING.shortReception },
+      { key: 'medREC',   label: 'Medium Gain',         count: counts.mediumReceptions,     mult: SCORING.mediumReception },
+      { key: 'lREC',     label: 'Long Gain',           count: counts.longReceptions,       mult: SCORING.longReception },
+      { key: 'FLG',      label: 'Flag Grabs',          count: counts.flagsPulled,          mult: SCORING.flagGrab },
+      { key: 'SACK',     label: 'Sacks',               count: counts.sacks,                mult: SCORING.sack },
+      { key: 'INT',      label: 'Interceptions',       count: counts.interceptions,        mult: SCORING.interception },
     ];
     return rows.map(r => ({ ...r, subtotal: r.count * r.mult }));
   }, [counts]);

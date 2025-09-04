@@ -9,6 +9,7 @@ export type Division = 'boys' | 'girls';
 export type PlayerStats = {
   touchdowns: number;
   passingTDs: number;
+  minimalReceptions: number,
   shortReceptions: number;
   mediumReceptions: number;
   longReceptions: number;
@@ -49,32 +50,21 @@ type TournamentContextType = {
 };
 
 /** ---------- Scoring Table ---------- **/
-const SCORING = {
+export const SCORING = {
   touchdown: 6,
   passingTD: 4,
+  minimalReception: 0,
   shortReception: 1,
   mediumReception: 2,
   longReception: 4,
   catch: 1,
   flagGrab: 1,
   sack: 3,
-  interception: 4,
+  interception: 5,
   passingInterception: -2,
 } as const;
 
 /** ---------- Helpers ---------- **/
-const EMPTY: PlayerStats = {
-  touchdowns: 0,
-  passingTDs: 0,
-  shortReceptions: 0,
-  mediumReceptions: 0,
-  longReceptions: 0,
-  catches: 0,
-  flagsPulled: 0,
-  sacks: 0,
-  interceptions: 0,
-  passingInterceptions: 0,
-};
 
 const normDiv = (v: unknown): Division => {
   const s = String(v ?? '').toLowerCase();
@@ -108,14 +98,15 @@ const statsFromSeasonTotals = (arr?: number[]): PlayerStats => {
   return {
     touchdowns: a[0] ?? 0,
     passingTDs: a[1] ?? 0,
-    shortReceptions: a[2] ?? 0,
-    mediumReceptions: a[3] ?? 0,
-    longReceptions: a[4] ?? 0,
-    catches: a[5] ?? 0,
-    flagsPulled: a[6] ?? 0,
-    sacks: a[7] ?? 0,
-    interceptions: a[8] ?? 0,
-    passingInterceptions: a[9] ?? 0,
+    minimalReceptions: a[2] ?? 0,
+    shortReceptions: a[3] ?? 0,
+    mediumReceptions: a[4] ?? 0,
+    longReceptions: a[5] ?? 0,
+    catches: a[6] ?? 0,
+    flagsPulled: a[7] ?? 0,
+    sacks: a[8] ?? 0,
+    interceptions: a[9] ?? 0,
+    passingInterceptions: a[10] ?? 0,
   };
 };
 
