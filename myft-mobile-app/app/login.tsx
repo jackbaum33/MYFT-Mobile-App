@@ -1,3 +1,4 @@
+// login.tsx
 import React, { useState } from 'react';
 import {
   View,
@@ -27,6 +28,7 @@ const TEXT = '#E9ECEF';
 const LINE = 'rgba(255,255,255,0.2)';
 
 const DEFAULT_AVATAR = require('@/assets/images/default-avatar.png');
+const LOGO = require('@/assets/images/MYFT_LOGO.png'); // <-- NEW
 
 export default function Login() {
   const router = useRouter();
@@ -117,15 +119,12 @@ export default function Login() {
         const maxRetries = 10;
         while (retries < maxRetries) {
           const profileExists = await userExists(uid!);
-          if (profileExists) {
-            break;
-          }
+          if (profileExists) break;
           await new Promise(resolve => setTimeout(resolve, 500));
           retries++;
         }
       }
 
-      // Navigate with a replace and force refresh
       router.replace('/(tabs)' as any);
     } catch (e: any) {
       console.warn('[login] failed:', e);
@@ -147,7 +146,11 @@ export default function Login() {
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
+        {/* NEW: Logo above the header */}
+        <Image source={LOGO} style={s.logo} resizeMode="contain" />
+
         <Text style={s.header}>Welcome to the MYFT App!</Text>
+
         <View style={s.card}>
           <Text style={s.title}>Create your profile</Text>
           <Text style={s.sub}>This is a one-time setup. You'll stay signed in.</Text>
@@ -159,6 +162,7 @@ export default function Login() {
             />
           </TouchableOpacity>
           <Text style={s.iconTitle}>Click icon to add or change photo!</Text>
+
           <TextInput
             placeholder="Display name"
             placeholderTextColor="#c9d6e2"
@@ -202,6 +206,15 @@ const s = StyleSheet.create({
     justifyContent: 'center',
     minHeight: '100%',
   },
+
+  logo: {
+    width: '70%',
+    height: 150,
+    alignSelf: 'center',
+    marginBottom: 10,
+    marginTop: -40,
+  },
+
   card: {
     backgroundColor: CARD,
     borderRadius: 16,
@@ -255,7 +268,6 @@ const s = StyleSheet.create({
     marginBottom: 14,
   },
   avatarImg: { width: '100%', height: '100%' },
-  avatarHint: { color: TEXT, opacity: 0.7, fontFamily: FONT_FAMILIES.archivoNarrow },
 
   input: {
     color: YELLOW,

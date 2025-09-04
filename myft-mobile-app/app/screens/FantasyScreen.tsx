@@ -9,6 +9,7 @@ import {
   Modal,
   Pressable,
   Alert,
+  Image,
   Platform,
   ActionSheetIOS,
 } from 'react-native';
@@ -23,6 +24,8 @@ const NAVY = '#00274C';
 const YELLOW = '#FFCB05';
 const TEXT = '#E9ECEF';
 const LINE = 'rgba(255,255,255,0.12)';
+
+const LOGO = require('@/assets/images/MYFT_LOGO.png');
 
 type FilterKey = 'division' | 'school' | null;
 
@@ -328,7 +331,7 @@ export default function FantasyScreen() {
   if (!hasOnboarded) {
     return (
       <View style={styles.onboardOuter}>
-        <Ionicons name="american-football-outline" size={48} color={YELLOW} />
+        <Image source={LOGO} style={styles.logo} resizeMode="contain" />
         <Text style={styles.onboardTitle}>Welcome to MYFT 2025 Fantasy Football!</Text>
         <Text style={styles.onboardSub}>
           Press continue to get started building your roster!
@@ -539,6 +542,14 @@ const styles = StyleSheet.create({
   points: { color: YELLOW, fontWeight: '900', fontSize: 16, marginLeft: 8, fontFamily: FONT_FAMILIES.archivoBlack},
 
   empty: { color: TEXT, textAlign: 'center', marginTop: 30 },
+
+  logo: {
+    width: '70%',
+    height: 150,
+    alignSelf: 'center',
+    marginBottom: 10,
+    marginTop: -40,
+  },
 
   // Modal
   backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'center', alignItems: 'center' },
