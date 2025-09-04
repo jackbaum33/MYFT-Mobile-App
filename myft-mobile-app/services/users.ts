@@ -17,6 +17,7 @@ export type UserProfile = {
   photoUrl?: string;
   boys_roster: string[];
   girls_roster: string[];
+  hasOnboarded: boolean,
 };
 
 export async function userExists(uid: string): Promise<boolean> {

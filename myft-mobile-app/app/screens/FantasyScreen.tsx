@@ -1,5 +1,5 @@
 // screens/FantasyScreen.tsx
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -15,6 +15,8 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { FONT_FAMILIES } from '@/assets/fonts';
 import { useTournament } from '../../context/TournamentContext';
+import { useAuth } from '../../context/AuthContext';
+import { getUser, updateUserProfile } from '@/services/users';
 
 const CARD = '#00417D';
 const NAVY = '#00274C';
@@ -30,11 +32,63 @@ function capitalize(s: string) {
 
 export default function FantasyScreen() {
   const { teams, userRoster, updateRoster, calculatePoints } = useTournament();
+  const { user: signedIn } = useAuth();
 
   /** -------------------------
-   *   Onboarding / view state
+   *   Boot / profile state
    *  ------------------------- */
-  const [hasOnboarded, setHasOnboarded] = useState(false); // swap to persistent storage later
+  const [profileLoading, setProfileLoading] = useState(true);
+  const [hasOnboarded, setHasOnboarded] = useState(false);
+  const hydratedFromProfileRef = useRef(false); // ensure we only hydrate roster once
+
+  // Load user profile: hasOnboarded + saved rosters
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      try {
+        setProfileLoading(true);
+        if (!signedIn?.uid) {
+          // Not signed in → default to onboarding
+          if (active) {
+            setHasOnboarded(false);
+          }
+          return;
+        }
+        const prof = await getUser(signedIn.uid);
+        if (!active) return;
+
+        const onboardFlag = !!(prof as any)?.hasOnboarded;
+        setHasOnboarded(onboardFlag);
+
+        // Hydrate saved roster once (only if we have saved players and haven't hydrated yet)
+        if (!hydratedFromProfileRef.current) {
+          const boys: string[] = Array.isArray((prof as any)?.boys_roster) ? (prof as any).boys_roster : [];
+          const girls: string[] = Array.isArray((prof as any)?.girls_roster) ? (prof as any).girls_roster : [];
+
+          // Soft cap to 4 each (your app logic)
+          const boysIds = [...new Set(boys)].slice(0, 4);
+          const girlsIds = [...new Set(girls)].slice(0, 4);
+
+          // Call updateRoster to sync context (it toggles add/remove; initial context is empty so these will add)
+          boysIds.forEach(id => updateRoster('boys', id));
+          girlsIds.forEach(id => updateRoster('girls', id));
+
+          hydratedFromProfileRef.current = true;
+        }
+      } catch (e) {
+        console.warn('[fantasy] load profile failed:', e);
+        // Fall back to onboarding if anything goes wrong
+        if (active) setHasOnboarded(false);
+      } finally {
+        if (active) setProfileLoading(false);
+      }
+    })();
+    return () => { active = false; };
+  }, [signedIn?.uid, updateRoster]);
+
+  /** -------------------------
+   *   View / local state
+   *  ------------------------- */
   const [tab, setTab] = useState<'all' | 'team'>('all');
 
   /** -------------------------
@@ -67,7 +121,6 @@ export default function FantasyScreen() {
     let arr = [...allPlayers].map(p => ({ ...p, fantasy: calculatePoints(p) }));
     if (divisionSelected) arr = arr.filter(p => p.__division === divisionSelected);
     if (schoolSelected) arr = arr.filter(p => p.__team === schoolSelected);
-    // always sort by fantasy desc
     arr.sort((a, b) => b.fantasy - a.fantasy);
     return arr;
   }, [allPlayers, divisionSelected, schoolSelected, calculatePoints]);
@@ -148,14 +201,10 @@ export default function FantasyScreen() {
    *   Filter button helpers
    *  ------------------------- */
   const onPressFilter = (key: Exclude<FilterKey, null>) => {
-    // If filter has a value, tapping its pill clears it
     if (key === 'division' && divisionSelected) { setDivisionSelected(null); return; }
     if (key === 'school' && schoolSelected) { setSchoolSelected(null); return; }
-    
 
-    // Open chooser
     if (Platform.OS === 'ios') {
-      // Native iOS sheet
       if (key === 'division') {
         ActionSheetIOS.showActionSheetWithOptions(
           {
@@ -183,22 +232,39 @@ export default function FantasyScreen() {
         );
       }
     } else {
-      // Simple inline sheet for Android/others
       setActiveFilter(prev => (prev === key ? null : key));
     }
   };
 
   /** -------------------------
-   *   Save team
+   *   Save team (writes to Firestore)
    *  ------------------------- */
+  const [saving, setSaving] = useState(false);
   const canSave = selectedBoys === maxBoys && selectedGirls === maxGirls;
-  const onSaveTeam = () => {
+
+  const onSaveTeam = async () => {
     if (!canSave) {
       Alert.alert('Almost there!', 'Pick 4 boys and 4 girls to complete your team.');
       return;
     }
-    Alert.alert('Team Saved', 'Your fantasy roster has been saved for this session.');
-    // TODO: persist to storage / backend here
+    if (!signedIn?.uid) {
+      Alert.alert('Not signed in', 'Please sign in to save your team.');
+      return;
+    }
+
+    try {
+      setSaving(true);
+      await updateUserProfile(signedIn.uid, {
+        boys_roster: [...(userRoster.boys ?? [])],
+        girls_roster: [...(userRoster.girls ?? [])],
+      });
+      Alert.alert('Team Saved', 'Your fantasy roster has been saved!');
+    } catch (e: any) {
+      console.warn('[fantasy] save team failed:', e);
+      Alert.alert('Save Failed', e?.message ?? 'Please try again.');
+    } finally {
+      setSaving(false);
+    }
   };
 
   /** -------------------------
@@ -239,6 +305,26 @@ export default function FantasyScreen() {
   /** -------------------------
    *   Onboarding screen
    *  ------------------------- */
+  const onContinueOnboarding = async () => {
+    setHasOnboarded(true);
+    if (signedIn?.uid) {
+      try {
+        await updateUserProfile(signedIn.uid, { hasOnboarded: true });
+      } catch (e) {
+        console.warn('[fantasy] failed to set hasOnboarded:', e);
+      }
+    }
+  };
+
+  if (profileLoading) {
+    return (
+      <View style={styles.onboardOuter}>
+        <Ionicons name="american-football-outline" size={48} color={YELLOW} />
+        <Text style={styles.onboardTitle}>Loading…</Text>
+      </View>
+    );
+  }
+
   if (!hasOnboarded) {
     return (
       <View style={styles.onboardOuter}>
@@ -247,7 +333,7 @@ export default function FantasyScreen() {
         <Text style={styles.onboardSub}>
           Press continue to get started building your roster!
         </Text>
-        <TouchableOpacity style={styles.cta} onPress={() => setHasOnboarded(true)}>
+        <TouchableOpacity style={styles.cta} onPress={onContinueOnboarding}>
           <Text style={styles.ctaText}>Continue</Text>
         </TouchableOpacity>
       </View>
@@ -267,9 +353,13 @@ export default function FantasyScreen() {
         <View style={styles.counter}>
           <Text style={styles.counterText}>Girls: {selectedGirls}/{maxGirls}</Text>
         </View>
-        <TouchableOpacity style={[styles.saveBtn, !canSave && { opacity: 0.6 }]} onPress={onSaveTeam}>
+        <TouchableOpacity
+          style={[styles.saveBtn, (!canSave || saving) && { opacity: 0.6 }]}
+          onPress={onSaveTeam}
+          disabled={!canSave || saving}
+        >
           <Ionicons name="save-outline" size={16} color={NAVY} />
-          <Text style={styles.saveBtnText}>Save Team</Text>
+          <Text style={styles.saveBtnText}>{saving ? 'Saving…' : 'Save Team'}</Text>
         </TouchableOpacity>
       </View>
 
@@ -371,7 +461,6 @@ export default function FantasyScreen() {
                   </Text>
                 </View>
 
-                {/* Add / Remove switch */}
                 {(() => {
                   const division = detail.__division as 'boys' | 'girls';
                   const isSelected =
@@ -398,7 +487,6 @@ export default function FantasyScreen() {
                 </TouchableOpacity>
               </>
             )}
-            
           </Pressable>
         </Pressable>
       </Modal>
@@ -413,21 +501,15 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: NAVY, padding: 12 },
 
   // Onboarding
-  onboardOuter: {
-    flex: 1, backgroundColor: NAVY, alignItems: 'center', justifyContent: 'center', padding: 20, marginTop: -50
-  },
+  onboardOuter: { flex: 1, backgroundColor: NAVY, alignItems: 'center', justifyContent: 'center', padding: 20, marginTop: -50 },
   onboardTitle: { color: YELLOW, fontSize: 24, fontWeight: '900', textAlign: 'center', marginTop: 12, fontFamily: FONT_FAMILIES.archivoBlack },
   onboardSub: { color: TEXT, opacity: 0.9, textAlign: 'center', marginTop: 8, fontFamily: FONT_FAMILIES.archivoNarrow},
-  cta: {
-    marginTop: 16, backgroundColor: YELLOW, paddingHorizontal: 18, paddingVertical: 12, borderRadius: 10,
-  },
+  cta: { marginTop: 16, backgroundColor: YELLOW, paddingHorizontal: 18, paddingVertical: 12, borderRadius: 10 },
   ctaText: { color: NAVY, fontWeight: '900', fontFamily: FONT_FAMILIES.archivoBlack },
 
   // Top bar
   topRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10 },
-  counter: {
-    backgroundColor: '#0b3c70', paddingHorizontal: 10, paddingVertical: 8, borderRadius: 10, borderWidth: 1, borderColor: LINE,
-  },
+  counter: { backgroundColor: '#0b3c70', paddingHorizontal: 10, paddingVertical: 8, borderRadius: 10, borderWidth: 1, borderColor: LINE },
   counterText: { color: TEXT, fontWeight: '800', fontFamily: FONT_FAMILIES.archivoBlack },
   saveBtn: { marginLeft: 'auto', flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: YELLOW, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 10 },
   saveBtnText: { color: NAVY, fontWeight: '900', fontFamily: FONT_FAMILIES.archivoBlack },
@@ -447,9 +529,7 @@ const styles = StyleSheet.create({
   pillText: { color: TEXT, fontWeight: '800', fontFamily: FONT_FAMILIES.archivoBlack },
   pillTextActive: { color: NAVY, fontFamily: FONT_FAMILIES.archivoBlack},
 
-  dropdown: {
-    backgroundColor: CARD, borderRadius: 10, borderWidth: 1, borderColor: 'rgba(255,255,255,0.18)', padding: 8, marginBottom: 8,
-  },
+  dropdown: { backgroundColor: CARD, borderRadius: 10, borderWidth: 1, borderColor: 'rgba(255,255,255,0.18)', padding: 8, marginBottom: 8 },
   dropdownItem: { color: TEXT, paddingVertical: 10, fontWeight: '800', fontFamily: FONT_FAMILIES.archivoBlack },
 
   // Rows
