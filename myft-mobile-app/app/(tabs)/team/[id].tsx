@@ -17,7 +17,8 @@ export default function TeamDetailScreen() {
 
   const team = useMemo(() => teams.find(t => t.id === id), [teams, id]);
   const players = team?.players ?? [];
-  const logoSrc = getTeamLogo(team?.id);
+  const nameForLogo = team?.id.split('-')[0];
+  const logoSrc = getTeamLogo(nameForLogo);
 
   // ---------- Guard for bad / missing id ----------
   if (!team) {

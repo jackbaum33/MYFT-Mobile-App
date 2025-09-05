@@ -4,6 +4,9 @@ export const teamLogos: Record<string, any> = {
   maryland: require('./maryland_logo.png'),
   yeshiva: require('./yu_logo.png'),
   binghamton: require('./binghamton_logo.png'),
+  stpeters: require('./st-peters_logo.png'),
+  brown: require('./brown_logo.png'),
+  washu: require('./washu_logo.png'),
 };
 
 // Optional fallback when a team has no logo key or file yet

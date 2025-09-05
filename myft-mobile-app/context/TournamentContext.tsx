@@ -80,15 +80,15 @@ const schoolFromTeamId = (teamId?: string) => {
 };
 
 // Pick a readable player name from various fields or fallback to slug
-const resolvePlayerName = (data: any, fallbackId: string) =>
-  data?.name ??
-  data?.fullName ??
-  data?.displayName ??
-  data?.playerName ??
-  fallbackId
+const resolvePlayerName = (data: any, fallbackId: string) => {
+  if (data?.display_name) return data.display_name;
+
+  // fallback: humanize the doc id if displayName not set
+  return fallbackId
     .split('-')
     .map((w: string) => (w ? w[0].toUpperCase() + w.slice(1) : ''))
     .join(' ');
+};
 
 // Convert seasonTotals array -> PlayerStats
 const statsFromSeasonTotals = (arr?: number[]): PlayerStats => {
@@ -149,7 +149,7 @@ export const TournamentProvider: React.FC<{ children: React.ReactNode }> = ({ ch
           const data = d.data() as any;
           const teamId: string = data?.team_id ?? data?.teamID ?? data?.teamId ?? '';
           if (!teamId) return;
-
+          
           const name = resolvePlayerName(data, d.id);
           const stats = statsFromSeasonTotals(data?.seasonTotals);
           const teamDiv = teamMeta.get(teamId)?.division ?? normDiv(teamId);

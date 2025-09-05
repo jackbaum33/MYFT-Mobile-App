@@ -111,7 +111,7 @@ export default function FantasyScreen() {
     [teams]
   );
 
-  const maxBoys = 4;
+  const maxBoys = 8;
   const maxGirls = 4;
   const selectedBoys = userRoster.boys?.length ?? 0;
   const selectedGirls = userRoster.girls?.length ?? 0;
@@ -247,7 +247,7 @@ export default function FantasyScreen() {
 
   const onSaveTeam = async () => {
     if (!canSave) {
-      Alert.alert('Almost there!', 'Pick 4 boys and 4 girls to complete your team.');
+      Alert.alert('Almost there!', 'Pick 8 boys and 4 girls to complete your team.');
       return;
     }
     if (!signedIn?.uid) {

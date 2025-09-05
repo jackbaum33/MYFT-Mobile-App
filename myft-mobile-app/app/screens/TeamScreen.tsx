@@ -44,7 +44,9 @@ export default function TeamScreen() {
         keyExtractor={(item) => item.id}
         contentContainerStyle={{ paddingBottom: 24 }}
         renderItem={({ item }) => {
-          const logoSrc = getTeamLogo(item.id); // ← per-team logo
+          const nameForLogo = item.id.split('-')[0];
+          const logoSrc = getTeamLogo(nameForLogo); // ← per-team logo
+          
 
           return (
             <TouchableOpacity

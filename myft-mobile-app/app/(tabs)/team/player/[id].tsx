@@ -57,7 +57,7 @@ export default function PlayerLeaderboardDetail() {
 
   // Team name/logo from context
   const teamName = useMemo(() => (player ? teamNameById.get(player.teamId) ?? '' : ''), [player, teamNameById]);
-  const logoSrc = getTeamLogo(player?.teamId ?? '');
+  const logoSrc = getTeamLogo(teamName); // ← per-team logo
 
   // Pull counts from aggregated stats in context
   const counts = useMemo(() => {
