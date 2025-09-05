@@ -69,8 +69,8 @@ export default function FantasyScreen() {
           const girls: string[] = Array.isArray((prof as any)?.girls_roster) ? (prof as any).girls_roster : [];
 
           // Soft cap to 4 each (your app logic)
-          const boysIds = [...new Set(boys)].slice(0, 4);
-          const girlsIds = [...new Set(girls)].slice(0, 4);
+          const boysIds = [...new Set(boys)].slice(0, 8);
+          const girlsIds = [...new Set(girls)].slice(0, 8);
 
           // Call updateRoster to sync context (it toggles add/remove; initial context is empty so these will add)
           boysIds.forEach(id => updateRoster('boys', id));
