@@ -384,40 +384,62 @@ export default function FantasyScreen() {
 
       {/* Filters (All Players) */}
       {tab === 'all' && (
-        <>
-          <Text style={styles.filterLabel}>Filters</Text>
-          <View style={styles.filterRow}>
-            <Pill
-              label={`Division${divisionSelected ? `: ${capitalize(divisionSelected)}` : ''}`}
-              active={!!divisionSelected}
-              onPress={() => onPressFilter('division')}
-            />
-            <Pill
-              label={`School${schoolSelected ? `: ${schoolSelected}` : ''}`}
-              active={!!schoolSelected}
-              onPress={() => onPressFilter('school')}
-            />
-          </View>
+  <>
+    <Text style={styles.filterLabel}>Filters</Text>
 
-          {/* Inline sheet for Android/others */}
-          {Platform.OS !== 'ios' && activeFilter && (
-            <View style={styles.dropdown}>
-              {activeFilter === 'division' &&
-                (['boys', 'girls'] as const).map(opt => (
-                  <TouchableOpacity key={opt} onPress={() => { setDivisionSelected(opt); setActiveFilter(null); }}>
-                    <Text style={styles.dropdownItem}>{capitalize(opt)}</Text>
-                  </TouchableOpacity>
-                ))}
-              {activeFilter === 'school' &&
-                schoolOptions.map(opt => (
-                  <TouchableOpacity key={opt} onPress={() => { setSchoolSelected(opt); setActiveFilter(null); }}>
-                    <Text style={styles.dropdownItem}>{opt}</Text>
-                  </TouchableOpacity>
-                ))}
-            </View>
-          )}
-        </>
+    {/* Rectangular buttons like Leaderboard */}
+    <View style={styles.filterRow}>
+      <TouchableOpacity
+        onPress={() => onPressFilter('division')}
+        style={[styles.filterBtn, !!divisionSelected && styles.filterBtnActive]}
+        activeOpacity={0.9}
+      >
+        <Text style={[styles.filterBtnText, !!divisionSelected && styles.filterBtnTextActive]}>
+          {`Division${divisionSelected ? `: ${capitalize(divisionSelected)}` : ''}`}
+        </Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        onPress={() => onPressFilter('school')}
+        style={[styles.filterBtn, !!schoolSelected && styles.filterBtnActive]}
+        activeOpacity={0.9}
+      >
+        <Text style={[styles.filterBtnText, !!schoolSelected && styles.filterBtnTextActive]}>
+          {`School${schoolSelected ? `: ${schoolSelected}` : ''}`}
+        </Text>
+      </TouchableOpacity>
+
+      {(divisionSelected || schoolSelected) && (
+        <TouchableOpacity
+          onPress={() => { setDivisionSelected(null); setSchoolSelected(null); }}
+          style={styles.filterBtn}
+          activeOpacity={0.9}
+        >
+          <Text style={styles.filterBtnText}>Clear</Text>
+        </TouchableOpacity>
       )}
+    </View>
+
+    {/* Inline sheet for Android/others (unchanged) */}
+    {Platform.OS !== 'ios' && activeFilter && (
+      <View style={styles.dropdown}>
+        {activeFilter === 'division' &&
+          (['boys', 'girls'] as const).map(opt => (
+            <TouchableOpacity key={opt} onPress={() => { setDivisionSelected(opt); setActiveFilter(null); }}>
+              <Text style={styles.dropdownItem}>{capitalize(opt)}</Text>
+            </TouchableOpacity>
+          ))}
+        {activeFilter === 'school' &&
+          schoolOptions.map(opt => (
+            <TouchableOpacity key={opt} onPress={() => { setSchoolSelected(opt); setActiveFilter(null); }}>
+              <Text style={styles.dropdownItem}>{opt}</Text>
+            </TouchableOpacity>
+          ))}
+      </View>
+    )}
+  </>
+)}
+
 
       {/* Lists */}
       {tab === 'all' ? (
@@ -526,11 +548,16 @@ const styles = StyleSheet.create({
 
   // Filters
   filterLabel: { color: YELLOW, fontWeight: '700', fontSize: 16, marginBottom: 8, fontFamily: FONT_FAMILIES.archivoBlack },
-  filterRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 8 },
   pill: { backgroundColor: '#062a4e', borderRadius: 999, paddingHorizontal: 12, paddingVertical: 8, borderWidth: 1, borderColor: LINE },
   pillActive: { backgroundColor: YELLOW, borderColor: 'rgba(0,0,0,0.12)' },
   pillText: { color: TEXT, fontWeight: '800', fontFamily: FONT_FAMILIES.archivoBlack },
   pillTextActive: { color: NAVY, fontFamily: FONT_FAMILIES.archivoBlack},
+
+  filterRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 8, flexWrap: 'wrap', gap: 8 },
+filterBtn: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, backgroundColor: CARD },
+filterBtnActive: { backgroundColor: YELLOW },
+filterBtnText: { color: TEXT, fontWeight: '800', fontFamily: FONT_FAMILIES.archivoBlack },
+filterBtnTextActive: { color: NAVY, fontFamily: FONT_FAMILIES.archivoBlack },
 
   dropdown: { backgroundColor: CARD, borderRadius: 10, borderWidth: 1, borderColor: 'rgba(255,255,255,0.18)', padding: 8, marginBottom: 8 },
   dropdownItem: { color: TEXT, paddingVertical: 10, fontWeight: '800', fontFamily: FONT_FAMILIES.archivoBlack },
