@@ -1,24 +1,22 @@
 // app/(tabs)/schedule/[id].tsx
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, StyleSheet, FlatList, Image, TouchableOpacity, Modal, Pressable } from 'react-native';
 import { Stack, useLocalSearchParams } from 'expo-router';
+import { doc, getDoc } from 'firebase/firestore';
+import { db } from '@/services/firebaseConfig';
 import { FONT_FAMILIES } from '@/assets/fonts';
-import {
-  findGameById,
-  statsForRender,
-  type PlayerGameStat,
-  type Game,
-  derivedPoints,
-  SCORING,
-} from '../../data/scheduleData';
-import { useTournament } from '../../../context/TournamentContext';
+import { useTournament, SCORING } from '../../../context/TournamentContext';
 import { getTeamLogo } from '../../../assets/team_logos';
 
-type Row = {
-  playerId: string;
-  name: string;
-  td: number;               // only TD shown in grid
-  line: PlayerGameStat;     // full line for modal breakdown
+type FSGame = {
+  division?: 'boys' | 'girls' | string;
+  field?: string;
+  startTime?: any; // Firestore Timestamp
+  status?: 'scheduled' | 'live' | 'final' | string;
+  team1ID?: string;
+  team2ID?: string;
+  team1score?: number;
+  team2score?: number;
 };
 
 const CARD = '#00417D';
@@ -29,13 +27,125 @@ const LINE = 'rgba(255,255,255,0.18)';
 
 export default function GameDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { teams } = useTournament();
+  const { teams, calculatePoints } = useTournament();
+
+  const [game, setGame] = useState<FSGame | null>(null);
+  const [loading, setLoading] = useState(true);
 
   const [side, setSide] = useState<'team1' | 'team2'>('team1');
-  const [detail, setDetail] = useState<{ name: string; line: PlayerGameStat } | null>(null);
+  const [detail, setDetail] = useState<{
+    name: string;
+    line: {
+      touchdowns: number;
+      passingTDs: number;
+      minimalReceptions: number;
+      shortReceptions: number;
+      mediumReceptions: number;
+      longReceptions: number;
+      catches: number;
+      flagsPulled: number;
+      sacks: number;
+      interceptions: number;
+      passingInterceptions: number;
+    };
+  } | null>(null);
 
-  const found = useMemo(() => findGameById(id), [id]);
-  if (!found) {
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      try {
+        setLoading(true);
+        if (!id) {
+          if (active) { setGame(null); }
+          return;
+        }
+        const snap = await getDoc(doc(db, 'games', String(id)));
+        if (active) setGame(snap.exists() ? (snap.data() as FSGame) : null);
+      } catch (e) {
+        console.warn('[game detail] load failed:', e);
+        if (active) setGame(null);
+      } finally {
+        if (active) setLoading(false);
+      }
+    })();
+    return () => { active = false; };
+  }, [id]);
+
+  const timeStr = useMemo(() => {
+    const ts = game?.startTime;
+    if (!ts?.toDate) return '';
+    const d = ts.toDate() as Date;
+    if (isNaN(d.getTime())) return '';
+    return d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+  }, [game]);
+
+  const t1 = useMemo(
+    () => (game?.team1ID ? teams.find(t => t.id === game.team1ID) : undefined),
+    [teams, game?.team1ID]
+  );
+  const t2 = useMemo(
+    () => (game?.team2ID ? teams.find(t => t.id === game.team2ID) : undefined),
+    [teams, game?.team2ID]
+  );
+
+  const name1 = t1?.name ?? (game?.team1ID ?? '');
+  const name2 = t2?.name ?? (game?.team2ID ?? '');
+  const s = game?.status ?? '';
+  const prettyStatus = s ? s[0].toUpperCase() + s.slice(1) : '';
+  const cap1Last = t1?.captain ? t1.captain.trim() : '';
+  const cap2Last = t2?.captain ? t2.captain.trim() : '';
+  const nameforLogo1 = game?.team1ID?.split('-')[0];
+  const nameforLogo2 = game?.team2ID?.split('-')[0];
+  const logo1 = getTeamLogo(nameforLogo1);
+  const logo2 = getTeamLogo(nameforLogo2);
+
+  const rows = useMemo(() => {
+    const team = side === 'team1' ? t1 : t2;
+    const list = (team?.players ?? []).map(p => ({
+      playerId: p.id,
+      name: p.name,
+      td: p.stats.touchdowns ?? 0,
+      line: { ...p.stats },
+    }));
+    return list;
+  }, [side, t1, t2]);
+
+  const computeBreakdown = (line: NonNullable<typeof detail>['line']) => {
+    const items = [
+      { key: 'TD',   label: 'Touchdowns',        count: line.touchdowns ?? 0,           mult: SCORING.touchdown },
+      { key: 'pTD',  label: 'Passing TDs',       count: line.passingTDs ?? 0,           mult: SCORING.passingTD },
+      { key: 'minR', label: 'Minimal Gain',      count: line.minimalReceptions ?? 0,    mult: SCORING.minimalReception },
+      { key: 'sREC', label: 'Short Gain',        count: line.shortReceptions ?? 0,      mult: SCORING.shortReception },
+      { key: 'mREC', label: 'Medium Gain',       count: line.mediumReceptions ?? 0,     mult: SCORING.mediumReception },
+      { key: 'lREC', label: 'Long Gain',         count: line.longReceptions ?? 0,       mult: SCORING.longReception },
+      { key: 'C',    label: 'Catches',           count: line.catches ?? 0,              mult: SCORING.catch },
+      { key: 'FLG',  label: 'Flag Grabs',        count: line.flagsPulled ?? 0,          mult: SCORING.flagGrab },
+      { key: 'SACK', label: 'Sacks',             count: line.sacks ?? 0,                mult: SCORING.sack },
+      { key: 'INT',  label: 'Interceptions',     count: line.interceptions ?? 0,        mult: SCORING.interception },
+      { key: 'pINT', label: 'Passing INTs',      count: line.passingInterceptions ?? 0, mult: SCORING.passingInterception },
+    ];
+    const withTotals = items.map(i => ({ ...i, subtotal: i.count * i.mult }));
+    const grandTotal = withTotals.reduce((s, i) => s + i.subtotal, 0);
+    return { rows: withTotals, grandTotal };
+  };
+
+  if (loading) {
+    return (
+      <View style={[styles.container, { justifyContent: 'center' }]}>
+        <Stack.Screen
+          options={{
+            title: 'Box Score',
+            headerStyle: { backgroundColor: NAVY },
+            headerTintColor: YELLOW,
+            headerTitleStyle: { color: YELLOW, fontWeight: 'bold', fontFamily: FONT_FAMILIES.archivoBlack },
+          }}
+        />
+        <Text style={styles.empty}>Loading…</Text>
+      </View>
+    );
+  }
+
+  if (!game) {
     return (
       <View style={[styles.container, { justifyContent: 'center' }]}>
         <Stack.Screen
@@ -51,72 +161,6 @@ export default function GameDetail() {
     );
   }
 
-  const { game } = found;
-
-  // resolve teams, names, captains, logos
-  const t1 = teams.find(t => t.id === game.team1);
-  const t2 = teams.find(t => t.id === game.team2);
-
-  const name1   = t1?.name ?? game.team1;
-  const name2   = t2?.name ?? game.team2;
-  const cap1Last = t1?.captain ? t1.captain.trim().split(/\s+/).slice(-1)[0] : '';
-  const cap2Last = t2?.captain ? t2.captain.trim().split(/\s+/).slice(-1)[0] : '';
-  const logo1   = getTeamLogo(game.team1);
-  const logo2   = getTeamLogo(game.team2);
-
-  // Merge roster with this game's per-player lines so all players appear (zeroed if no line yet)
-  const merge = (teamId: string, which: 'team1' | 'team2'): Row[] => {
-    const team = teams.find(t => t.id === teamId);
-    const box = statsForRender(game);
-    const lines: PlayerGameStat[] = which === 'team1' ? (box?.team1 ?? []) : (box?.team2 ?? []);
-
-    const lineById = new Map(lines.map(l => [l.playerId, l]));
-    return (team?.players ?? []).map(p => {
-      const l: PlayerGameStat = lineById.get(p.id) ?? {
-        playerId: p.id,
-        touchdowns: 0,
-        passingTDs: 0,
-        shortReceptions: 0,
-        mediumReceptions: 0,
-        longReceptions: 0,
-        catches: 0,
-        flagsPulled: 0,
-        sacks: 0,
-        interceptions: 0,
-        passingInterceptions: 0,
-      };
-      return {
-        playerId: p.id,
-        name: p.name,
-        td: l.touchdowns ?? 0,
-        line: l,
-      };
-    });
-  };
-
-  const activeTeamId = side === 'team1' ? game.team1 : game.team2;
-  const rows = merge(activeTeamId, side);
-  const activeTeamName = side === 'team1' ? name1 : name2;
-
-  // Compute per-player breakdown rows for modal (Metric | Count | Pts | Total)
-  const computeBreakdown = (line: PlayerGameStat) => {
-    const items = [
-      { key: 'TD',   label: 'Touchdowns',        count: line.touchdowns ?? 0,           mult: SCORING.touchdown },
-      { key: 'pTD',  label: 'Passing TDs',       count: line.passingTDs ?? 0,           mult: SCORING.passingTD },
-      { key: 'pINT', label: 'Passing INTs',      count: line.passingInterceptions ?? 0, mult: SCORING.passingInterception },
-      { key: 'C',    label: 'Catches',           count: line.catches ?? 0,              mult: SCORING.catch },
-      { key: 'sREC', label: 'Short Gain',        count: line.shortReceptions ?? 0,      mult: SCORING.shortReception },
-      { key: 'mREC', label: 'Medium Gain',       count: line.mediumReceptions ?? 0,     mult: SCORING.mediumReception },
-      { key: 'lREC', label: 'Long Gain',         count: line.longReceptions ?? 0,       mult: SCORING.longReception },
-      { key: 'FLG',  label: 'Flag Grabs',        count: line.flagsPulled ?? 0,          mult: SCORING.flagGrab },
-      { key: 'SACK', label: 'Sacks',             count: line.sacks ?? 0,                mult: SCORING.sack },
-      { key: 'INT',  label: 'Interceptions',     count: line.interceptions ?? 0,        mult: SCORING.interception },
-    ];
-    const withTotals = items.map(i => ({ ...i, subtotal: i.count * i.mult }));
-    const grandTotal = withTotals.reduce((s, i) => s + i.subtotal, 0);
-    return { rows: withTotals, grandTotal };
-  };
-
   return (
     <View style={styles.container}>
       <Stack.Screen
@@ -128,36 +172,40 @@ export default function GameDetail() {
         }}
       />
 
-      {/* Score header (time/field + two teams + fantasy totals) */}
+      {/* Score header */}
       <View style={styles.headerCard}>
         <Text style={styles.subhead}>
-          {game.time} • {game.field}
+          {timeStr} • {game.field ?? ''}
         </Text>
 
         <View style={styles.teamRow}>
-          {logo1 ? <Image source={logo1} style={styles.logo} /> : null}
+          <View style={styles.logoContainer}>
+            {logo1 ? <Image source={logo1} style={styles.logo} resizeMode="contain" /> : null}
+          </View>
           <View style={{ flex: 1 }}>
             <Text style={styles.teamName} numberOfLines={1}>{name1}</Text>
-            {!!cap1Last && <Text style={styles.captain}>{cap1Last}</Text>}
+            {!!cap1Last && <Text style={styles.captain}>Captain: {cap1Last}</Text>}
           </View>
-          <Text style={styles.score}>{derivedPoints(game, 'team1')}</Text>
+          <Text style={styles.score}>{Number(game.team1score ?? 0)}</Text>
         </View>
 
         <View style={styles.sepLine} />
 
         <View style={styles.teamRow}>
-          {logo2 ? <Image source={logo2} style={styles.logo} /> : null}
+          <View style={styles.logoContainer}>
+            {logo2 ? <Image source={logo2} style={styles.logo} resizeMode="contain" /> : null}
+          </View>
           <View style={{ flex: 1 }}>
             <Text style={styles.teamName} numberOfLines={1}>{name2}</Text>
-            {!!cap2Last && <Text style={styles.captain}>{cap2Last}</Text>}
+            {!!cap2Last && <Text style={styles.captain}>Captain: {cap2Last}</Text>}
           </View>
-          <Text style={styles.score}>{derivedPoints(game, 'team2')}</Text>
+          <Text style={styles.score}>{Number(game.team2score ?? 0)}</Text>
         </View>
       </View>
 
-      <Text style={styles.status}>{game.status}</Text>
+      <Text style={styles.status}>{prettyStatus}</Text>
 
-      {/* Toggle which team box score to show */}
+      {/* Toggle which team roster (season totals) to show */}
       <View style={styles.toggleRow}>
         <TouchableOpacity
           onPress={() => setSide('team1')}
@@ -177,9 +225,8 @@ export default function GameDetail() {
         </TouchableOpacity>
       </View>
 
-      {/* Spreadsheet-like box: Player | TD | Full breakdown */}
+      {/* Spreadsheet-like box */}
       <View style={styles.tableCard}>
-
         <FlatList
           data={rows}
           keyExtractor={(r) => r.playerId}
@@ -195,14 +242,14 @@ export default function GameDetail() {
                 onPress={() => setDetail({ name: item.name, line: item.line })}
                 activeOpacity={0.85}
               >
-                <Text style={styles.detailBtnText}>Game Breakdown</Text>
+                <Text style={styles.detailBtnText}>Total Stat Breakdown</Text>
               </TouchableOpacity>
             </View>
           )}
         />
       </View>
 
-      {/* Modal: per-player full breakdown (matches player screen layout) */}
+      {/* Modal: per-player full breakdown (uses SEASON totals) */}
       <Modal
         visible={!!detail}
         transparent
@@ -260,7 +307,7 @@ export default function GameDetail() {
   );
 }
 
-/** styles **/
+/** styles (only logo treatment changed) **/
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: NAVY, padding: 12 },
 
@@ -268,12 +315,21 @@ const styles = StyleSheet.create({
   subhead: { color: TEXT, textAlign: 'left', marginBottom: 10, fontWeight: '700', fontFamily: FONT_FAMILIES.archivoBlack },
 
   teamRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 6 },
-  logo: {
-    width: 28, height: 28, borderRadius: 6,
-    backgroundColor: 'rgba(0,0,0,0.15)', borderWidth: 1, borderColor: 'rgba(255,215,0,0.25)'
+
+  // NEW: bigger square container behind the logo, centers the logo image
+  logoContainer: {
+    width: 32,
+    height: 32,
+    borderRadius: 6,
+    backgroundColor: '#00417D',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
+  // NEW: keep the logo itself a bit smaller so it breathes inside the square
+  logo: { width: 35, height: 35 },
+
   teamName: { color: YELLOW, fontWeight: '800', fontSize: 16 },
-  captain: { color: TEXT, fontSize: 12 },
+  captain: { color: '#FFFFFF', fontSize: 12, fontFamily: FONT_FAMILIES.archivoBlack},
   score: { color: YELLOW, fontWeight: '900', fontSize: 22, marginLeft: 8 },
   sepLine: { height: 1, backgroundColor: 'rgba(255,255,255,0.12)', marginVertical: 8 },
   status: { color: YELLOW, fontSize: 16, fontWeight: '700', marginTop: 4, marginBottom: 20, textAlign: 'right', fontFamily: FONT_FAMILIES.archivoBlack },
@@ -291,7 +347,6 @@ const styles = StyleSheet.create({
   hCell: { color: YELLOW, fontWeight: '800', fontFamily: FONT_FAMILIES.archivoBlack },
   cell: { color: TEXT, fontWeight: '800', width: 60, fontFamily: FONT_FAMILIES.archivoBlack },
 
-  // column widths
   cName: { flex: 1.6, fontSize: 12, fontFamily: FONT_FAMILIES.archivoBlack },
   cNum:  { width: 64, textAlign: 'center' },
   cAction: { width: 132 },
@@ -305,8 +360,7 @@ const styles = StyleSheet.create({
   },
   detailBtnText: { color: NAVY, fontWeight: '900', fontFamily: FONT_FAMILIES.archivoBlack, fontSize: 12 },
 
-  // Modal (matches player screen)
-  backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'center', alignItems: 'center' },
+  backdrop: { flex: 1, backgroundColor: '#00417D', justifyContent: 'center', alignItems: 'center' },
   modalCard: { width: '92%', maxHeight: '80%', backgroundColor: NAVY, borderRadius: 16, padding: 16, borderWidth: 1, borderColor: LINE },
   modalTitle: { color: YELLOW, fontWeight: '900', fontSize: 18, marginBottom: 10, fontFamily: FONT_FAMILIES.archivoBlack, textAlign: 'center' },
 

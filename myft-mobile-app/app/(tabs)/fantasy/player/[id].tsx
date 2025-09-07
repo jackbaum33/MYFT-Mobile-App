@@ -95,7 +95,7 @@ export default function FantasyPlayerDetail() {
 
       <View style={s.card}>
         <Text style={s.name}>{player.name}</Text>
-        <Text style={s.sub}>{player.position}{teamName ? ` • ${teamName}` : ''}{division ? ` • ${titleCase(division)}` : ''}</Text>
+        <Text style={s.sub}>{teamName ? ` • ${teamName}` : ''}{division ? ` • ${titleCase(division)}` : ''}</Text>
         <Text style={s.points}>Fantasy: {fantasy} pts</Text>
 
         <TouchableOpacity

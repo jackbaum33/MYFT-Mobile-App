@@ -66,8 +66,9 @@ export default function TeamDetailScreen() {
             Record: <Text style={styles.metaStrong}>{team.record.wins}-{team.record.losses}</Text>
           </Text>
         </View>
-
+        <View style={styles.logoContainer}>
         {logoSrc ? <Image source={logoSrc} style={styles.logo} resizeMode="contain" /> : null}
+        </View>
       </View>
 
       <FlatList
@@ -108,13 +109,20 @@ const styles = StyleSheet.create({
   metaStrong: { color: YELLOW, fontWeight: '600', fontFamily: FONT_FAMILIES.archivoBlack },
 
   logo: {
-    width: 56,
-    height: 56,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: 'rgba(255,215,0,0.25)',
-    backgroundColor: 'rgba(0,0,0,0.08)',
+    width: 75,
+    height: 75,
   },
+  logoContainer: {
+    width: 32,
+    height: 32,
+    borderRadius: 6,
+    marginRight: 20,
+    marginTop: 10,
+    backgroundColor: NAVY,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  
 
   playerRow: {
     backgroundColor: CARD,

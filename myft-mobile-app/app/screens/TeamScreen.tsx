@@ -67,7 +67,9 @@ export default function TeamScreen() {
               </View>
 
               {/* Right-side logo */}
+              <View style={styles.logoContainer}>
               <Image source={logoSrc} style={styles.logo} resizeMode="contain" />
+              </View>
             </TouchableOpacity>
           );
         }}
@@ -93,18 +95,23 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
   },
+  logoContainer: {
+    width: 32,
+    height: 32,
+    borderRadius: 6,
+    marginRight: 15,
+    backgroundColor: NAVY,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   cardText: { flex: 1, gap: 2 },
   teamName: { color: YELLOW, fontWeight: 'bold', fontSize: 18, marginBottom: 4, fontFamily: FONT_FAMILIES.archivoBlack},
   meta: { color: TEXT, fontSize: 14, fontFamily: FONT_FAMILIES.archivoNarrow },
   metaStrong: { color: YELLOW, fontWeight: '600', fontFamily: FONT_FAMILIES.archivoBlack},
 
   logo: {
-    width: 56,
-    height: 56,
-    marginLeft: 12,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: 'rgba(255,215,0,0.25)',
-    backgroundColor: 'rgba(0,0,0,0.08)',
+    width: 75,
+    height: 75,
+    backgroundColor: CARD
   },
 });

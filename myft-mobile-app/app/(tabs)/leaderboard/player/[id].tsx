@@ -57,7 +57,6 @@ export default function PlayerLeaderboardDetail() {
 
   // Team name/logo from context
   const teamName = useMemo(() => (player ? teamNameById.get(player.teamId) ?? '' : ''), [player, teamNameById]);
-  const nameForLogo = player?.id.split('-')[0];
   const logoSrc = getTeamLogo(teamName); // ← per-team logo
 
   // Pull counts from aggregated stats in context
@@ -119,7 +118,9 @@ export default function PlayerLeaderboardDetail() {
             <Text style={s.name}>{displayName}</Text>
             <Text style={s.meta}>{teamName}</Text>
           </View>
+          <View style={s.logoContainer}>
           <Image source={logoSrc} style={s.logo} resizeMode="contain" />
+          </View>
         </View>
 
         {/* Total points + breakdown */}
@@ -204,5 +205,14 @@ const s = StyleSheet.create({
   totalCell: { color: YELLOW },
   closeBtn: { alignSelf: 'center', marginTop: 12, paddingHorizontal: 16, paddingVertical: 10, borderRadius: 10, backgroundColor: YELLOW },
   closeBtnText: { color: NAVY, fontWeight: '900', fontFamily: FONT_FAMILIES.archivoBlack },
-  logo: { width: 56, height: 56, borderRadius: 8, borderWidth: 1, borderColor: 'rgba(255,215,0,0.25)', backgroundColor: 'rgba(0,0,0,0.08)' },
+  logoContainer: {
+    width: 32,
+    height: 32,
+    borderRadius: 6,
+    marginRight: 15,
+    backgroundColor: CARD,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },  
+  logo: { width: 56, height: 56,},
 });
