@@ -199,7 +199,7 @@ export default function LeaderboardIndex() {
           activeOpacity={0.9}
         >
           <Text style={[styles.segText, mode === 'users' && styles.segTextActive]}>
-            Users{usersLoading ? ' …' : ''}
+            Fantasy Teams{usersLoading ? ' …' : ''}
           </Text>
         </TouchableOpacity>
       </View>
