@@ -15,11 +15,11 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
 
   ios: {
     supportsTablet: true,
-    bundleIdentifier: 'com.yourname.myftmobileapp.dev', // 👈 REQUIRED
+    bundleIdentifier: 'com.yourname.myftmobileapp.dev',
   },
 
   android: {
-    package: 'com.yourname.myftmobileapp.dev',          // 👈 strongly recommended
+    package: 'com.yourname.myftmobileapp.dev',
     adaptiveIcon: {
       foregroundImage: './assets/images/adaptive-icon.png',
       backgroundColor: '#ffffff',
@@ -58,5 +58,10 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     firebaseAppId: process.env.EXPO_PUBLIC_FIREBASE_APP_ID,
     firebaseMeasurementId: process.env.EXPO_PUBLIC_FIREBASE_MEASUREMENT_ID,
     environment: process.env.APP_ENV ?? 'development',
+
+    // 👇 ADD THIS BLOCK (not secret)
+    eas: {
+      projectId: '3cded989-9caf-4b3d-99b9-da6bdcd33d7f',
+    },
   },
 });
