@@ -9,20 +9,36 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   scheme: 'myftmobileapp',
   version: '1.0.0',
   orientation: 'portrait',
-  icon: './assets/images/icon.png',
+  icon: './assets/images/MYFT_LOGO.png',
   userInterfaceStyle: 'automatic',
   newArchEnabled: true,
 
   ios: {
     supportsTablet: true,
-    bundleIdentifier: 'com.yourname.myftmobileapp.dev',
+    bundleIdentifier: process.env.APP_ENV === 'production'
+      ? 'com.yourname.myftmobileapp'
+      : 'com.yourname.myftmobileapp.dev',
+    buildNumber: process.env.IOS_BUILD_NUMBER ?? '1',
+
+    // ✅ iOS permission strings shown in the system prompts
+    infoPlist: {
+      NSCameraUsageDescription:
+        'We use the camera to capture photos and videos inside the app.',
+      NSPhotoLibraryUsageDescription:
+        'We need access to your photo library to pick images/videos for account avatar.',
+      NSPhotoLibraryAddUsageDescription:
+        'We save edited media back to your library when you choose to export.',
+    },
   },
 
   android: {
-    package: 'com.yourname.myftmobileapp.dev',
+    package: process.env.APP_ENV === 'production'
+      ? 'com.yourname.myftmobileapp'
+      : 'com.yourname.myftmobileapp.dev',
+    versionCode: Number(process.env.ANDROID_VERSION_CODE ?? 1),
     adaptiveIcon: {
-      foregroundImage: './assets/images/adaptive-icon.png',
-      backgroundColor: '#ffffff',
+      foregroundImage: './assets/images/MYFT_LOGO.png',
+      backgroundColor: '#00274C',
     },
     edgeToEdgeEnabled: true,
   },
@@ -38,10 +54,10 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     [
       'expo-splash-screen',
       {
-        image: './assets/images/splash-icon.png',
+        image: './assets/images/MYFT_LOGO.png',
         imageWidth: 200,
         resizeMode: 'contain',
-        backgroundColor: '#ffffff',
+        backgroundColor: '#00274C',
       },
     ],
     'expo-font',
@@ -59,9 +75,8 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     firebaseMeasurementId: process.env.EXPO_PUBLIC_FIREBASE_MEASUREMENT_ID,
     environment: process.env.APP_ENV ?? 'development',
 
-    // 👇 ADD THIS BLOCK (not secret)
     eas: {
-      projectId: '3cded989-9caf-4b3d-99b9-da6bdcd33d7f',
+      projectId: '3cded989-9caf-4b3d-99b9-da6bdcd33d7f', // from your EAS link step
     },
   },
 });
