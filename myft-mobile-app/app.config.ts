@@ -13,7 +13,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     scheme: 'myftmobileapp',
     version: '1.0.2',
     orientation: 'portrait',
-    icon: './assets/images/MYFT_LOGO.png',
+    icon: './assets/images/MYFT_APP_LOGO.png',
     userInterfaceStyle: 'automatic',
     newArchEnabled: true,
 
@@ -41,7 +41,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
         : 'com.yourname.myftmobileapp.dev',
       versionCode: Number(process.env.ANDROID_VERSION_CODE ?? 1),
       adaptiveIcon: {
-        foregroundImage: './assets/images/MYFT_LOGO.png',
+        foregroundImage: './assets/images/MYFT_APP_LOGO.png',
         backgroundColor: '#00274C',
       },
       edgeToEdgeEnabled: true,
@@ -52,7 +52,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       [
         'expo-splash-screen',
         {
-          image: './assets/images/MYFT_LOGO.png',
+          image: './assets/images/MYFT_APP_LOGO.png',
           imageWidth: 200,
           resizeMode: 'contain',
           backgroundColor: '#00274C',
