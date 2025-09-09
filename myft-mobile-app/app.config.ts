@@ -11,7 +11,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     name: 'myft-mobile-app',
     slug: 'myft-mobile-app',
     scheme: 'myftmobileapp',
-    version: '1.0.0',
+    version: '1.0.2',
     orientation: 'portrait',
     icon: './assets/images/MYFT_LOGO.png',
     userInterfaceStyle: 'automatic',
@@ -21,7 +21,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       supportsTablet: true,
       bundleIdentifier: isProd
         ? 'com.yourname.myftmobileapp'
-        : 'com.yourname.myftmobileapp.dev',
+        : 'com.yourname.myftmobileapp',
       buildNumber: process.env.IOS_BUILD_NUMBER ?? '1',
       infoPlist: {
         NSCameraUsageDescription:
