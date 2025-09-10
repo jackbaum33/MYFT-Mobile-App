@@ -13,6 +13,7 @@ export const teamLogos: Record<string, any> = {
   maryland:   require('./maryland_logo.png'),
   michigan:   require('./michigan_logo.png'),
   minnesota:  require('./minnesota_logo.png'),
+  northwestern: require('./northwestern_logo.png'),
   nyu:        require('./nyu_logo.png'),
   ohiostate:  require('./osu_logo.png'),
   penn:       require('./penn_logo.png'),
