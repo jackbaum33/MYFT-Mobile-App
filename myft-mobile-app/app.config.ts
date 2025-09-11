@@ -15,13 +15,25 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     orientation: 'portrait',
     icon: './assets/images/MYFT_APP_LOGO.png',
     userInterfaceStyle: 'automatic',
-    newArchEnabled: true,
+
+    // 👉 Consider turning this OFF until you’ve verified all deps are New Arch safe.
+    // newArchEnabled: true,
+    newArchEnabled: false,
+
+    // 👉 Add this: stable runtime & updates
+    runtimeVersion: { policy: 'appVersion' },
+    updates: {
+      enabled: true,
+      // If you have EXPO_PROJECT_ID, this URL gets auto-filled by the expo-updates plugin.
+      // It’s fine to omit if you rely on the plugin; leaving here shows the intent.
+      // url: `https://u.expo.dev/${process.env.EAS_PROJECT_ID}`,
+      checkAutomatically: 'ON_ERROR_RECOVERY',
+      fallbackToCacheTimeout: 0
+    },
 
     ios: {
       supportsTablet: true,
-      bundleIdentifier: isProd
-        ? 'com.yourname.myftmobileapp'
-        : 'com.yourname.myftmobileapp',
+      bundleIdentifier: 'com.yourname.myftmobileapp',
       buildNumber: process.env.IOS_BUILD_NUMBER ?? '1',
       infoPlist: {
         NSCameraUsageDescription:
@@ -36,9 +48,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     },
 
     android: {
-      package: isProd
-        ? 'com.yourname.myftmobileapp'
-        : 'com.yourname.myftmobileapp.dev',
+      package: isProd ? 'com.yourname.myftmobileapp' : 'com.yourname.myftmobileapp.dev',
       versionCode: Number(process.env.ANDROID_VERSION_CODE ?? 1),
       adaptiveIcon: {
         foregroundImage: './assets/images/MYFT_APP_LOGO.png',
@@ -59,12 +69,13 @@ export default ({ config }: ConfigContext): ExpoConfig => {
         },
       ],
       'expo-font',
+      // 👉 Ensure expo-updates plugin runs so the embedded update & URL get configured
+      'expo-updates',
     ],
 
     experiments: { typedRoutes: true },
 
     extra: {
-      // Keep only non-secret flags here
       environment: isProd ? 'production' : 'development',
       eas: { projectId: process.env.EAS_PROJECT_ID as string },
     },
