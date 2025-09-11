@@ -18,7 +18,6 @@ export default ({ config }: ConfigContext): ExpoConfig => {
 
     // 👉 Consider turning this OFF until you’ve verified all deps are New Arch safe.
     // newArchEnabled: true,
-    newArchEnabled: false,
 
     // 👉 Add this: stable runtime & updates
     runtimeVersion: { policy: 'appVersion' },

@@ -32,7 +32,7 @@ export default function TabLayout() {
             case 'schedule':    return <AntDesign name="calendar" size={size} color={color} />;
             case 'team':        return <AntDesign name="team" size={size} color={color} />;
             case 'fantasy':     return <Ionicons name="american-football-outline" size={size} color={color} />;
-            case 'leaderboard': return <AntDesign name="Trophy" size={size} color={color} />;
+            case 'leaderboard': return <Ionicons name="trophy" size={size} color={color} />;
             default: return null;
           }
         },
