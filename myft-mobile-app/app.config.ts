@@ -32,7 +32,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
 
     ios: {
       supportsTablet: true,
-      bundleIdentifier: 'com.yourname.myftmobileapp',
+      bundleIdentifier: 'com.jackbaum.myftmobileapp',
       buildNumber: process.env.IOS_BUILD_NUMBER ?? '1',
       infoPlist: {
         NSCameraUsageDescription:
@@ -47,7 +47,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     },
 
     android: {
-      package: isProd ? 'com.yourname.myftmobileapp' : 'com.yourname.myftmobileapp.dev',
+      package: isProd ? 'com.jackbaum.myftmobileapp' : 'com.jackbaum.myftmobileapp.dev',
       versionCode: Number(process.env.ANDROID_VERSION_CODE ?? 1),
       adaptiveIcon: {
         foregroundImage: './assets/images/MYFT_APP_LOGO.png',
