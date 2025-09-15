@@ -43,13 +43,15 @@ export default function Login() {
       Alert.alert('Permission required', 'Please allow photo library access.');
       return;
     }
+  
     const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
       allowsEditing: true,
-      quality: 0.8,
       aspect: [1, 1],
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      quality: 0.8,
     });
-    if (!result.canceled) {
+  
+    if (!result.canceled && result.assets?.[0]?.uri) {
       setPhoto(result.assets[0].uri);
     }
   };
