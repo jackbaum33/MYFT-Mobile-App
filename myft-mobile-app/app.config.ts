@@ -12,7 +12,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     name: 'MYFT 2025',
     slug: 'myft-mobile-app',
     scheme: 'myftmobileapp',
-    version: '1.0.11',
+    version: '1.0.12',
     orientation: 'portrait',
     icon: './assets/images/MYFT_APP_LOGO.png',
     userInterfaceStyle: 'automatic',
