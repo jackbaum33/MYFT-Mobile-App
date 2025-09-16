@@ -11,7 +11,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     name: 'MYFT 2025',
     slug: 'myft-mobile-app',
     scheme: 'myftmobileapp',
-    version: '1.0.7',
+    version: '1.0.8',
     orientation: 'portrait',
     icon: './assets/images/MYFT_APP_LOGO.png',
     userInterfaceStyle: 'automatic',
@@ -32,6 +32,10 @@ export default ({ config }: ConfigContext): ExpoConfig => {
 
     ios: {
       supportsTablet: true,
+      config:
+      {
+        usesNonExemptEncryption: false
+      },
       bundleIdentifier: 'com.jackbaum.myftmobileapp',
       buildNumber: process.env.IOS_BUILD_NUMBER ?? '1',
       infoPlist: {
