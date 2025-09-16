@@ -1,5 +1,5 @@
 // app/utils/fantasy.ts
-import type { Player, Team } from '../../context/TournamentContext';
+import type { Player, Team } from '../context/TournamentContext';
 
 export const allPlayersFromTeams = (teams: Team[]) =>
   teams.flatMap(t => t.players);

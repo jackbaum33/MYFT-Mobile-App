@@ -8,10 +8,10 @@ export default ({ config }: ConfigContext): ExpoConfig => {
 
   return {
     ...config,
-    name: 'myft-mobile-app',
+    name: 'MYFT',
     slug: 'myft-mobile-app',
     scheme: 'myftmobileapp',
-    version: '1.0.6',
+    version: '1.0.7',
     orientation: 'portrait',
     icon: './assets/images/MYFT_APP_LOGO.png',
     userInterfaceStyle: 'automatic',

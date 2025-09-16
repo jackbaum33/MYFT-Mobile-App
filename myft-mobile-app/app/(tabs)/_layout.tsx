@@ -2,7 +2,7 @@
 import { Tabs } from 'expo-router';
 import { useAppFonts } from "../../assets/fonts";
 import { AntDesign, Ionicons } from '@expo/vector-icons';
-import ProfileButton from '../utils/ProfileButton';
+import ProfileButton from '../../utils/ProfileButton';
 import { FONT_FAMILIES } from '../../assets/fonts';
 
 const NAVY = '#00274C';

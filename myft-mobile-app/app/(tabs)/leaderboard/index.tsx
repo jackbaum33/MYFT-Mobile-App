@@ -3,7 +3,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, Platform, ActionSheetIOS, Alert } from 'react-native';
 import { Stack, Link, router } from 'expo-router';
 import { useTournament } from '../../../context/TournamentContext';
-import { mapPlayersById, rosterTotalPoints } from '../../utils/fantasy';
+import { mapPlayersById, rosterTotalPoints } from '../../../utils/fantasy';
 import { useAuth } from '../../../context/AuthContext';
 import { listUsers, type UserProfile } from '@/services/users';
 import { FONT_FAMILIES } from '@/assets/fonts';
