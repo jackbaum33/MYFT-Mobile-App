@@ -68,7 +68,6 @@ export default ({ config }: ConfigContext): ExpoConfig => {
         },
       ],
       'expo-font',
-      'expo-dev-client',
       // 👉 Ensure expo-updates plugin runs so the embedded update & URL get configured
       'expo-updates',
     ],
