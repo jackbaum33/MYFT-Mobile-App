@@ -8,7 +8,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
 
   return {
     ...config,
-    name: 'myft-mobile-app',
+    name: 'MYFT 2025',
     slug: 'myft-mobile-app',
     scheme: 'myftmobileapp',
     version: '1.0.7',
