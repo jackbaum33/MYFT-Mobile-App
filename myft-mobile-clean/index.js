@@ -1,3 +1,5 @@
-import { registerRootComponent } from "expo";
-import App from "./App";
-registerRootComponent(App);
+// index.js
+import { registerRootComponent } from 'expo';
+import RootLayout from './app/_layout';
+
+registerRootComponent(RootLayout);
