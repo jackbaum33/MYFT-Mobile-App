@@ -7,7 +7,7 @@ import { onAuthStateChanged } from 'firebase/auth';
 import { auth } from '../services/firebaseConfig';
 import { userExists } from '../services/users';
 import TabNavigator from './TabNavigator';
-import ProfileModal from './(modals)/profile';
+// import ProfileModal from './(modals)/profile';
 import LoginScreen from './login';
 import { TournamentProvider } from '../context/TournamentContext';
 import { AuthProvider } from '../context/AuthContext';
@@ -110,7 +110,7 @@ function RootNavigator() {
         <>
           <Stack.Screen name="Main" component={TabNavigator} />
           
-          {/* Modal screens */}
+          {/* Modal screens
           <Stack.Group screenOptions={{ presentation: 'modal' }}>
             <Stack.Screen 
               name="Profile" 
@@ -122,7 +122,7 @@ function RootNavigator() {
                 headerTintColor: '#FFCB05',
               }}
             />
-          </Stack.Group>
+          </Stack.Group> */}
         </>
       )}
     </Stack.Navigator>

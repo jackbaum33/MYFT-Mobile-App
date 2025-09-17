@@ -2,12 +2,15 @@
   "expo": {
     "name": "MYFT",
     "slug": "myft-mobile-clean",
-    "version": "1.0.8",
+    "version": "1.0.9",
     "orientation": "portrait",
     "scheme": "myftmobileapp",
     "icon": "./images/MYFT_APP_LOGO.png",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
+    "assetBundlePatterns": [
+      "**/*"
+    ],
     "splash": {
       "image": "./images/MYFT_APP_LOGO.png",
       "resizeMode": "contain",
@@ -16,14 +19,33 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.backjaum33.myftmobileclean",
+      "requireFullScreen": false,
       "infoPlist": {
-        "ITSAppUsesNonExemptEncryption": false
+        "NSCameraUsageDescription": "MYFT uses the camera to capture profile photos.",
+        "NSPhotoLibraryUsageDescription": "MYFT needs access to your photo library to select profile pictures.",
+        "NSPhotoLibraryAddUsageDescription": "MYFT can save photos to your library.",
+        "UIStatusBarStyle": "UIStatusBarStyleLightContent",
+        "UIViewControllerBasedStatusBarAppearance": false,
+        "CFBundleDisplayName": "MYFT",
+        "CFBundleShortVersionString": "1.0.8",
+        "ITSAppUsesNonExemptEncryption": false,
+        "UILaunchStoryboardName": "SplashScreen",
+        "UIRequiredDeviceCapabilities": ["armv7"],
+        "UISupportedInterfaceOrientations": [
+          "UIInterfaceOrientationPortrait"
+        ],
+        "UISupportedInterfaceOrientations~ipad": [
+          "UIInterfaceOrientationPortrait",
+          "UIInterfaceOrientationPortraitUpsideDown",
+          "UIInterfaceOrientationLandscapeLeft",
+          "UIInterfaceOrientationLandscapeRight"
+        ]
       }
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
+        "foregroundImage": "./images/MYFT_APP_LOGO.png",
+        "backgroundColor": "#00274C"
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false
