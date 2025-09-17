@@ -2,7 +2,7 @@
   "expo": {
     "name": "MYFT",
     "slug": "myft-mobile-clean",
-    "version": "1.0.3",
+    "version": "1.0.4",
     "orientation": "portrait",
     "scheme": "myftmobileapp",
     "icon": "./images/MYFT_APP_LOGO.png",
@@ -36,9 +36,6 @@
       "eas": {
         "projectId": "9ce50732-f833-47e7-99e3-8e389d2aaec6"
       }
-    },
-    "plugins": [
-      "expo-router"
-    ]
+    }
   }
 }
