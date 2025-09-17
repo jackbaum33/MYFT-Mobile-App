@@ -10,7 +10,7 @@
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "splash": {
-      "image": "./assets/MYFT_APP_LOGO.png",
+      "image": "./images/MYFT_APP_LOGO.png",
       "resizeMode": "contain",
       "backgroundColor": "#00274C"
     },
