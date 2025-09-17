@@ -1,21 +1,30 @@
-// app/_layout.tsx - Step 2A: Test AuthProvider only
+// app/_layout.tsx - Step 2B: Test with error handling
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { StatusBar } from 'expo-status-bar';
-import { AuthProvider } from '../context/AuthContext';
+
+// Temporary safe AuthProvider for testing
+const SafeAuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  console.log('SafeAuthProvider rendering...');
+  
+  // Simple provider that just passes through children
+  return <>{children}</>;
+};
 
 export default function RootLayout() {
+  console.log('RootLayout rendering...');
+  
   return (
-    <AuthProvider>
+    <SafeAuthProvider>
       <NavigationContainer>
         <StatusBar style="light" backgroundColor="#00274C" />
         <View style={styles.container}>
-          <Text style={styles.text}>Step 2A: AuthProvider only</Text>
-          <Text style={styles.subtext}>Testing AuthProvider isolation</Text>
+          <Text style={styles.text}>Step 2B: Safe AuthProvider</Text>
+          <Text style={styles.subtext}>Testing without Firebase calls</Text>
         </View>
       </NavigationContainer>
-    </AuthProvider>
+    </SafeAuthProvider>
   );
 }
 
