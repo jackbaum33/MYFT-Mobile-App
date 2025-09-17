@@ -1,15 +1,18 @@
-// app/_layout.tsx - Debug version
+// app/_layout.tsx - Step 1: Add NavigationContainer
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
+import { NavigationContainer } from '@react-navigation/native';
 import { StatusBar } from 'expo-status-bar';
 
-export default function DebugApp() {
+export default function RootLayout() {
   return (
-    <View style={styles.container}>
+    <NavigationContainer>
       <StatusBar style="light" />
-      <Text style={styles.text}>DEBUG: App is working!</Text>
-      <Text style={styles.subtext}>If you see this, React Navigation is not the issue</Text>
-    </View>
+      <View style={styles.container}>
+        <Text style={styles.text}>Step 1: NavigationContainer added</Text>
+        <Text style={styles.subtext}>Navigation is working</Text>
+      </View>
+    </NavigationContainer>
   );
 }
 

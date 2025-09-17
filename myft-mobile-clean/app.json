@@ -27,7 +27,6 @@
         "UIStatusBarStyle": "UIStatusBarStyleLightContent",
         "UIViewControllerBasedStatusBarAppearance": false,
         "CFBundleDisplayName": "MYFT",
-        "CFBundleShortVersionString": "1.0.8",
         "ITSAppUsesNonExemptEncryption": false,
         "UILaunchStoryboardName": "SplashScreen",
         "UIRequiredDeviceCapabilities": [
