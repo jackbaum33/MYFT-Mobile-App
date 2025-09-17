@@ -1,0 +1,55 @@
+{
+  "expo": {
+    "name": "MYFT",
+    "slug": "myft-mobile-fresh",
+    "version": "1.0.3",
+    "jsEngine": "jsc",
+    "orientation": "portrait",
+    "scheme": "myftmobileapp",
+    "icon": "./images/MYFT_APP_LOGO.png",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "splash": {
+      "image": "./images/MYFT_APP_LOGO.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#00274C"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.backjaum33.myftmobilefresh",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#ffffff"
+      },
+      "edgeToEdgeEnabled": true,
+      "predictiveBackGestureEnabled": false
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "01d53617-29c1-4a5c-84ea-880281effbdd"
+      }
+    },
+    "plugins": [
+      "expo-router",
+      "expo-font",
+      "expo-web-browser",
+      "expo-build-properties",
+      "expo-build-properties",
+      [      
+        {
+        "ios": {
+          "jsEngine": "jsc"
+        }
+      }
+    ]
+    ]
+  }
+}
