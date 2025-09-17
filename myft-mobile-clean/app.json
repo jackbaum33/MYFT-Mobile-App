@@ -30,7 +30,9 @@
         "CFBundleShortVersionString": "1.0.8",
         "ITSAppUsesNonExemptEncryption": false,
         "UILaunchStoryboardName": "SplashScreen",
-        "UIRequiredDeviceCapabilities": ["armv7"],
+        "UIRequiredDeviceCapabilities": [
+          "armv7"
+        ],
         "UISupportedInterfaceOrientations": [
           "UIInterfaceOrientationPortrait"
         ],
@@ -58,6 +60,9 @@
       "eas": {
         "projectId": "9ce50732-f833-47e7-99e3-8e389d2aaec6"
       }
-    }
+    },
+    "plugins": [
+      "expo-font"
+    ]
   }
 }
