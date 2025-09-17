@@ -1,9 +1,8 @@
 {
   "expo": {
     "name": "MYFT",
-    "slug": "myft-mobile-fresh",
-    "version": "1.0.3",
-    "jsEngine": "jsc",
+    "slug": "myft-mobile-clean",
+    "version": "1.0.2",
     "orientation": "portrait",
     "scheme": "myftmobileapp",
     "icon": "./images/MYFT_APP_LOGO.png",
@@ -16,7 +15,7 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.backjaum33.myftmobilefresh",
+      "bundleIdentifier": "com.backjaum33.myftmobileclean",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
       }
@@ -32,23 +31,14 @@
     "web": {
       "favicon": "./assets/favicon.png"
     },
+    "owner": "backjaum33",
     "extra": {
       "eas": {
-        "projectId": "01d53617-29c1-4a5c-84ea-880281effbdd"
+        "projectId": "9ce50732-f833-47e7-99e3-8e389d2aaec6"
       }
     },
     "plugins": [
-      "expo-router",
-      "expo-font",
-      "expo-web-browser",
-      [
-        "expo-build-properties",
-        {
-          "ios": {
-            "jsEngine": "jsc"
-          }
-        }
-      ]
+      "expo-router"
     ]
   }
 }
