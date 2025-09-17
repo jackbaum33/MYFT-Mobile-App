@@ -1,18 +1,24 @@
-// app/_layout.tsx - Step 1: Add NavigationContainer
+// app/_layout.tsx - Step 2: Add context providers
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { StatusBar } from 'expo-status-bar';
+import { TournamentProvider } from '../context/TournamentContext';
+import { AuthProvider } from '../context/AuthContext';
 
 export default function RootLayout() {
   return (
-    <NavigationContainer>
-      <StatusBar style="light" />
-      <View style={styles.container}>
-        <Text style={styles.text}>Step 1: NavigationContainer added</Text>
-        <Text style={styles.subtext}>Navigation is working</Text>
-      </View>
-    </NavigationContainer>
+    <AuthProvider>
+      <TournamentProvider>
+        <NavigationContainer>
+          <StatusBar style="light" backgroundColor="#00274C" />
+          <View style={styles.container}>
+            <Text style={styles.text}>Step 2: Context providers added</Text>
+            <Text style={styles.subtext}>AuthProvider & TournamentProvider working</Text>
+          </View>
+        </NavigationContainer>
+      </TournamentProvider>
+    </AuthProvider>
   );
 }
 
