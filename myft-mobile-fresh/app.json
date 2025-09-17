@@ -10,7 +10,7 @@
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "splash": {
-      "image": "./images/MYFT_APP_LOGO.png",
+      "image": "./assets/MYFT_APP_LOGO.png",
       "resizeMode": "contain",
       "backgroundColor": "#00274C"
     },
@@ -41,15 +41,14 @@
       "expo-router",
       "expo-font",
       "expo-web-browser",
-      "expo-build-properties",
-      "expo-build-properties",
-      [      
+      [
+        "expo-build-properties",
         {
-        "ios": {
-          "jsEngine": "jsc"
+          "ios": {
+            "jsEngine": "jsc"
+          }
         }
-      }
-    ]
+      ]
     ]
   }
 }
