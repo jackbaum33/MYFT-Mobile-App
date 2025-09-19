@@ -1,5 +1,5 @@
 // context/TournamentContext.tsx
-import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import React, { createContext, useContext, useEffect, useMemo, useState, useCallback } from 'react';
 import { collection, getDocs } from 'firebase/firestore';
 import { db } from '../services/firebaseConfig';
 
@@ -32,7 +32,7 @@ export interface Team {
   id: string;
   name: string;
   division: Division;
-  captain: string; // <-- we’ll populate this from Firestore captain_name
+  captain: string; // <-- we'll populate this from Firestore captain_name
   record: { wins: number; losses: number };
   players: Player[];
 }
@@ -45,8 +45,10 @@ export interface FantasyRoster {
 type TournamentContextType = {
   teams: Team[];
   userRoster: FantasyRoster;
+  loading: boolean;
   updateRoster: (division: Division, playerId: string) => void;
   calculatePoints: (p: Player) => number;
+  refreshData: () => Promise<void>;
 };
 
 /** ---------- Scoring Table ---------- **/
@@ -71,7 +73,7 @@ const normDiv = (v: unknown): Division => {
   return 'boys';
 };
 
-// “michigan-boys-1” | “michigan_boys_1” -> "Michigan"
+// "michigan-boys-1" | "michigan_boys_1" -> "Michigan"
 const schoolFromTeamId = (teamId?: string) => {
   if (!teamId) return '';
   const slug = String(teamId).trim().replace(/_/g, '-');
@@ -108,6 +110,71 @@ const statsFromSeasonTotals = (arr?: number[]): PlayerStats => {
   };
 };
 
+/** ---------- Data Loading Function ---------- **/
+const loadTeamsAndPlayers = async (): Promise<Team[]> => {
+  /** 1) Teams metadata */
+  const teamsSnap = await getDocs(collection(db, 'teams'));
+  const teamMeta = new Map<
+    string,
+    { name: string; division: Division; captain: string; record: { wins: number; losses: number } }
+  >();
+
+  teamsSnap.forEach((d) => {
+    const data = d.data() as any;
+    const division: Division = data?.division ? normDiv(data.division) : normDiv(d.id);
+    teamMeta.set(d.id, {
+      name: data?.name || schoolFromTeamId(d.id),
+      division,
+      // ✅ prefer captain_name, fall back to captain
+      captain: data?.captain_name ?? data?.captain ?? '',
+      record: data?.record ?? { wins: 0, losses: 0 },
+    });
+  });
+
+  /** 2) Players */
+  const playersSnap = await getDocs(collection(db, 'players'));
+  const playersByTeam = new Map<string, Player[]>();
+
+  playersSnap.forEach((d) => {
+    const data = d.data() as any;
+    const teamId: string = data?.team_id ?? data?.teamID ?? data?.teamId ?? '';
+    if (!teamId) return;
+    
+    const name = resolvePlayerName(data, d.id);
+    const stats = statsFromSeasonTotals(data?.seasonTotals);
+    const teamDiv = teamMeta.get(teamId)?.division ?? normDiv(teamId);
+
+    const player: Player = {
+      id: d.id,
+      name,
+      division: teamDiv,
+      teamId,
+      stats,
+    };
+
+    const list = playersByTeam.get(teamId) ?? [];
+    list.push(player);
+    playersByTeam.set(teamId, list);
+  });
+
+  /** 3) Build Team[] */
+  const teamIds = Array.from(new Set([...playersByTeam.keys(), ...teamMeta.keys()]));
+  const builtTeams: Team[] = teamIds.map((tid) => {
+    const meta = teamMeta.get(tid);
+    const players = (playersByTeam.get(tid) ?? []).sort((a, b) => a.name.localeCompare(b.name));
+    return {
+      id: tid,
+      name: meta?.name ?? schoolFromTeamId(tid),
+      division: meta?.division ?? normDiv(tid),
+      captain: meta?.captain ?? '', // ✅ will now contain captain_name value
+      record: meta?.record ?? { wins: 0, losses: 0 },
+      players,
+    };
+  });
+
+  return builtTeams;
+};
+
 /** ---------- Context ---------- **/
 const TournamentContext = createContext<TournamentContextType | undefined>(undefined);
 
@@ -115,84 +182,31 @@ const TournamentContext = createContext<TournamentContextType | undefined>(undef
 export const TournamentProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [teams, setTeams] = useState<Team[]>([]);
   const [userRoster, setUserRoster] = useState<FantasyRoster>({ boys: [], girls: [] });
+  const [loading, setLoading] = useState<boolean>(true);
 
-  // Load teams + players from Firestore once on mount
-  useEffect(() => {
-    let active = true;
-
-    (async () => {
-      try {
-        /** 1) Teams metadata */
-        const teamsSnap = await getDocs(collection(db, 'teams'));
-        const teamMeta = new Map<
-          string,
-          { name: string; division: Division; captain: string; record: { wins: number; losses: number } }
-        >();
-
-        teamsSnap.forEach((d) => {
-          const data = d.data() as any;
-          const division: Division = data?.division ? normDiv(data.division) : normDiv(d.id);
-          teamMeta.set(d.id, {
-            name: data?.name || schoolFromTeamId(d.id),
-            division,
-            // ✅ prefer captain_name, fall back to captain
-            captain: data?.captain_name ?? data?.captain ?? '',
-            record: data?.record ?? { wins: 0, losses: 0 },
-          });
-        });
-
-        /** 2) Players */
-        const playersSnap = await getDocs(collection(db, 'players'));
-        const playersByTeam = new Map<string, Player[]>();
-
-        playersSnap.forEach((d) => {
-          const data = d.data() as any;
-          const teamId: string = data?.team_id ?? data?.teamID ?? data?.teamId ?? '';
-          if (!teamId) return;
-          
-          const name = resolvePlayerName(data, d.id);
-          const stats = statsFromSeasonTotals(data?.seasonTotals);
-          const teamDiv = teamMeta.get(teamId)?.division ?? normDiv(teamId);
-
-          const player: Player = {
-            id: d.id,
-            name,
-            division: teamDiv,
-            teamId,
-            stats,
-          };
-
-          const list = playersByTeam.get(teamId) ?? [];
-          list.push(player);
-          playersByTeam.set(teamId, list);
-        });
-
-        /** 3) Build Team[] */
-        const teamIds = Array.from(new Set([...playersByTeam.keys(), ...teamMeta.keys()]));
-        const builtTeams: Team[] = teamIds.map((tid) => {
-          const meta = teamMeta.get(tid);
-          const players = (playersByTeam.get(tid) ?? []).sort((a, b) => a.name.localeCompare(b.name));
-          return {
-            id: tid,
-            name: meta?.name ?? schoolFromTeamId(tid),
-            division: meta?.division ?? normDiv(tid),
-            captain: meta?.captain ?? '', // ✅ will now contain captain_name value
-            record: meta?.record ?? { wins: 0, losses: 0 },
-            players,
-          };
-        });
-
-        if (active) setTeams(builtTeams);
-      } catch (e) {
-        console.warn('[TournamentContext] failed to load Firestore data:', e);
-        if (active) setTeams([]);
-      }
-    })();
-
-    return () => {
-      active = false;
-    };
+  // Load teams + players from Firestore
+  const loadData = useCallback(async () => {
+    try {
+      setLoading(true);
+      const builtTeams = await loadTeamsAndPlayers();
+      setTeams(builtTeams);
+    } catch (e) {
+      console.warn('[TournamentContext] failed to load Firestore data:', e);
+      setTeams([]);
+    } finally {
+      setLoading(false);
+    }
   }, []);
+
+  // Initial load on mount
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
+
+  // Refresh function that can be called externally
+  const refreshData = useCallback(async () => {
+    await loadData();
+  }, [loadData]);
 
   /** Toggle add/remove a player from a division list */
   const updateRoster = (division: Division, playerId: string) => {
@@ -223,8 +237,8 @@ export const TournamentProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   };
 
   const value = useMemo(
-    () => ({ teams, userRoster, updateRoster, calculatePoints }),
-    [teams, userRoster]
+    () => ({ teams, userRoster, loading, updateRoster, calculatePoints, refreshData }),
+    [teams, userRoster, loading, refreshData]
   );
 
   return <TournamentContext.Provider value={value}>{children}</TournamentContext.Provider>;

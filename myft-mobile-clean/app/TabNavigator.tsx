@@ -2,13 +2,14 @@ import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useNavigation, NavigationProp } from '@react-navigation/native';
+import { useNavigation, NavigationProp, useFocusEffect } from '@react-navigation/native';
 import FantasyLayout from './(tabs)/fantasy/_layout';
 import LeaderboardLayout from './(tabs)/leaderboard/_layout';
 import ScheduleLayout from './(tabs)/schedule/_layout';
 import TeamLayout from './(tabs)/team/_layout';
 import HomeScreen from './(tabs)/index';
 import { RootStackParamList } from './_layout';
+import { useTournament } from '../context/TournamentContext';
 
 export type RootTabParamList = {
   Home: undefined;
@@ -30,6 +31,28 @@ function ProfileButton() {
       style={{ marginRight: 16 }}
     >
       <Ionicons name="person-circle-outline" size={28} color="#FFCB05" />
+    </TouchableOpacity>
+  );
+}
+
+// Refresh button component
+function RefreshButton() {
+  const { refreshData } = useTournament();
+  
+  const handleRefresh = async () => {
+    try {
+      await refreshData();
+    } catch (error) {
+      console.warn('Failed to refresh data:', error);
+    }
+  };
+
+  return (
+    <TouchableOpacity
+      onPress={handleRefresh}
+      style={{ marginLeft: 16 }}
+    >
+      <Ionicons name="refresh-outline" size={28} color="#FFCB05" />
     </TouchableOpacity>
   );
 }
@@ -71,6 +94,7 @@ export default function TabNavigator() {
         },
         headerTintColor: '#FFCB05',
         headerTitle: '', // Empty title for clean look
+        headerLeft: RefreshButton, // Refresh button on the left
         headerRight: ProfileButton, // Profile button on all tabs
       })}
     >
