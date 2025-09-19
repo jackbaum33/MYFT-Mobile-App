@@ -243,11 +243,12 @@ export default function FantasyScreen() {
    *   Save team (writes to Firestore)
    *  ------------------------- */
   const [saving, setSaving] = useState(false);
-  const canSave = selectedBoys === maxBoys && selectedGirls === maxGirls;
+  const hasAnyPlayers = selectedBoys > 0 || selectedGirls > 0;
+  const isCompleteTeam = selectedBoys === maxBoys && selectedGirls === maxGirls;
 
   const onSaveTeam = async () => {
-    if (!canSave) {
-      Alert.alert('Almost there!', 'Pick 8 boys and 4 girls to complete your team.');
+    if (!hasAnyPlayers) {
+      Alert.alert('Nothing to save', 'Add some players to your team first.');
       return;
     }
     if (!signedIn?.uid) {
@@ -261,7 +262,12 @@ export default function FantasyScreen() {
         boys_roster: [...(userRoster.boys ?? [])],
         girls_roster: [...(userRoster.girls ?? [])],
       });
-      Alert.alert('Team Saved', 'Your fantasy roster has been saved!');
+      
+      if (isCompleteTeam) {
+        Alert.alert('Team Saved', 'Your complete fantasy roster has been saved!');
+      } else {
+        Alert.alert('Team Saved', `Your team has been saved! You have ${selectedBoys}/${maxBoys} boys and ${selectedGirls}/${maxGirls} girls selected.`);
+      }
     } catch (e: any) {
       console.warn('[fantasy] save team failed:', e);
       Alert.alert('Save Failed', e?.message ?? 'Please try again.');
@@ -357,9 +363,9 @@ export default function FantasyScreen() {
           <Text style={styles.counterText}>Girls: {selectedGirls}/{maxGirls}</Text>
         </View>
         <TouchableOpacity
-          style={[styles.saveBtn, (!canSave || saving) && { opacity: 0.6 }]}
+          style={[styles.saveBtn, (!hasAnyPlayers || saving) && { opacity: 0.6 }]}
           onPress={onSaveTeam}
-          disabled={!canSave || saving}
+          disabled={!hasAnyPlayers || saving}
         >
           <Ionicons name="save-outline" size={16} color={NAVY} />
           <Text style={styles.saveBtnText}>{saving ? 'Saving…' : 'Save Team'}</Text>
@@ -439,7 +445,6 @@ export default function FantasyScreen() {
     )}
   </>
 )}
-
 
       {/* Lists */}
       {tab === 'all' ? (

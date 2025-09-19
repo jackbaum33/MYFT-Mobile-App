@@ -111,7 +111,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   cardText: { flex: 1, gap: 2 },
-  teamName: { color: YELLOW, fontWeight: 'bold', fontSize: 18, marginBottom: 4, fontFamily: FONT_FAMILIES.archivoBlack},
+  teamName: { color: YELLOW, fontWeight: 'bold', fontSize: 20, marginBottom: 4, fontFamily: FONT_FAMILIES.archivoNarrow},
   meta: { color: TEXT, fontSize: 14, fontFamily: FONT_FAMILIES.archivoNarrow },
   metaStrong: { color: YELLOW, fontWeight: '600', fontFamily: FONT_FAMILIES.archivoBlack},
 
