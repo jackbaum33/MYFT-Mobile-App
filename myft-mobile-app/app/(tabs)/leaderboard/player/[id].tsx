@@ -97,7 +97,7 @@ export default function PlayerLeaderboardDetail() {
     return rows.map(r => ({ ...r, subtotal: r.count * r.mult }));
   }, [counts]);
 
-  // Loading/empty states (no network now, so just “not found” if player missing)
+  // Loading/empty states (no network now, so just "not found" if player missing)
   if (!player) {
     return (
       <View style={[s.container, { justifyContent: 'center', alignItems: 'center' }]}>
@@ -143,6 +143,7 @@ export default function PlayerLeaderboardDetail() {
           <Pressable style={s.modalCard} onPress={(e) => e.stopPropagation()}>
             <Text style={s.modalTitle}>{displayName}'s Stats</Text>
 
+            {/* Header Row */}
             <View style={[s.row, s.rowHead]}>
               <Text style={[s.cellLabel, { flex: 1 }]}>Metric</Text>
               <Text style={[s.cell, s.right]}>Count</Text>
@@ -150,28 +151,33 @@ export default function PlayerLeaderboardDetail() {
               <Text style={[s.cell, s.right]}>Total</Text>
             </View>
 
-            <FlatList
-              data={breakdownRows}
-              keyExtractor={(r) => r.key}
-              ItemSeparatorComponent={() => <View style={{ height: 8 }} />}
-              renderItem={({ item }) => (
-                <View style={s.row}>
-                  <Text style={[s.cellLabel, { flex: 1 }]} numberOfLines={1}>{item.label}</Text>
-                  <Text style={[s.cell, s.right]}>{item.count}</Text>
-                  <Text style={[s.cell, s.right]}>{item.mult}</Text>
-                  <Text style={[s.cell, s.right, s.totalCell]}>{item.subtotal}</Text>
-                </View>
-              )}
-              ListFooterComponent={
-                <View style={[s.row, s.footerRow]}>
-                  <Text style={[s.cellLabel, { flex: 1 }]}>Total Points</Text>
-                  <Text style={[s.cell, s.right]} />
-                  <Text style={[s.cell, s.right]} />
-                  <Text style={[s.cell, s.right]} />
-                  <Text style={[s.cell, s.right, s.totalCell]}>{totalPoints}</Text>
-                </View>
-              }
-            />
+            {/* Scrollable Content */}
+            <View style={s.scrollContainer}>
+              <FlatList
+                data={breakdownRows}
+                keyExtractor={(r) => r.key}
+                showsVerticalScrollIndicator={true}
+                bounces={true}
+                ItemSeparatorComponent={() => <View style={{ height: 4 }} />}
+                renderItem={({ item }) => (
+                  <View style={s.row}>
+                    <Text style={[s.cellLabel, { flex: 1 }]} numberOfLines={1}>{item.label}</Text>
+                    <Text style={[s.cell, s.right]}>{item.count}</Text>
+                    <Text style={[s.cell, s.right]}>{item.mult}</Text>
+                    <Text style={[s.cell, s.right, s.totalCell]}>{item.subtotal}</Text>
+                  </View>
+                )}
+                ListFooterComponent={
+                  <View style={[s.row, s.footerRow]}>
+                    <Text style={[s.cellLabel, { flex: 1 }]}>Total Points</Text>
+                    <Text style={[s.cell, s.right]} />
+                    <Text style={[s.cell, s.right]} />
+                    <Text style={[s.cell, s.right]} />
+                    <Text style={[s.cell, s.right, s.totalCell]}>{totalPoints}</Text>
+                  </View>
+                }
+              />
+            </View>
 
             <TouchableOpacity style={s.closeBtn} onPress={() => setShowBreakdown(false)}>
               <Text style={s.closeBtnText}>Close</Text>
@@ -183,7 +189,6 @@ export default function PlayerLeaderboardDetail() {
   );
 }
 
-/* styles unchanged */
 const s = StyleSheet.create({
   container: { flex: 1, padding: 12 },
   headerCard: { backgroundColor: CARD, borderRadius: 12, padding: 14, marginBottom: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
@@ -194,17 +199,70 @@ const s = StyleSheet.create({
   breakdownBtn: { marginTop: 10, alignSelf: 'center', paddingHorizontal: 16, paddingVertical: 10, borderRadius: 10, backgroundColor: YELLOW },
   breakdownBtnText: { color: NAVY, fontWeight: '900', fontFamily: FONT_FAMILIES.archivoBlack },
   backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'center', alignItems: 'center' },
-  modalCard: { width: '90%', maxHeight: '80%', backgroundColor: NAVY, borderRadius: 16, padding: 16, borderWidth: 1, borderColor: LINE },
-  modalTitle: { color: YELLOW, fontWeight: '900', fontSize: 18, marginBottom: 10, fontFamily: FONT_FAMILIES.archivoBlack, textAlign: 'center' },
-  row: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#0a3a68', borderRadius: 8, paddingVertical: 10, paddingHorizontal: 12 },
-  rowHead: { backgroundColor: '#0f4a85', marginBottom: 8 },
-  footerRow: { marginTop: 10, backgroundColor: '#0f4a85' },
-  cellLabel: { color: YELLOW, fontWeight: '800', fontFamily: FONT_FAMILIES.archivoBlack },
-  cell: { color: TEXT, fontWeight: '800', width: 60, fontFamily: FONT_FAMILIES.archivoBlack },
+  modalCard: { 
+    width: '90%', 
+    maxHeight: '80%', 
+    backgroundColor: NAVY, 
+    borderRadius: 16, 
+    padding: 16, 
+    borderWidth: 1, 
+    borderColor: LINE 
+  },
+  modalTitle: { 
+    color: YELLOW, 
+    fontWeight: '900', 
+    fontSize: 18, 
+    marginBottom: 16, 
+    fontFamily: FONT_FAMILIES.archivoBlack, 
+    textAlign: 'center' 
+  },
+  scrollContainer: {
+    flex: 1,
+    marginBottom: 16,
+  },
+  row: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    backgroundColor: '#0a3a68', 
+    borderRadius: 6, 
+    paddingVertical: 6, 
+    paddingHorizontal: 8 
+  },
+  rowHead: { 
+    backgroundColor: '#0f4a85', 
+    marginBottom: 8 
+  },
+  footerRow: { 
+    marginTop: 6, 
+    backgroundColor: '#0f4a85' 
+  },
+  cellLabel: { 
+    color: YELLOW, 
+    fontWeight: '800', 
+    fontSize: 13,
+    fontFamily: FONT_FAMILIES.archivoBlack 
+  },
+  cell: { 
+    color: TEXT, 
+    fontWeight: '800', 
+    fontSize: 13,
+    width: 50, 
+    fontFamily: FONT_FAMILIES.archivoBlack 
+  },
   right: { textAlign: 'right' as const },
   totalCell: { color: YELLOW },
-  closeBtn: { alignSelf: 'center', marginTop: 12, paddingHorizontal: 16, paddingVertical: 10, borderRadius: 10, backgroundColor: YELLOW },
-  closeBtnText: { color: NAVY, fontWeight: '900', fontFamily: FONT_FAMILIES.archivoBlack },
+  closeBtn: { 
+    alignSelf: 'center', 
+    paddingHorizontal: 16, 
+    paddingVertical: 10, 
+    borderRadius: 10, 
+    backgroundColor: YELLOW 
+  },
+  closeBtnText: { 
+    color: NAVY, 
+    fontWeight: '900', 
+    fontFamily: FONT_FAMILIES.archivoBlack 
+  },
   logoContainer: {
     width: 32,
     height: 32,
@@ -214,5 +272,5 @@ const s = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },  
-  logo: { width: 56, height: 56,},
+  logo: { width: 56, height: 56 },
 });

@@ -1,4 +1,4 @@
-// team/player/[id].tsx - React Navigation Version
+// leaderboard/player/[id].tsx - React Navigation Version
 import React, { useMemo, useState, useLayoutEffect } from 'react';
 import { View, Text, StyleSheet, Image, Modal, Pressable, TouchableOpacity, FlatList } from 'react-native';
 import { RouteProp, useRoute, useNavigation, NavigationProp } from '@react-navigation/native';
@@ -6,15 +6,15 @@ import { useTournament, SCORING } from '../../../../context/TournamentContext';
 import { getTeamLogo } from '../../../../team_logos';
 import { FONT_FAMILIES } from '../../../../fonts';
 
-// Define the navigation types - adjust based on your team stack structure
-export type TeamStackParamList = {
-  TeamIndex: undefined;
-  TeamDetail: { id: string };
+// Define the navigation types - adjust based on your leaderboard stack structure
+export type LeaderboardStackParamList = {
+  LeaderboardIndex: undefined;
   Player: { id: string };
+  User: { id: string };
 };
 
-type PlayerScreenRouteProp = RouteProp<TeamStackParamList, 'Player'>;
-type PlayerScreenNavigationProp = NavigationProp<TeamStackParamList, 'Player'>;
+type PlayerScreenRouteProp = RouteProp<LeaderboardStackParamList, 'Player'>;
+type PlayerScreenNavigationProp = NavigationProp<LeaderboardStackParamList, 'Player'>;
 
 const CARD = '#00417D';
 const NAVY = '#00274C';
@@ -29,7 +29,7 @@ const toSlug = (s: string) =>
 const humanizeSlug = (slug: string) =>
   slug.split('-').map(w => (w ? w[0].toUpperCase() + w.slice(1) : '')).join(' ');
 
-export default function PlayerTeamDetail() {
+export default function PlayerLeaderboardDetail() {
   const route = useRoute<PlayerScreenRouteProp>();
   const navigation = useNavigation<PlayerScreenNavigationProp>();
   const { id: rawParam } = route.params;
@@ -212,7 +212,7 @@ const s = StyleSheet.create({
   backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'center', alignItems: 'center' },
   modalCard: { width: '90%', maxHeight: '80%', backgroundColor: NAVY, borderRadius: 16, padding: 16, borderWidth: 1, borderColor: LINE },
   modalTitle: { color: YELLOW, fontWeight: '900', fontSize: 18, marginBottom: 10, fontFamily: FONT_FAMILIES.archivoBlack, textAlign: 'center' },
-  row: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#0a3a68', borderRadius: 8, paddingVertical: 10, paddingHorizontal: 12 },
+  row: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#0a3a68', borderRadius: 8, paddingVertical: 9.5, paddingHorizontal: 12 },
   rowHead: { backgroundColor: '#0f4a85', marginBottom: 8 },
   footerRow: { marginTop: 10, backgroundColor: '#0f4a85' },
   cellLabel: { color: YELLOW, fontWeight: '800', fontFamily: FONT_FAMILIES.archivoBlack },
