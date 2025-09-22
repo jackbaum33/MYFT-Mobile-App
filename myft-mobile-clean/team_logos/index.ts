@@ -23,6 +23,7 @@ export const teamLogos: Record<string, any> = {
   stpeters:     require('./st-peters_logo.png'),
   syracuse:     require('./syracuse_logo.png'),
   texas:        require('./texas_logo.png'),
+  touro:        require('./touro_logo.png'),
   washu:        require('./washu_logo.png'),
   wisconsin:    require('./wisconsin_logo.png'),
   yeshiva:      require('./yu_logo.png')
