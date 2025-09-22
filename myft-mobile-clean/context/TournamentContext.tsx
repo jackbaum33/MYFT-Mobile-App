@@ -122,12 +122,28 @@ const loadTeamsAndPlayers = async (): Promise<Team[]> => {
   teamsSnap.forEach((d) => {
     const data = d.data() as any;
     const division: Division = data?.division ? normDiv(data.division) : normDiv(d.id);
+    
+    // Handle record as array [wins, losses] or fallback to object or default
+    let record = { wins: 0, losses: 0 };
+    if (Array.isArray(data?.record)) {
+      record = {
+        wins: data.record[0] ?? 0,
+        losses: data.record[1] ?? 0,
+      };
+    } else if (data?.record && typeof data.record === 'object') {
+      // Fallback for existing object format
+      record = {
+        wins: data.record.wins ?? 0,
+        losses: data.record.losses ?? 0,
+      };
+    }
+
     teamMeta.set(d.id, {
       name: data?.name || schoolFromTeamId(d.id),
       division,
       // ✅ prefer captain_name, fall back to captain
       captain: data?.captain_name ?? data?.captain ?? '',
-      record: data?.record ?? { wins: 0, losses: 0 },
+      record,
     });
   });
 
