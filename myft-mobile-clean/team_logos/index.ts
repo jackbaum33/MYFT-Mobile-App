@@ -19,6 +19,7 @@ export const teamLogos: Record<string, any> = {
   penn:         require('./penn_logo.png'),
   princeton:    require('./princeton_logo.png'),
   queens:       require('./queens_logo.png'),
+  rutgers:      require('./rutgers_logo.png'),
   stpeters:     require('./st-peters_logo.png'),
   syracuse:     require('./syracuse_logo.png'),
   texas:        require('./texas_logo.png'),

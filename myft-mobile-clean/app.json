@@ -2,7 +2,7 @@
   "expo": {
     "name": "MYFT",
     "slug": "myft-mobile-clean",
-    "version": "1.0.16",
+    "version": "1.0.17",
     "orientation": "portrait",
     "scheme": "myftmobileapp",
     "icon": "./images/MYFT_APP_LOGO.png",
