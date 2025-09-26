@@ -1,7 +1,8 @@
 // leaderboard/index.tsx - React Navigation Version
 import React, { useEffect, useMemo, useState } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, Platform, ActionSheetIOS, Alert } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, Platform, ActionSheetIOS, Alert, TextInput } from 'react-native';
 import { NavigationProp, useNavigation } from '@react-navigation/native';
+import { Ionicons } from '@expo/vector-icons';
 import { useTournament } from '../../../context/TournamentContext';
 import { mapPlayersById, rosterTotalPoints } from '../../../utils/fantasy';
 import { useAuth } from '../../../context/AuthContext';
@@ -17,6 +18,7 @@ const CARD = '#00417D';
 const NAVY = '#00274C';
 const YELLOW = '#FFCB05';
 const TEXT = '#E9ECEF';
+const LINE = 'rgba(255,255,255,0.12)';
 
 type FilterKey = 'division' | 'school' | 'position';
 type RankedUser = UserProfile & { totalPoints: number };
@@ -33,6 +35,7 @@ export default function LeaderboardIndex() {
 
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [usersLoading, setUsersLoading] = useState<boolean>(false);
+  const [searchQuery, setSearchQuery] = useState<string>('');
 
   const allPlayers = useMemo(() => teams.flatMap(t => t.players), [teams]);
 
@@ -84,6 +87,18 @@ export default function LeaderboardIndex() {
       .map(u => ({ ...u, totalPoints: calc(u) }))
       .sort((a, b) => b.totalPoints - a.totalPoints);
   }, [users, playersById, calculatePoints]);
+
+  // Filter users based on search query
+  const filteredUsers = useMemo(() => {
+    if (!searchQuery.trim()) return usersRanked;
+    
+    const query = searchQuery.toLowerCase().trim();
+    return usersRanked.filter(user => {
+      const displayName = user.displayName.toLowerCase();
+      const username = user.username.toLowerCase();
+      return displayName.includes(query) || username.includes(query);
+    });
+  }, [usersRanked, searchQuery]);
 
   const playersRanked = useMemo(
     () => [...allPlayers].map(p => ({ ...p, fantasy: calculatePoints(p) }))
@@ -151,6 +166,11 @@ export default function LeaderboardIndex() {
 
   const navigateToUser = (userId: string) => {
     navigation.navigate('User', { id: userId });
+  };
+
+  // Clear search
+  const clearSearch = () => {
+    setSearchQuery('');
   };
 
   /** Renders **/
@@ -253,6 +273,34 @@ export default function LeaderboardIndex() {
         </View>
       )}
 
+      {/* Search bar for Fantasy Teams view */}
+      {mode === 'users' && (
+        <View style={styles.searchContainer}>
+          <View style={styles.searchInputContainer}>
+            <Ionicons name="search-outline" size={20} color={TEXT} style={styles.searchIcon} />
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Search users..."
+              placeholderTextColor={`${TEXT}80`}
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
+            {searchQuery.length > 0 && (
+              <TouchableOpacity onPress={clearSearch} style={styles.clearButton}>
+                <Ionicons name="close-circle" size={20} color={TEXT} />
+              </TouchableOpacity>
+            )}
+          </View>
+          {searchQuery.length > 0 && (
+            <Text style={styles.searchResults}>
+              {filteredUsers.length} player{filteredUsers.length !== 1 ? 's' : ''}
+            </Text>
+          )}
+        </View>
+      )}
+
       {mode === 'players' ? (
         <FlatList
           data={filteredPlayers}
@@ -263,7 +311,7 @@ export default function LeaderboardIndex() {
         />
       ) : (
         <FlatList
-          data={usersRanked}
+          data={filteredUsers}
           keyExtractor={(u, i) => u.uid ?? `${u.username}-${i}`}
           renderItem={renderUser}
           contentContainerStyle={{ paddingBottom: 24 }}
@@ -288,6 +336,39 @@ const styles = StyleSheet.create({
   filterBtnActive: { backgroundColor: YELLOW, fontFamily: FONT_FAMILIES.archivoBlack },
   filterBtnText: { color: TEXT, fontWeight: '800', fontFamily: FONT_FAMILIES.archivoBlack},
   filterBtnTextActive: { color: NAVY, fontFamily: FONT_FAMILIES.archivoBlack},
+
+  // Search styles
+  searchContainer: { marginBottom: 16 },
+  searchInputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: CARD,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderWidth: 1,
+    borderColor: LINE,
+  },
+  searchIcon: { marginRight: 8 },
+  searchInput: {
+    flex: 1,
+    color: TEXT,
+    fontSize: 16,
+    fontFamily: FONT_FAMILIES.archivoNarrow,
+    paddingVertical: 12,
+  },
+  clearButton: {
+    padding: 4,
+    marginLeft: 8,
+  },
+  searchResults: {
+    color: TEXT,
+    fontSize: 12,
+    marginTop: 4,
+    marginLeft: 4,
+    fontFamily: FONT_FAMILIES.archivoNarrow,
+    opacity: 0.8,
+  },
 
   segWrap: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#07335f', borderRadius: 10, padding: 6, gap: 8, marginBottom: 20 },
   segBtn: { flex: 1, borderRadius: 10, alignItems: 'center', justifyContent: 'center', paddingVertical: 10 },
