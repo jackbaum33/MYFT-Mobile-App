@@ -12,6 +12,7 @@ import {
   Image,
   Platform,
   ActionSheetIOS,
+  TextInput,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { FONT_FAMILIES } from '../../fonts';
@@ -27,6 +28,9 @@ const LINE = 'rgba(255,255,255,0.12)';
 
 const LOGO = require('../../images/MYFT_LOGO.png');
 
+// Lock date: November 7, 2025 at 7:00 AM
+const LOCK_DATE = new Date('2025-11-07T07:00:00');
+
 type FilterKey = 'division' | 'school' | null;
 
 function capitalize(s: string) {
@@ -38,11 +42,18 @@ export default function FantasyScreen() {
   const { user: signedIn } = useAuth();
 
   /** -------------------------
+   *   Lock state
+   *  ------------------------- */
+  const isLocked = useMemo(() => {
+    return new Date() >= LOCK_DATE;
+  }, []);
+
+  /** -------------------------
    *   Boot / profile state
    *  ------------------------- */
   const [profileLoading, setProfileLoading] = useState(true);
   const [hasOnboarded, setHasOnboarded] = useState(false);
-  const hydratedFromProfileRef = useRef(false); // ensure we only hydrate roster once
+  const hydratedFromProfileRef = useRef(false);
 
   // Load user profile: hasOnboarded + saved rosters
   useEffect(() => {
@@ -51,7 +62,6 @@ export default function FantasyScreen() {
       try {
         setProfileLoading(true);
         if (!signedIn?.uid) {
-          // Not signed in → default to onboarding
           if (active) {
             setHasOnboarded(false);
           }
@@ -63,16 +73,13 @@ export default function FantasyScreen() {
         const onboardFlag = !!(prof as any)?.hasOnboarded;
         setHasOnboarded(onboardFlag);
 
-        // Hydrate saved roster once (only if we have saved players and haven't hydrated yet)
         if (!hydratedFromProfileRef.current) {
           const boys: string[] = Array.isArray((prof as any)?.boys_roster) ? (prof as any).boys_roster : [];
           const girls: string[] = Array.isArray((prof as any)?.girls_roster) ? (prof as any).girls_roster : [];
 
-          // Soft cap to 4 each (your app logic)
           const boysIds = [...new Set(boys)].slice(0, 8);
           const girlsIds = [...new Set(girls)].slice(0, 8);
 
-          // Call updateRoster to sync context (it toggles add/remove; initial context is empty so these will add)
           boysIds.forEach(id => updateRoster('boys', id));
           girlsIds.forEach(id => updateRoster('girls', id));
 
@@ -80,7 +87,6 @@ export default function FantasyScreen() {
         }
       } catch (e) {
         console.warn('[fantasy] load profile failed:', e);
-        // Fall back to onboarding if anything goes wrong
         if (active) setHasOnboarded(false);
       } finally {
         if (active) setProfileLoading(false);
@@ -93,6 +99,7 @@ export default function FantasyScreen() {
    *   View / local state
    *  ------------------------- */
   const [tab, setTab] = useState<'all' | 'team'>('all');
+  const [searchQuery, setSearchQuery] = useState<string>('');
 
   /** -------------------------
    *   Filters
@@ -118,15 +125,26 @@ export default function FantasyScreen() {
   const totalSelected = selectedBoys + selectedGirls;
 
   /** -------------------------
-   *   Filtering + sorting
+   *   Filtering + sorting + searching
    *  ------------------------- */
   const filteredPlayers = useMemo(() => {
     let arr = [...allPlayers].map(p => ({ ...p, fantasy: calculatePoints(p) }));
     if (divisionSelected) arr = arr.filter(p => p.__division === divisionSelected);
     if (schoolSelected) arr = arr.filter(p => p.__team === schoolSelected);
+    
+    // Search filter
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase().trim();
+      arr = arr.filter(p => {
+        const name = p.name.toLowerCase();
+        const team = p.__team.toLowerCase();
+        return name.includes(query) || team.includes(query);
+      });
+    }
+    
     arr.sort((a, b) => b.fantasy - a.fantasy);
     return arr;
-  }, [allPlayers, divisionSelected, schoolSelected, calculatePoints]);
+  }, [allPlayers, divisionSelected, schoolSelected, searchQuery, calculatePoints]);
 
   /** -------------------------
    *   "My Team" dataset
@@ -146,6 +164,11 @@ export default function FantasyScreen() {
   const [detail, setDetail] = useState<any | null>(null);
 
   const confirmRemoveFromTeam = (player: any) => {
+    if (isLocked) {
+      Alert.alert('Team Locked', 'Fantasy teams can no longer be modified.');
+      return;
+    }
+    
     const division = player.__division as 'boys' | 'girls';
     Alert.alert(
       'Remove from Team',
@@ -165,6 +188,11 @@ export default function FantasyScreen() {
   };
 
   const confirmAddToTeam = (player: any) => {
+    if (isLocked) {
+      Alert.alert('Team Locked', 'Fantasy teams can no longer be modified.');
+      return;
+    }
+    
     const division = player.__division as 'boys' | 'girls';
     const already =
       (division === 'boys' ? userRoster.boys : userRoster.girls)?.includes(player.id) ?? false;
@@ -243,14 +271,8 @@ export default function FantasyScreen() {
    *   Save team (writes to Firestore)
    *  ------------------------- */
   const [saving, setSaving] = useState(false);
-  const hasAnyPlayers = selectedBoys > 0 || selectedGirls > 0;
-  const isCompleteTeam = selectedBoys === maxBoys && selectedGirls === maxGirls;
 
   const onSaveTeam = async () => {
-    if (!hasAnyPlayers) {
-      Alert.alert('Nothing to save', 'Add some players to your team first.');
-      return;
-    }
     if (!signedIn?.uid) {
       Alert.alert('Not signed in', 'Please sign in to save your team.');
       return;
@@ -263,7 +285,9 @@ export default function FantasyScreen() {
         girls_roster: [...(userRoster.girls ?? [])],
       });
       
-      if (isCompleteTeam) {
+      if (totalSelected === 0) {
+        Alert.alert('Team Cleared', 'Your fantasy roster has been cleared.');
+      } else if (selectedBoys === maxBoys && selectedGirls === maxGirls) {
         Alert.alert('Team Saved', 'Your complete fantasy roster has been saved!');
       } else {
         Alert.alert('Team Saved', `Your team has been saved! You have ${selectedBoys}/${maxBoys} boys and ${selectedGirls}/${maxGirls} girls selected.`);
@@ -279,26 +303,18 @@ export default function FantasyScreen() {
   /** -------------------------
    *   Render helpers
    *  ------------------------- */
-  const Pill = ({
-    label,
-    active,
-    onPress,
-  }: { label: string; active?: boolean; onPress: () => void }) => (
-    <TouchableOpacity
-      onPress={onPress}
-      style={[styles.pill, active && styles.pillActive]}
-    >
-      <Text style={[styles.pillText, active && styles.pillTextActive]}>{label}</Text>
-    </TouchableOpacity>
-  );
-
   const PlayerRow = ({ item }: { item: any }) => {
     const division = item.__division as 'boys' | 'girls';
     const selected =
       (division === 'boys' ? userRoster.boys : userRoster.girls)?.includes(item.id) ?? false;
 
     return (
-      <TouchableOpacity style={styles.row} activeOpacity={0.9} onPress={() => setDetail(item)}>
+      <TouchableOpacity 
+        style={styles.row} 
+        activeOpacity={0.9} 
+        onPress={() => setDetail(item)}
+        disabled={isLocked}
+      >
         <View style={{ flex: 1 }}>
           <Text style={styles.primary} numberOfLines={1}>{item.name}</Text>
           <Text style={styles.sub} numberOfLines={1}>
@@ -309,6 +325,11 @@ export default function FantasyScreen() {
         {selected ? <Ionicons name="checkmark-circle" size={20} color={YELLOW} style={{ marginLeft: 8 }} /> : null}
       </TouchableOpacity>
     );
+  };
+
+  // Clear search
+  const clearSearch = () => {
+    setSearchQuery('');
   };
 
   /** -------------------------
@@ -350,6 +371,24 @@ export default function FantasyScreen() {
   }
 
   /** -------------------------
+   *   Locked screen
+   *  ------------------------- */
+  if (isLocked) {
+    return (
+      <View style={styles.lockedContainer}>
+        <Ionicons name="lock-closed" size={80} color={YELLOW} />
+        <Text style={styles.lockedTitle}>Fantasy Teams Locked</Text>
+        <Text style={styles.lockedText}>
+          No more changes to fantasy teams can be made.
+        </Text>
+        <Text style={styles.lockedSubtext}>
+          Your roster has been finalized for the tournament.
+        </Text>
+      </View>
+    );
+  }
+
+  /** -------------------------
    *   Main screen
    *  ------------------------- */
   return (
@@ -363,9 +402,9 @@ export default function FantasyScreen() {
           <Text style={styles.counterText}>Girls: {selectedGirls}/{maxGirls}</Text>
         </View>
         <TouchableOpacity
-          style={[styles.saveBtn, (!hasAnyPlayers || saving) && { opacity: 0.6 }]}
+          style={[styles.saveBtn, saving && { opacity: 0.6 }]}
           onPress={onSaveTeam}
-          disabled={!hasAnyPlayers || saving}
+          disabled={saving}
         >
           <Ionicons name="save-outline" size={16} color={NAVY} />
           <Text style={styles.saveBtnText}>{saving ? 'Saving…' : 'Save Team'}</Text>
@@ -390,61 +429,86 @@ export default function FantasyScreen() {
 
       {/* Filters (All Players) */}
       {tab === 'all' && (
-  <>
-    <Text style={styles.filterLabel}>Filters</Text>
+        <>
+          <Text style={styles.filterLabel}>Filters</Text>
 
-    {/* Rectangular buttons like Leaderboard */}
-    <View style={styles.filterRow}>
-      <TouchableOpacity
-        onPress={() => onPressFilter('division')}
-        style={[styles.filterBtn, !!divisionSelected && styles.filterBtnActive]}
-        activeOpacity={0.9}
-      >
-        <Text style={[styles.filterBtnText, !!divisionSelected && styles.filterBtnTextActive]}>
-          {`Division${divisionSelected ? `: ${capitalize(divisionSelected)}` : ''}`}
-        </Text>
-      </TouchableOpacity>
+          <View style={styles.filterRow}>
+            <TouchableOpacity
+              onPress={() => onPressFilter('division')}
+              style={[styles.filterBtn, !!divisionSelected && styles.filterBtnActive]}
+              activeOpacity={0.9}
+            >
+              <Text style={[styles.filterBtnText, !!divisionSelected && styles.filterBtnTextActive]}>
+                {`Division${divisionSelected ? `: ${capitalize(divisionSelected)}` : ''}`}
+              </Text>
+            </TouchableOpacity>
 
-      <TouchableOpacity
-        onPress={() => onPressFilter('school')}
-        style={[styles.filterBtn, !!schoolSelected && styles.filterBtnActive]}
-        activeOpacity={0.9}
-      >
-        <Text style={[styles.filterBtnText, !!schoolSelected && styles.filterBtnTextActive]}>
-          {`School${schoolSelected ? `: ${schoolSelected}` : ''}`}
-        </Text>
-      </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => onPressFilter('school')}
+              style={[styles.filterBtn, !!schoolSelected && styles.filterBtnActive]}
+              activeOpacity={0.9}
+            >
+              <Text style={[styles.filterBtnText, !!schoolSelected && styles.filterBtnTextActive]}>
+                {`School${schoolSelected ? `: ${schoolSelected}` : ''}`}
+              </Text>
+            </TouchableOpacity>
 
-      {(divisionSelected || schoolSelected) && (
-        <TouchableOpacity
-          onPress={() => { setDivisionSelected(null); setSchoolSelected(null); }}
-          style={styles.filterBtn}
-          activeOpacity={0.9}
-        >
-          <Text style={styles.filterBtnText}>Clear</Text>
-        </TouchableOpacity>
+            {(divisionSelected || schoolSelected) && (
+              <TouchableOpacity
+                onPress={() => { setDivisionSelected(null); setSchoolSelected(null); }}
+                style={styles.filterBtn}
+                activeOpacity={0.9}
+              >
+                <Text style={styles.filterBtnText}>Clear</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+
+          {/* Search bar */}
+          <View style={styles.searchContainer}>
+            <View style={styles.searchInputContainer}>
+              <Ionicons name="search-outline" size={20} color={TEXT} style={styles.searchIcon} />
+              <TextInput
+                style={styles.searchInput}
+                placeholder="Search players..."
+                placeholderTextColor={`${TEXT}80`}
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+                autoCapitalize="none"
+                autoCorrect={false}
+              />
+              {searchQuery.length > 0 && (
+                <TouchableOpacity onPress={clearSearch} style={styles.clearButton}>
+                  <Ionicons name="close-circle" size={20} color={TEXT} />
+                </TouchableOpacity>
+              )}
+            </View>
+            {searchQuery.length > 0 && (
+              <Text style={styles.searchResults}>
+                {filteredPlayers.length} result{filteredPlayers.length !== 1 ? 's' : ''}
+              </Text>
+            )}
+          </View>
+
+          {/* Inline sheet for Android/others */}
+          {Platform.OS !== 'ios' && activeFilter && (
+            <View style={styles.dropdown}>
+              {activeFilter === 'division' &&
+                (['boys', 'girls'] as const).map(opt => (
+                  <TouchableOpacity key={opt} onPress={() => { setDivisionSelected(opt); setActiveFilter(null); }}>
+                    <Text style={styles.dropdownItem}>{capitalize(opt)}</Text>
+                  </TouchableOpacity>
+                ))}
+              {activeFilter === 'school' &&
+                schoolOptions.map(opt => (
+                  <TouchableOpacity key={opt} onPress={() => { setSchoolSelected(opt); setActiveFilter(null); }}>
+                    <Text style={styles.dropdownItem}>{opt}</Text>
+                  </TouchableOpacity>
+                ))}
+            </View>
+          )}
+        </>
       )}
-    </View>
-
-    {/* Inline sheet for Android/others (unchanged) */}
-    {Platform.OS !== 'ios' && activeFilter && (
-      <View style={styles.dropdown}>
-        {activeFilter === 'division' &&
-          (['boys', 'girls'] as const).map(opt => (
-            <TouchableOpacity key={opt} onPress={() => { setDivisionSelected(opt); setActiveFilter(null); }}>
-              <Text style={styles.dropdownItem}>{capitalize(opt)}</Text>
-            </TouchableOpacity>
-          ))}
-        {activeFilter === 'school' &&
-          schoolOptions.map(opt => (
-            <TouchableOpacity key={opt} onPress={() => { setSchoolSelected(opt); setActiveFilter(null); }}>
-              <Text style={styles.dropdownItem}>{opt}</Text>
-            </TouchableOpacity>
-          ))}
-      </View>
-    )}
-  </>
-)}
 
       {/* Lists */}
       {tab === 'all' ? (
@@ -530,6 +594,38 @@ export default function FantasyScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: NAVY, padding: 12 },
 
+  // Locked screen
+  lockedContainer: {
+    flex: 1,
+    backgroundColor: NAVY,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  lockedTitle: {
+    color: YELLOW,
+    fontSize: 28,
+    fontWeight: '900',
+    textAlign: 'center',
+    marginTop: 20,
+    fontFamily: FONT_FAMILIES.archivoBlack,
+  },
+  lockedText: {
+    color: TEXT,
+    fontSize: 18,
+    textAlign: 'center',
+    marginTop: 12,
+    fontFamily: FONT_FAMILIES.archivoNarrow,
+  },
+  lockedSubtext: {
+    color: TEXT,
+    fontSize: 14,
+    textAlign: 'center',
+    marginTop: 8,
+    opacity: 0.8,
+    fontFamily: FONT_FAMILIES.archivoNarrow,
+  },
+
   // Onboarding
   onboardOuter: { flex: 1, backgroundColor: NAVY, alignItems: 'center', justifyContent: 'center', padding: 20, marginTop: -50 },
   onboardTitle: { color: YELLOW, fontSize: 24, fontWeight: '900', textAlign: 'center', marginTop: 12, fontFamily: FONT_FAMILIES.archivoBlack },
@@ -553,16 +649,45 @@ const styles = StyleSheet.create({
 
   // Filters
   filterLabel: { color: YELLOW, fontWeight: '700', fontSize: 16, marginBottom: 8, fontFamily: FONT_FAMILIES.archivoBlack },
-  pill: { backgroundColor: '#062a4e', borderRadius: 999, paddingHorizontal: 12, paddingVertical: 8, borderWidth: 1, borderColor: LINE },
-  pillActive: { backgroundColor: YELLOW, borderColor: 'rgba(0,0,0,0.12)' },
-  pillText: { color: TEXT, fontWeight: '800', fontFamily: FONT_FAMILIES.archivoBlack },
-  pillTextActive: { color: NAVY, fontFamily: FONT_FAMILIES.archivoBlack},
 
-  filterRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 8, flexWrap: 'wrap', gap: 8 },
-filterBtn: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, backgroundColor: CARD },
-filterBtnActive: { backgroundColor: YELLOW },
-filterBtnText: { color: TEXT, fontWeight: '800', fontFamily: FONT_FAMILIES.archivoBlack },
-filterBtnTextActive: { color: NAVY, fontFamily: FONT_FAMILIES.archivoBlack },
+  filterRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 12, flexWrap: 'wrap', gap: 8 },
+  filterBtn: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, backgroundColor: CARD },
+  filterBtnActive: { backgroundColor: YELLOW },
+  filterBtnText: { color: TEXT, fontWeight: '800', fontFamily: FONT_FAMILIES.archivoBlack },
+  filterBtnTextActive: { color: NAVY, fontFamily: FONT_FAMILIES.archivoBlack },
+
+  // Search
+  searchContainer: { marginBottom: 12 },
+  searchInputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: CARD,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderWidth: 1,
+    borderColor: LINE,
+  },
+  searchIcon: { marginRight: 8 },
+  searchInput: {
+    flex: 1,
+    color: TEXT,
+    fontSize: 16,
+    fontFamily: FONT_FAMILIES.archivoNarrow,
+    paddingVertical: 12,
+  },
+  clearButton: {
+    padding: 4,
+    marginLeft: 8,
+  },
+  searchResults: {
+    color: TEXT,
+    fontSize: 12,
+    marginTop: 4,
+    marginLeft: 4,
+    fontFamily: FONT_FAMILIES.archivoNarrow,
+    opacity: 0.8,
+  },
 
   dropdown: { backgroundColor: CARD, borderRadius: 10, borderWidth: 1, borderColor: 'rgba(255,255,255,0.18)', padding: 8, marginBottom: 8 },
   dropdownItem: { color: TEXT, paddingVertical: 10, fontWeight: '800', fontFamily: FONT_FAMILIES.archivoBlack },
