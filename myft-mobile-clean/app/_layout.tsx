@@ -11,7 +11,7 @@ import ProfileModal from './(modals)/profile';
 import LoginScreen from './login';
 import { TournamentProvider } from '../context/TournamentContext';
 import { AuthProvider } from '../context/AuthContext';
-import { View, Text, Image } from 'react-native';
+import { View, Text, ActivityIndicator } from 'react-native';
 
 export type RootStackParamList = {
   Main: undefined;
@@ -21,8 +21,6 @@ export type RootStackParamList = {
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
-const LOGO = require('../images/MYFT_LOGO.png');
-
 function AuthLoadingScreen() {
   return (
     <View style={{ 
@@ -31,14 +29,14 @@ function AuthLoadingScreen() {
       justifyContent: 'center', 
       alignItems: 'center' 
     }}>
-      <Image 
-        source={LOGO} 
-        style={{ 
-          width: '70%', 
-          height: 200,
-          resizeMode: 'contain'
-        }} 
-      />
+      <ActivityIndicator size="large" color="#FFCB05" />
+      <Text style={{ 
+        color: '#FFCB05', 
+        marginTop: 16, 
+        fontSize: 16 
+      }}>
+        Loading...
+      </Text>
     </View>
   );
 }

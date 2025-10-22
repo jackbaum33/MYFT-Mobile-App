@@ -1,6 +1,6 @@
 // leaderboard/index.tsx - React Navigation Version
 import React, { useEffect, useMemo, useState } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, Platform, ActionSheetIOS, Alert, TextInput } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, Platform, ActionSheetIOS, Alert, TextInput, Image } from 'react-native';
 import { NavigationProp, useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTournament } from '../../../context/TournamentContext';
@@ -202,9 +202,32 @@ export default function LeaderboardIndex() {
 
     const onPress = () => navigateToUser(item.uid);
 
+    // Generate initials for default avatar
+    const getInitials = (displayName: string): string => {
+      return displayName
+        .split(' ')
+        .map(word => word.charAt(0))
+        .join('')
+        .toUpperCase()
+        .slice(0, 2);
+    };
+
     return (
       <TouchableOpacity style={[styles.row, isMe && styles.rowMe]} activeOpacity={0.9} onPress={onPress}>
         <Text style={rankStyle}>{index + 1}.</Text>
+        
+        {/* Profile Picture */}
+        {item.photoUrl ? (
+          <Image
+            source={{ uri: item.photoUrl }}
+            style={styles.profilePic}
+          />
+        ) : (
+          <View style={styles.defaultAvatar}>
+            <Text style={styles.avatarText}>{getInitials(item.displayName)}</Text>
+          </View>
+        )}
+        
         <View style={{ flex: 1 }}>
           <Text style={[styles.primary, isMe && { color: YELLOW }]} numberOfLines={1}>
             {item.displayName}
@@ -295,7 +318,7 @@ export default function LeaderboardIndex() {
           </View>
           {searchQuery.length > 0 && (
             <Text style={styles.searchResults}>
-              {filteredUsers.length} player{filteredUsers.length !== 1 ? 's' : ''}
+              {filteredUsers.length} result{filteredUsers.length !== 1 ? 's' : ''}
             </Text>
           )}
         </View>
@@ -378,8 +401,36 @@ const styles = StyleSheet.create({
 
   row: { flexDirection: 'row', alignItems: 'center', backgroundColor: CARD, borderRadius: 12, padding: 14, marginBottom: 10 },
   rowMe: { borderWidth: 2, borderColor: YELLOW },
-  rank: { width: 48, textAlign: 'left', color: TEXT, fontWeight: '900', fontSize: 16 },
+  rank: { width: 48, textAlign: 'left', color: TEXT, fontWeight: '900', fontSize: 16, marginRight: 8 },
   rankTop: { color: TEXT },
+  
+  // Profile picture styles
+  profilePic: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    marginRight: 12,
+    borderWidth: 2,
+    borderColor: YELLOW,
+  },
+  defaultAvatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: YELLOW,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+    borderWidth: 2,
+    borderColor: YELLOW,
+  },
+  avatarText: {
+    color: NAVY,
+    fontWeight: '900',
+    fontSize: 14,
+    fontFamily: FONT_FAMILIES.archivoBlack,
+  },
+  
   primary: { color: TEXT, fontWeight: '800', fontSize: 16, fontFamily: FONT_FAMILIES.archivoBlack },
   sub: { color: TEXT, fontSize: 12, marginTop: 2, fontFamily: FONT_FAMILIES.archivoNarrow},
   points: { color: YELLOW, fontWeight: '900', fontSize: 18, marginLeft: 10, fontFamily: FONT_FAMILIES.archivoBlack },
