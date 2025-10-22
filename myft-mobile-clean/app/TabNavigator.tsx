@@ -16,7 +16,7 @@ export type RootTabParamList = {
   Fantasy: undefined;
   Leaderboard: undefined;
   Schedule: undefined;
-  Team: undefined;
+  Teams: undefined;
 };
 
 const Tab = createBottomTabNavigator<RootTabParamList>();
@@ -72,7 +72,7 @@ export default function TabNavigator() {
             iconName = focused ? 'trophy' : 'trophy-outline';
           } else if (route.name === 'Schedule') {
             iconName = focused ? 'calendar' : 'calendar-outline';
-          } else if (route.name === 'Team') {
+          } else if (route.name === 'Teams') {
             iconName = focused ? 'people' : 'people-outline';
           } else {
             iconName = 'help-outline';
@@ -100,7 +100,7 @@ export default function TabNavigator() {
     >
       <Tab.Screen name="Home" component={HomeScreen} />
       <Tab.Screen name="Schedule" component={ScheduleLayout} />
-      <Tab.Screen name="Team" component={TeamLayout} />
+      <Tab.Screen name="Teams" component={TeamLayout} />
       <Tab.Screen name="Fantasy" component={FantasyLayout} />
       <Tab.Screen name="Leaderboard" component={LeaderboardLayout} />
     </Tab.Navigator>
