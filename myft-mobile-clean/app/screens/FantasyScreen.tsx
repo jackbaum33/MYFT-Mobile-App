@@ -31,6 +31,12 @@ const LOGO = require('../../images/MYFT_LOGO.png');
 // Lock date: November 7, 2025 at 7:00 AM
 const LOCK_DATE = new Date('2025-11-07T07:00:00');
 
+// Helper to get player image URL
+function getPlayerImageUrl(playerId: string): string {
+  const imageFilename = playerId.replace(/-/g, '');
+  return `https://firebasestorage.googleapis.com/v0/b/myft-2025.firebasestorage.app/o/players%2F${playerId}%2F${imageFilename}.jpg?alt=media`;
+}
+
 type FilterKey = 'division' | 'school' | null;
 
 function capitalize(s: string) {
@@ -100,6 +106,7 @@ export default function FantasyScreen() {
    *  ------------------------- */
   const [tab, setTab] = useState<'all' | 'team'>('all');
   const [searchQuery, setSearchQuery] = useState<string>('');
+  const [playerImageErrors, setPlayerImageErrors] = useState<Set<string>>(new Set());
 
   /** -------------------------
    *   Filters
@@ -307,6 +314,9 @@ export default function FantasyScreen() {
     const division = item.__division as 'boys' | 'girls';
     const selected =
       (division === 'boys' ? userRoster.boys : userRoster.girls)?.includes(item.id) ?? false;
+    
+    const imageUrl = getPlayerImageUrl(item.id);
+    const hasError = playerImageErrors.has(item.id);
 
     return (
       <TouchableOpacity 
@@ -315,6 +325,21 @@ export default function FantasyScreen() {
         onPress={() => setDetail(item)}
         disabled={isLocked}
       >
+        {/* Player Image */}
+        {!hasError ? (
+          <Image 
+            source={{ uri: imageUrl }} 
+            style={styles.playerImage}
+            onError={() => {
+              setPlayerImageErrors(prev => new Set(prev).add(item.id));
+            }}
+          />
+        ) : (
+          <View style={styles.playerImagePlaceholder}>
+            <Ionicons name="person" size={18} color={TEXT} />
+          </View>
+        )}
+        
         <View style={{ flex: 1 }}>
           <Text style={styles.primary} numberOfLines={1}>{item.name}</Text>
           <Text style={styles.sub} numberOfLines={1}>
@@ -694,6 +719,24 @@ const styles = StyleSheet.create({
 
   // Rows
   row: { flexDirection: 'row', alignItems: 'center', backgroundColor: CARD, borderRadius: 12, padding: 14, marginBottom: 10, borderWidth: 1, borderColor: LINE },
+  
+  // Player image styles
+  playerImage: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    marginRight: 12,
+  },
+  playerImagePlaceholder: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    marginRight: 12,
+    backgroundColor: '#062a4e',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  
   primary: { color: TEXT, fontWeight: '800', fontSize: 16, fontFamily: FONT_FAMILIES.archivoBlack },
   sub: { color: TEXT, fontSize: 12, marginTop: 2, fontFamily: FONT_FAMILIES.archivoNarrow},
   points: { color: YELLOW, fontWeight: '900', fontSize: 16, marginLeft: 8, fontFamily: FONT_FAMILIES.archivoBlack},

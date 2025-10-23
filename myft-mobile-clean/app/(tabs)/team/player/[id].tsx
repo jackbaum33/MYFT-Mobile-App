@@ -2,6 +2,7 @@
 import React, { useMemo, useState, useLayoutEffect } from 'react';
 import { View, Text, StyleSheet, Image, Modal, Pressable, TouchableOpacity, FlatList } from 'react-native';
 import { RouteProp, useRoute, useNavigation, NavigationProp } from '@react-navigation/native';
+import { Ionicons } from '@expo/vector-icons';
 import { useTournament, SCORING } from '../../../../context/TournamentContext';
 import { getTeamLogo } from '../../../../team_logos';
 import { FONT_FAMILIES } from '../../../../fonts';
@@ -22,6 +23,14 @@ const YELLOW = '#FFCB05';
 const TEXT = '#E9ECEF';
 const LINE = 'rgba(255,255,255,0.18)';
 
+// Helper to get player image URL
+function getPlayerImageUrl(playerId: string): string {
+  // Convert firstname-lastname to firstnamelastname for the image filename
+  const imageFilename = playerId.replace(/-/g, '');
+  // Construct the direct Firebase Storage URL
+  return `https://firebasestorage.googleapis.com/v0/b/myft-2025.firebasestorage.app/o/players%2F${playerId}%2F${imageFilename}.jpg?alt=media`;
+}
+
 // --- helpers ---
 const toSlug = (s: string) =>
   s.trim().toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '').replace(/-+/g, '-');
@@ -36,6 +45,8 @@ export default function PlayerLeaderboardDetail() {
   
   const { teams, calculatePoints } = useTournament();
   const [showBreakdown, setShowBreakdown] = useState(false);
+  const [imageError, setImageError] = useState(false);
+  const [showEnlargedImage, setShowEnlargedImage] = useState(false);
 
   // Build quick lookups from context
   const { players, teamNameById } = useMemo(() => {
@@ -77,6 +88,9 @@ export default function PlayerLeaderboardDetail() {
   // Team name/logo from context
   const teamName = useMemo(() => (player ? teamNameById.get(player.teamId) ?? '' : ''), [player, teamNameById]);
   const logoSrc = getTeamLogo(teamName); // ← per-team logo
+
+  // Player image URL
+  const playerImageUrl = useMemo(() => player ? getPlayerImageUrl(player.id) : null, [player]);
 
   // Pull counts from aggregated stats in context
   const counts = useMemo(() => {
@@ -130,12 +144,33 @@ export default function PlayerLeaderboardDetail() {
       <View style={s.container}>
         {/* Header */}
         <View style={s.headerCard}>
-          <View>
-            <Text style={s.name}>{displayName}</Text>
-            <Text style={s.meta}>{teamName}</Text>
+          <View style={s.playerInfoContainer}>
+            {/* Player Image */}
+            {playerImageUrl && !imageError ? (
+              <TouchableOpacity 
+                onPress={() => setShowEnlargedImage(true)}
+                activeOpacity={0.8}
+              >
+                <Image 
+                  source={{ uri: playerImageUrl }} 
+                  style={s.playerImage}
+                  onError={() => setImageError(true)}
+                />
+              </TouchableOpacity>
+            ) : (
+              <View style={s.playerImagePlaceholder}>
+                <Ionicons name="person" size={32} color={TEXT} />
+              </View>
+            )}
+            
+            <View style={s.textInfo}>
+              <Text style={s.name}>{displayName}</Text>
+              <Text style={s.meta}>{teamName}</Text>
+            </View>
           </View>
+          
           <View style={s.logoContainer}>
-          <Image source={logoSrc} style={s.logo} resizeMode="contain" />
+            <Image source={logoSrc} style={s.logo} resizeMode="contain" />
           </View>
         </View>
 
@@ -195,14 +230,75 @@ export default function PlayerLeaderboardDetail() {
           </Pressable>
         </Pressable>
       </Modal>
+
+      {/* Enlarged Image Modal */}
+      <Modal
+        visible={showEnlargedImage}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowEnlargedImage(false)}
+      >
+        <Pressable 
+          style={s.imageModalBackdrop} 
+          onPress={() => setShowEnlargedImage(false)}
+        >
+          <View style={s.enlargedImageContainer}>
+            {playerImageUrl && !imageError && (
+              <Image
+                source={{ uri: playerImageUrl }}
+                style={s.enlargedImage}
+                resizeMode="contain"
+                onError={() => setImageError(true)}
+              />
+            )}
+            <TouchableOpacity 
+              style={s.closeImageBtn} 
+              onPress={() => setShowEnlargedImage(false)}
+            >
+              <Text style={s.closeImageBtnText}>Close</Text>
+            </TouchableOpacity>
+          </View>
+        </Pressable>
+      </Modal>
     </View>
   );
 }
 
-/* styles unchanged */
+/* styles */
 const s = StyleSheet.create({
   container: { flex: 1, padding: 12 },
-  headerCard: { backgroundColor: CARD, borderRadius: 12, padding: 14, marginBottom: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  headerCard: { 
+    backgroundColor: CARD, 
+    borderRadius: 12, 
+    padding: 14, 
+    marginBottom: 12, 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    justifyContent: 'space-between' 
+  },
+  playerInfoContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  playerImage: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    marginRight: 12,
+  },
+  playerImagePlaceholder: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    marginRight: 12,
+    backgroundColor: '#062a4e',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  textInfo: {
+    flex: 1,
+  },
   name: { color: YELLOW, fontWeight: '900', fontSize: 20, fontFamily: FONT_FAMILIES.archivoBlack },
   meta: { color: TEXT, marginTop: 4, fontFamily: FONT_FAMILIES.archivoNarrow },
   bottomCard: { backgroundColor: CARD, padding: 14, borderWidth: 1, borderColor: LINE, borderRadius: 12 },
@@ -230,5 +326,37 @@ const s = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },  
-  logo: { width: 56, height: 56,},
+  logo: { width: 56, height: 56 },
+  
+  // Enlarged image modal styles
+  imageModalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.9)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  enlargedImageContainer: {
+    width: '90%',
+    height: '70%',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  enlargedImage: {
+    width: '100%',
+    height: '90%',
+    borderRadius: 12,
+  },
+  closeImageBtn: {
+    marginTop: 20,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    backgroundColor: YELLOW,
+    borderRadius: 8,
+  },
+  closeImageBtnText: {
+    color: NAVY,
+    fontWeight: '900',
+    fontSize: 16,
+    fontFamily: FONT_FAMILIES.archivoBlack,
+  },
 });

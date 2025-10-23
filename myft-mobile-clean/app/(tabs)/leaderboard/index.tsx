@@ -23,6 +23,12 @@ const LINE = 'rgba(255,255,255,0.12)';
 type FilterKey = 'division' | 'school' | 'position';
 type RankedUser = UserProfile & { totalPoints: number };
 
+// Helper to get player image URL
+function getPlayerImageUrl(playerId: string): string {
+  const imageFilename = playerId.replace(/-/g, '');
+  return `https://firebasestorage.googleapis.com/v0/b/myft-2025.firebasestorage.app/o/players%2F${playerId}%2F${imageFilename}.jpg?alt=media`;
+}
+
 export default function LeaderboardIndex() {
   const navigation = useNavigation<LeaderboardNavigationProp>();
   const { teams, calculatePoints } = useTournament();
@@ -36,6 +42,7 @@ export default function LeaderboardIndex() {
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [usersLoading, setUsersLoading] = useState<boolean>(false);
   const [searchQuery, setSearchQuery] = useState<string>('');
+  const [playerImageErrors, setPlayerImageErrors] = useState<Set<string>>(new Set());
 
   const allPlayers = useMemo(() => teams.flatMap(t => t.players), [teams]);
 
@@ -178,6 +185,9 @@ export default function LeaderboardIndex() {
     const school = playerIdToTeamName.get(item.id) ?? '';
     let rankStyle = styles.rank;
     if (index <= 2) rankStyle = [styles.rank, { color: TEXT }] as any;
+    
+    const imageUrl = getPlayerImageUrl(item.id);
+    const hasError = playerImageErrors.has(item.id);
 
     return (
       <TouchableOpacity 
@@ -186,6 +196,22 @@ export default function LeaderboardIndex() {
         onPress={() => navigateToPlayer(item.id)}
       >
         <Text style={rankStyle}>{index + 1}.</Text>
+        
+        {/* Player Image */}
+        {!hasError ? (
+          <Image 
+            source={{ uri: imageUrl }} 
+            style={styles.playerImage}
+            onError={() => {
+              setPlayerImageErrors(prev => new Set(prev).add(item.id));
+            }}
+          />
+        ) : (
+          <View style={styles.playerImagePlaceholder}>
+            <Ionicons name="person" size={18} color={TEXT} />
+          </View>
+        )}
+        
         <View style={{ flex: 1 }}>
           <Text style={styles.primary} numberOfLines={1}>{item.name}</Text>
           <Text style={styles.sub} numberOfLines={1}>{school || ''}</Text>
@@ -404,7 +430,24 @@ const styles = StyleSheet.create({
   rank: { width: 48, textAlign: 'left', color: TEXT, fontWeight: '900', fontSize: 16, marginRight: 8 },
   rankTop: { color: TEXT },
   
-  // Profile picture styles
+  // Player image styles (for All Players tab)
+  playerImage: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    marginRight: 12,
+  },
+  playerImagePlaceholder: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    marginRight: 12,
+    backgroundColor: '#062a4e',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  
+  // Profile picture styles (for Fantasy Teams tab)
   profilePic: {
     width: 40,
     height: 40,
