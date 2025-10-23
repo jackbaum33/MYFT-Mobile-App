@@ -7,6 +7,7 @@ import { db } from '../../../services/firebaseConfig';
 import { FONT_FAMILIES } from '../../../fonts';
 import { useTournament, SCORING } from '../../../context/TournamentContext';
 import { getTeamLogo } from '../../../team_logos';
+import { Ionicons } from '@expo/vector-icons';
 
 // Import the navigation types from your layout
 import { ScheduleStackParamList } from './_layout';
@@ -31,6 +32,15 @@ const TEXT = '#E9ECEF';
 const YELLOW = '#FFCB05';
 const LINE = 'rgba(255,255,255,0.18)';
 
+// Helper to get player image URL
+function getPlayerImageUrl(playerId: string): string {
+  // Convert firstname-lastname to firstnamelastname for the image filename
+  const imageFilename = playerId.replace(/-/g, '');
+  // Construct the direct Firebase Storage URL
+  // Note: %2F is the URL-encoded version of /
+  return `https://firebasestorage.googleapis.com/v0/b/myft-2025.firebasestorage.app/o/players%2F${playerId}%2F${imageFilename}.jpg?alt=media`;
+}
+
 export default function GameDetail() {
   const route = useRoute<ScheduleDetailRouteProp>();
   const navigation = useNavigation<ScheduleDetailNavigationProp>();
@@ -40,6 +50,7 @@ export default function GameDetail() {
 
   const [game, setGame] = useState<FSGame | null>(null);
   const [loading, setLoading] = useState(true);
+  const [imageErrors, setImageErrors] = useState<Set<string>>(new Set());
 
   const [side, setSide] = useState<'team1' | 'team2'>('team1');
   const [detail, setDetail] = useState<{
@@ -222,21 +233,41 @@ export default function GameDetail() {
           data={rows}
           keyExtractor={(r) => r.playerId}
           ItemSeparatorComponent={() => <View style={styles.rowSep} />}
-          renderItem={({ item }) => (
-            <View style={styles.row}>
-              <Text style={[styles.cell, styles.cName]} numberOfLines={1} ellipsizeMode="tail">
-                {item.name}
-              </Text>
+          renderItem={({ item }) => {
+            const imageUrl = getPlayerImageUrl(item.playerId);
+            const hasError = imageErrors.has(item.playerId);
+            
+            return (
+              <View style={styles.row}>
+                {/* Player Image */}
+                {!hasError ? (
+                  <Image 
+                    source={{ uri: imageUrl }} 
+                    style={styles.playerImage}
+                    onError={() => {
+                      setImageErrors(prev => new Set(prev).add(item.playerId));
+                    }}
+                  />
+                ) : (
+                  <View style={styles.playerImagePlaceholder}>
+                    <Ionicons name="person" size={18} color={TEXT} />
+                  </View>
+                )}
+                
+                <Text style={[styles.cell, styles.cName]} numberOfLines={1} ellipsizeMode="tail">
+                  {item.name}
+                </Text>
 
-              <TouchableOpacity
-                style={styles.detailBtn}
-                onPress={() => setDetail({ name: item.name, line: item.line })}
-                activeOpacity={0.85}
-              >
-                <Text style={styles.detailBtnText}>Total Stat Breakdown</Text>
-              </TouchableOpacity>
-            </View>
-          )}
+                <TouchableOpacity
+                  style={styles.detailBtn}
+                  onPress={() => setDetail({ name: item.name, line: item.line })}
+                  activeOpacity={0.85}
+                >
+                  <Text style={styles.detailBtnText}>Total Stat Breakdown</Text>
+                </TouchableOpacity>
+              </View>
+            );
+          }}
         />
       </View>
 
@@ -333,6 +364,23 @@ const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#0a3a68', borderRadius: 8, paddingVertical: 6, paddingHorizontal: 12 },
   rowSep: { height: 8 },
   cell: { color: TEXT, fontWeight: '800', fontFamily: FONT_FAMILIES.archivoBlack },
+
+  // Player image styles
+  playerImage: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    marginRight: 8,
+  },
+  playerImagePlaceholder: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    marginRight: 8,
+    backgroundColor: '#062a4e',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
 
   cName: { flex: 1.6, fontSize: 12, fontFamily: FONT_FAMILIES.archivoBlack },
 
