@@ -568,6 +568,26 @@ export default function FantasyScreen() {
           <Pressable style={styles.modalCard} onPress={(e) => e.stopPropagation()}>
             {detail && (
               <>
+                {/* Player Image */}
+                {(() => {
+                  const imageUrl = getPlayerImageUrl(detail.id);
+                  const hasError = playerImageErrors.has(detail.id);
+                  
+                  return !hasError ? (
+                    <Image 
+                      source={{ uri: imageUrl }} 
+                      style={styles.modalPlayerImage}
+                      onError={() => {
+                        setPlayerImageErrors(prev => new Set(prev).add(detail.id));
+                      }}
+                    />
+                  ) : (
+                    <View style={styles.modalPlayerImagePlaceholder}>
+                      <Ionicons name="person" size={40} color={TEXT} />
+                    </View>
+                  );
+                })()}
+                
                 <Text style={styles.modalTitle}>{detail.name}</Text>
                 <Text style={styles.modalMeta}>
                   {detail.__team} • {capitalize(detail.__division)}
@@ -754,6 +774,24 @@ const styles = StyleSheet.create({
   // Modal
   backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'center', alignItems: 'center' },
   modalCard: { width: '88%', backgroundColor: NAVY, borderRadius: 16, padding: 16, alignItems: 'center', borderWidth: 1, borderColor: 'rgba(255,215,0,0.25)' },
+  
+  // Modal player image styles
+  modalPlayerImage: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    marginBottom: 12,
+  },
+  modalPlayerImagePlaceholder: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    marginBottom: 12,
+    backgroundColor: '#062a4e',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  
   modalTitle: { color: YELLOW, fontSize: 20, fontWeight: '900', fontFamily: FONT_FAMILIES.archivoBlack },
   modalMeta: { color: TEXT, marginTop: 6, marginBottom: 12, fontFamily: FONT_FAMILIES.archivoNarrow },
   statRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },

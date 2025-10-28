@@ -1,6 +1,6 @@
 {
   "name": "myft-mobile-clean",
-  "version": "1.0.21",
+  "version": "1.0.22",
   "main": "App.js",
   "scripts": {
     "start": "expo start",
