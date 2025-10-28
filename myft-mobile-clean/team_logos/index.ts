@@ -6,6 +6,7 @@ export const teamLogos: Record<string, any> = {
   brown:        require('./brown_logo.png'),
   columbia:     require('./columbia_logo.png'),
   fdu:          require('./fdu_logo.png'),
+  florida:      require('./florida_logo.png'),
   georgia:      require('./georgia_logo.png'),
   harvard:      require('./harvard_logo.png'),
   illinois:     require('./illinois_logo.png'),
