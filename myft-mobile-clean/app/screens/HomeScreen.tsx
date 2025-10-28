@@ -71,7 +71,7 @@ type Member = { name: string; line1: string; email: string };
 const MEMBERS: Member[] = [
   { name: 'Lila Ellman',      line1: 'Co-Chair',                            email: 'ellmanl@umich.edu'  },
   { name: 'Josh Katz',        line1: 'Co-Chair',                            email: 'joshuaek@umich.edu' },
-  { name: 'Levi Stein',       line1: 'Executive Advisor',                   email: 'steinlev@umich.edu' },
+  { name: 'Levi Stein',       line1: 'Head of Water',                       email: 'steinlev@umich.edu' },
   { name: 'Abby Kutin',       line1: 'Website Developer',                   email: 'kutin@umich.edu'    },
   { name: 'Viv Schlussel',    line1: 'Photography',                         email: 'vschluss@umich.edu' },
   { name: 'Shayna Foreman',   line1: 'Events',                              email: 'shaynapf@umich.edu' },
