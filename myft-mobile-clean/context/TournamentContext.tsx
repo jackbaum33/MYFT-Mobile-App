@@ -49,6 +49,7 @@ type TournamentContextType = {
   updateRoster: (division: Division, playerId: string) => void;
   calculatePoints: (p: Player) => number;
   refreshData: () => Promise<void>;
+  refreshTrigger: number; // NEW: Increments on each refresh
 };
 
 /** ---------- Scoring Table ---------- **/
@@ -199,6 +200,7 @@ export const TournamentProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   const [teams, setTeams] = useState<Team[]>([]);
   const [userRoster, setUserRoster] = useState<FantasyRoster>({ boys: [], girls: [] });
   const [loading, setLoading] = useState<boolean>(true);
+  const [refreshTrigger, setRefreshTrigger] = useState<number>(0); // NEW
 
   // Load teams + players from Firestore
   const loadData = useCallback(async () => {
@@ -220,8 +222,10 @@ export const TournamentProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   }, [loadData]);
 
   // Refresh function that can be called externally
+  // NEW: Now increments refreshTrigger after loading
   const refreshData = useCallback(async () => {
     await loadData();
+    setRefreshTrigger((prev) => prev + 1); // Increment to notify subscribers
   }, [loadData]);
 
   /** Toggle add/remove a player from a division list */
@@ -253,8 +257,8 @@ export const TournamentProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   };
 
   const value = useMemo(
-    () => ({ teams, userRoster, loading, updateRoster, calculatePoints, refreshData }),
-    [teams, userRoster, loading, refreshData]
+    () => ({ teams, userRoster, loading, updateRoster, calculatePoints, refreshData, refreshTrigger }), // NEW: Added refreshTrigger
+    [teams, userRoster, loading, refreshData, refreshTrigger] // NEW: Added refreshTrigger to deps
   );
 
   return <TournamentContext.Provider value={value}>{children}</TournamentContext.Provider>;

@@ -1,4 +1,4 @@
-// schedule/index.tsx - React Navigation Version
+// schedule/index.tsx - React Navigation Version with Auto-Refresh Support
 import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, StyleSheet, FlatList, Pressable, Image } from 'react-native';
 import { NavigationProp, useNavigation } from '@react-navigation/native';
@@ -69,13 +69,14 @@ function prettyDayLabel(key: string) {
 
 export default function ScheduleIndex() {
   const navigation = useNavigation<ScheduleNavigationProp>();
-  const { teams } = useTournament();
+  const { teams, refreshTrigger } = useTournament(); // Get refreshTrigger from context
 
   const [loading, setLoading] = useState(true);
   const [days, setDays] = useState<DayBucket[]>([]);
   const [dayIndex, setDayIndex] = useState(0);
 
   // Load games from Firestore and group by day
+  // UPDATED: Now responds to refreshTrigger from context
   useEffect(() => {
     let active = true;
     (async () => {
@@ -117,7 +118,8 @@ export default function ScheduleIndex() {
 
         if (active) {
           setDays(built);
-          setDayIndex(0);
+          // Preserve the current day index if possible
+          setDayIndex(prev => (prev < built.length ? prev : 0));
         }
       } catch (e) {
         console.warn('[schedule] failed to load games:', e);
@@ -127,7 +129,7 @@ export default function ScheduleIndex() {
       }
     })();
     return () => { active = false; };
-  }, []);
+  }, [refreshTrigger]); // Added refreshTrigger as dependency
 
   const day = days[dayIndex];
   const games = day?.games ?? [];
@@ -139,7 +141,7 @@ export default function ScheduleIndex() {
     if (!full) return '';
     const parts = full.trim().split(/\s+/);
     return parts[parts.length - 1] || full;
-    };
+  };
 
   // Navigation handler
   const navigateToGame = (gameId: string) => {

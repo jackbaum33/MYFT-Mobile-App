@@ -1,5 +1,5 @@
-// screens/FantasyScreen.tsx
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+// screens/FantasyScreen.tsx - OPTIMIZED VERSION
+import React, { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -42,6 +42,69 @@ type FilterKey = 'division' | 'school' | null;
 function capitalize(s: string) {
   return s ? s.charAt(0).toUpperCase() + s.slice(1) : s;
 }
+
+// ===== OPTIMIZED PLAYER IMAGE COMPONENT =====
+// Memoized to prevent unnecessary re-renders
+const PlayerImage = React.memo(({ 
+  playerId, 
+  size = 32,
+  onError 
+}: { 
+  playerId: string; 
+  size?: number;
+  onError?: (id: string) => void;
+}) => {
+  const [error, setError] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const imageUrl = getPlayerImageUrl(playerId);
+
+  const handleError = useCallback(() => {
+    setError(true);
+    setLoading(false);
+    onError?.(playerId);
+  }, [playerId, onError]);
+
+  const handleLoad = useCallback(() => {
+    setLoading(false);
+  }, []);
+
+  if (error) {
+    return (
+      <View style={[
+        styles.playerImagePlaceholder, 
+        { width: size, height: size, borderRadius: size / 2 }
+      ]}>
+        <Ionicons name="person" size={size * 0.56} color={TEXT} />
+      </View>
+    );
+  }
+
+  return (
+    <>
+      {loading && (
+        <View style={[
+          styles.playerImagePlaceholder,
+          styles.shimmer,
+          { width: size, height: size, borderRadius: size / 2 }
+        ]} />
+      )}
+      <Image 
+        source={{ uri: imageUrl }}
+        style={[
+          styles.playerImage,
+          { width: size, height: size, borderRadius: size / 2 },
+          loading && { position: 'absolute', opacity: 0 }
+        ]}
+        onError={handleError}
+        onLoad={handleLoad}
+        // Add caching headers
+        defaultSource={undefined}
+      />
+    </>
+  );
+});
+
+PlayerImage.displayName = 'PlayerImage';
 
 export default function FantasyScreen() {
   const { teams, userRoster, updateRoster, calculatePoints } = useTournament();
@@ -106,7 +169,12 @@ export default function FantasyScreen() {
    *  ------------------------- */
   const [tab, setTab] = useState<'all' | 'team'>('all');
   const [searchQuery, setSearchQuery] = useState<string>('');
-  const [playerImageErrors, setPlayerImageErrors] = useState<Set<string>>(new Set());
+  
+  // FIXED: Use ref to persist error state across re-renders
+  const playerImageErrorsRef = useRef<Set<string>>(new Set());
+  const handleImageError = useCallback((playerId: string) => {
+    playerImageErrorsRef.current.add(playerId);
+  }, []);
 
   /** -------------------------
    *   Filters
@@ -170,7 +238,7 @@ export default function FantasyScreen() {
    *  ------------------------- */
   const [detail, setDetail] = useState<any | null>(null);
 
-  const confirmRemoveFromTeam = (player: any) => {
+  const confirmRemoveFromTeam = useCallback((player: any) => {
     if (isLocked) {
       Alert.alert('Team Locked', 'Fantasy teams can no longer be modified.');
       return;
@@ -192,9 +260,9 @@ export default function FantasyScreen() {
         },
       ],
     );
-  };
+  }, [isLocked, updateRoster]);
 
-  const confirmAddToTeam = (player: any) => {
+  const confirmAddToTeam = useCallback((player: any) => {
     if (isLocked) {
       Alert.alert('Team Locked', 'Fantasy teams can no longer be modified.');
       return;
@@ -233,12 +301,12 @@ export default function FantasyScreen() {
         },
       ],
     );
-  };
+  }, [isLocked, userRoster, selectedBoys, selectedGirls, updateRoster, confirmRemoveFromTeam]);
 
   /** -------------------------
    *   Filter button helpers
    *  ------------------------- */
-  const onPressFilter = (key: Exclude<FilterKey, null>) => {
+  const onPressFilter = useCallback((key: Exclude<FilterKey, null>) => {
     if (key === 'division' && divisionSelected) { setDivisionSelected(null); return; }
     if (key === 'school' && schoolSelected) { setSchoolSelected(null); return; }
 
@@ -272,7 +340,7 @@ export default function FantasyScreen() {
     } else {
       setActiveFilter(prev => (prev === key ? null : key));
     }
-  };
+  }, [divisionSelected, schoolSelected, schoolOptions]);
 
   /** -------------------------
    *   Save team (writes to Firestore)
@@ -308,15 +376,12 @@ export default function FantasyScreen() {
   };
 
   /** -------------------------
-   *   Render helpers
+   *   Render helpers - MEMOIZED
    *  ------------------------- */
-  const PlayerRow = ({ item }: { item: any }) => {
+  const PlayerRow = useCallback(({ item }: { item: any }) => {
     const division = item.__division as 'boys' | 'girls';
     const selected =
       (division === 'boys' ? userRoster.boys : userRoster.girls)?.includes(item.id) ?? false;
-    
-    const imageUrl = getPlayerImageUrl(item.id);
-    const hasError = playerImageErrors.has(item.id);
 
     return (
       <TouchableOpacity 
@@ -325,22 +390,13 @@ export default function FantasyScreen() {
         onPress={() => setDetail(item)}
         disabled={isLocked}
       >
-        {/* Player Image */}
-        {!hasError ? (
-          <Image 
-            source={{ uri: imageUrl }} 
-            style={styles.playerImage}
-            onError={() => {
-              setPlayerImageErrors(prev => new Set(prev).add(item.id));
-            }}
-          />
-        ) : (
-          <View style={styles.playerImagePlaceholder}>
-            <Ionicons name="person" size={18} color={TEXT} />
-          </View>
-        )}
+        <PlayerImage 
+          playerId={item.id} 
+          size={32}
+          onError={handleImageError}
+        />
         
-        <View style={{ flex: 1 }}>
+        <View style={{ flex: 1, marginLeft: 12 }}>
           <Text style={styles.primary} numberOfLines={1}>{item.name}</Text>
           <Text style={styles.sub} numberOfLines={1}>
             {item.__team} • {capitalize(division)}
@@ -350,12 +406,12 @@ export default function FantasyScreen() {
         {selected ? <Ionicons name="checkmark-circle" size={20} color={YELLOW} style={{ marginLeft: 8 }} /> : null}
       </TouchableOpacity>
     );
-  };
+  }, [userRoster, isLocked, handleImageError]);
 
   // Clear search
-  const clearSearch = () => {
+  const clearSearch = useCallback(() => {
     setSearchQuery('');
-  };
+  }, []);
 
   /** -------------------------
    *   Onboarding screen
@@ -543,6 +599,11 @@ export default function FantasyScreen() {
           renderItem={({ item }) => <PlayerRow item={item} />}
           contentContainerStyle={{ paddingBottom: 20 }}
           showsVerticalScrollIndicator={false}
+          // Performance optimizations
+          removeClippedSubviews={true}
+          maxToRenderPerBatch={10}
+          windowSize={10}
+          initialNumToRender={15}
         />
       ) : (
         <FlatList
@@ -568,25 +629,11 @@ export default function FantasyScreen() {
           <Pressable style={styles.modalCard} onPress={(e) => e.stopPropagation()}>
             {detail && (
               <>
-                {/* Player Image */}
-                {(() => {
-                  const imageUrl = getPlayerImageUrl(detail.id);
-                  const hasError = playerImageErrors.has(detail.id);
-                  
-                  return !hasError ? (
-                    <Image 
-                      source={{ uri: imageUrl }} 
-                      style={styles.modalPlayerImage}
-                      onError={() => {
-                        setPlayerImageErrors(prev => new Set(prev).add(detail.id));
-                      }}
-                    />
-                  ) : (
-                    <View style={styles.modalPlayerImagePlaceholder}>
-                      <Ionicons name="person" size={40} color={TEXT} />
-                    </View>
-                  );
-                })()}
+                <PlayerImage 
+                  playerId={detail.id} 
+                  size={80}
+                  onError={handleImageError}
+                />
                 
                 <Text style={styles.modalTitle}>{detail.name}</Text>
                 <Text style={styles.modalMeta}>
@@ -740,21 +787,20 @@ const styles = StyleSheet.create({
   // Rows
   row: { flexDirection: 'row', alignItems: 'center', backgroundColor: CARD, borderRadius: 12, padding: 14, marginBottom: 10, borderWidth: 1, borderColor: LINE },
   
-  // Player image styles
+  // Player image styles - UPDATED
   playerImage: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    marginRight: 12,
+    // Dynamic size will be applied via style prop
   },
   playerImagePlaceholder: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    marginRight: 12,
     backgroundColor: '#062a4e',
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  
+  // Shimmer effect for loading
+  shimmer: {
+    backgroundColor: '#0b3c70',
+    opacity: 0.5,
   },
   
   primary: { color: TEXT, fontWeight: '800', fontSize: 16, fontFamily: FONT_FAMILIES.archivoBlack },
@@ -775,24 +821,7 @@ const styles = StyleSheet.create({
   backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'center', alignItems: 'center' },
   modalCard: { width: '88%', backgroundColor: NAVY, borderRadius: 16, padding: 16, alignItems: 'center', borderWidth: 1, borderColor: 'rgba(255,215,0,0.25)' },
   
-  // Modal player image styles
-  modalPlayerImage: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    marginBottom: 12,
-  },
-  modalPlayerImagePlaceholder: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    marginBottom: 12,
-    backgroundColor: '#062a4e',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  
-  modalTitle: { color: YELLOW, fontSize: 20, fontWeight: '900', fontFamily: FONT_FAMILIES.archivoBlack },
+  modalTitle: { color: YELLOW, fontSize: 20, fontWeight: '900', fontFamily: FONT_FAMILIES.archivoBlack, marginTop: 12 },
   modalMeta: { color: TEXT, marginTop: 6, marginBottom: 12, fontFamily: FONT_FAMILIES.archivoNarrow },
   statRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
   statText: { color: TEXT, fontWeight: '800', fontFamily: FONT_FAMILIES.archivoBlack},
