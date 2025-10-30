@@ -1,4 +1,4 @@
-// screens/FantasyScreen.tsx - OPTIMIZED VERSION
+// screens/FantasyScreen.tsx - SEAMLESS AUTO-REFRESH VERSION
 import React, { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import {
   View,
@@ -97,7 +97,6 @@ const PlayerImage = React.memo(({
         ]}
         onError={handleError}
         onLoad={handleLoad}
-        // Add caching headers
         defaultSource={undefined}
       />
     </>
@@ -120,19 +119,23 @@ export default function FantasyScreen() {
   /** -------------------------
    *   Boot / profile state
    *  ------------------------- */
-  const [profileLoading, setProfileLoading] = useState(true);
   const [hasOnboarded, setHasOnboarded] = useState(false);
   const hydratedFromProfileRef = useRef(false);
+  const initialLoadDoneRef = useRef(false);
 
   // Load user profile: hasOnboarded + saved rosters
+  // ONLY runs once on mount, never again
   useEffect(() => {
+    // Skip if we've already done the initial load
+    if (initialLoadDoneRef.current) return;
+    
     let active = true;
     (async () => {
       try {
-        setProfileLoading(true);
         if (!signedIn?.uid) {
           if (active) {
             setHasOnboarded(false);
+            initialLoadDoneRef.current = true;
           }
           return;
         }
@@ -154,11 +157,16 @@ export default function FantasyScreen() {
 
           hydratedFromProfileRef.current = true;
         }
+        
+        if (active) {
+          initialLoadDoneRef.current = true;
+        }
       } catch (e) {
         console.warn('[fantasy] load profile failed:', e);
-        if (active) setHasOnboarded(false);
-      } finally {
-        if (active) setProfileLoading(false);
+        if (active) {
+          setHasOnboarded(false);
+          initialLoadDoneRef.current = true;
+        }
       }
     })();
     return () => { active = false; };
@@ -427,15 +435,6 @@ export default function FantasyScreen() {
     }
   };
 
-  if (profileLoading) {
-    return (
-      <View style={styles.onboardOuter}>
-        <Ionicons name="american-football-outline" size={48} color={YELLOW} />
-        <Text style={styles.onboardTitle}>Loading…</Text>
-      </View>
-    );
-  }
-
   if (!hasOnboarded) {
     return (
       <View style={styles.onboardOuter}>
@@ -470,7 +469,7 @@ export default function FantasyScreen() {
   }
 
   /** -------------------------
-   *   Main screen
+   *   Main screen - NO LOADING STATES ON REFRESH
    *  ------------------------- */
   return (
     <View style={styles.container}>
@@ -591,7 +590,7 @@ export default function FantasyScreen() {
         </>
       )}
 
-      {/* Lists */}
+      {/* Lists - Data updates seamlessly without loading states */}
       {tab === 'all' ? (
         <FlatList
           data={filteredPlayers}
@@ -787,7 +786,7 @@ const styles = StyleSheet.create({
   // Rows
   row: { flexDirection: 'row', alignItems: 'center', backgroundColor: CARD, borderRadius: 12, padding: 14, marginBottom: 10, borderWidth: 1, borderColor: LINE },
   
-  // Player image styles - UPDATED
+  // Player image styles
   playerImage: {
     // Dynamic size will be applied via style prop
   },
