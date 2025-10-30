@@ -14,6 +14,7 @@ import {
   Modal,
   Linking,
   ActivityIndicator,
+  FlatList,
 } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { FONT_FAMILIES } from '../../fonts';
@@ -22,8 +23,11 @@ import * as ImagePicker from 'expo-image-picker';
 import * as Clipboard from 'expo-clipboard';
 import { useAuth } from '../../context/AuthContext';
 import { auth } from '../../services/firebaseConfig';
-import { storage } from '../../services/firebaseConfig';
+import { storage, db } from '../../services/firebaseConfig';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { collection, getDocs, doc, updateDoc } from 'firebase/firestore';
+
+const ADMIN_PANEL_PASSWORD = "mYft2025###";
 
 const CARD = '#00417D';
 const NAVY = '#00274C';
@@ -31,6 +35,39 @@ const YELLOW = '#FFCB05';
 const TEXT = '#E9ECEF';
 const LINE = 'rgba(255,255,255,0.25)';
 const DEFAULT_AVATAR = require('../../images/default-avatar.png');
+
+// Stat names in order matching seasonTotals array
+const STAT_NAMES = [
+  'Touchdowns',
+  'Passing TDs',
+  'Minimal Receptions',
+  'Short Receptions',
+  'Medium Receptions',
+  'Long Receptions',
+  'Catches',
+  'Flags Pulled',
+  'Sacks',
+  'Interceptions',
+  'Passing Interceptions',
+];
+
+const GAME_STATUS_OPTIONS = ['Scheduled', 'Live', 'Final'];
+
+interface Player {
+  id: string;
+  display_name?: string;
+  team_id?: string;
+  seasonTotals?: number[];
+}
+
+interface Game {
+  id: string;
+  team1ID: string;
+  team2ID: string;
+  team1score: number;
+  team2score: number;
+  status: string;
+}
 
 export default function ProfileScreen() {
   const navigation = useNavigation();
@@ -47,6 +84,28 @@ export default function ProfileScreen() {
   const [uploading, setUploading] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Admin panel states
+  const [showPasswordPrompt, setShowPasswordPrompt] = useState(false);
+  const [passwordInput, setPasswordInput] = useState('');
+  const [showAdminPanel, setShowAdminPanel] = useState(false);
+  const [adminTab, setAdminTab] = useState<'players' | 'games'>('players');
+  
+  // Players admin states
+  const [players, setPlayers] = useState<Player[]>([]);
+  const [filteredPlayers, setFilteredPlayers] = useState<Player[]>([]);
+  const [playerSearchQuery, setPlayerSearchQuery] = useState('');
+  const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null);
+  const [editingStats, setEditingStats] = useState<number[]>([]);
+  
+  // Games admin states
+  const [games, setGames] = useState<Game[]>([]);
+  const [filteredGames, setFilteredGames] = useState<Game[]>([]);
+  const [gameSearchQuery, setGameSearchQuery] = useState('');
+  const [selectedGame, setSelectedGame] = useState<Game | null>(null);
+  const [editingGame, setEditingGame] = useState<{ status: string; team1score: number; team2score: number } | null>(null);
+  
+  const [adminLoading, setAdminLoading] = useState(false);
 
   // Expo SDK uses string union for mediaTypes; Images shortcut is fine
   const MEDIA_IMAGE: any = (ImagePicker as any).MediaType?.Image;
@@ -274,6 +333,161 @@ export default function ProfileScreen() {
     } catch {}
   };
 
+  // ---------- Admin Panel Functions ----------
+  const handleSettingsPress = () => {
+    setShowPasswordPrompt(true);
+    setPasswordInput('');
+  };
+
+  const handlePasswordSubmit = () => {
+    if (passwordInput === ADMIN_PANEL_PASSWORD) {
+      setShowPasswordPrompt(false);
+      setShowAdminPanel(true);
+      loadAdminData();
+    } else {
+      Alert.alert('Access Denied', 'Incorrect password');
+      setPasswordInput('');
+    }
+  };
+
+  const loadAdminData = async () => {
+    setAdminLoading(true);
+    try {
+      // Load players
+      const playersSnap = await getDocs(collection(db, 'players'));
+      const playersData: Player[] = [];
+      playersSnap.forEach((doc) => {
+        playersData.push({ id: doc.id, ...doc.data() } as Player);
+      });
+      setPlayers(playersData);
+      setFilteredPlayers(playersData);
+
+      // Load games
+      const gamesSnap = await getDocs(collection(db, 'games'));
+      const gamesData: Game[] = [];
+      gamesSnap.forEach((doc) => {
+        gamesData.push({ id: doc.id, ...doc.data() } as Game);
+      });
+      setGames(gamesData);
+      setFilteredGames(gamesData);
+    } catch (e) {
+      console.error('Failed to load admin data:', e);
+      Alert.alert('Error', 'Failed to load admin data');
+    } finally {
+      setAdminLoading(false);
+    }
+  };
+
+  // Player search
+  useEffect(() => {
+    if (playerSearchQuery.trim() === '') {
+      setFilteredPlayers(players);
+    } else {
+      const query = playerSearchQuery.toLowerCase();
+      setFilteredPlayers(
+        players.filter((p) => {
+          const name = p.display_name?.toLowerCase() || p.id.toLowerCase();
+          const teamId = p.team_id?.toLowerCase() || '';
+          return name.includes(query) || teamId.includes(query);
+        })
+      );
+    }
+  }, [playerSearchQuery, players]);
+
+  // Game search
+  useEffect(() => {
+    if (gameSearchQuery.trim() === '') {
+      setFilteredGames(games);
+    } else {
+      const query = gameSearchQuery.toLowerCase();
+      setFilteredGames(
+        games.filter((g) => {
+          const team1 = g.team1ID?.toLowerCase() || '';
+          const team2 = g.team2ID?.toLowerCase() || '';
+          return team1.includes(query) || team2.includes(query) || g.id.toLowerCase().includes(query);
+        })
+      );
+    }
+  }, [gameSearchQuery, games]);
+
+  const handlePlayerSelect = (player: Player) => {
+    setSelectedPlayer(player);
+    setEditingStats(player.seasonTotals || new Array(11).fill(0));
+  };
+
+  const handleStatChange = (index: number, delta: number) => {
+    setEditingStats((prev) => {
+      const newStats = [...prev];
+      newStats[index] = Math.max(0, (newStats[index] || 0) + delta);
+      return newStats;
+    });
+  };
+
+  const handleSavePlayer = async () => {
+    if (!selectedPlayer) return;
+    
+    try {
+      setAdminLoading(true);
+      const playerRef = doc(db, 'players', selectedPlayer.id);
+      await updateDoc(playerRef, { seasonTotals: editingStats });
+      
+      // Update local state
+      setPlayers((prev) =>
+        prev.map((p) => (p.id === selectedPlayer.id ? { ...p, seasonTotals: editingStats } : p))
+      );
+      
+      Alert.alert('Success', 'Player stats updated successfully');
+      setSelectedPlayer(null);
+      setEditingStats([]);
+    } catch (e) {
+      console.error('Failed to update player:', e);
+      Alert.alert('Error', 'Failed to update player stats');
+    } finally {
+      setAdminLoading(false);
+    }
+  };
+
+  const handleGameSelect = (game: Game) => {
+    setSelectedGame(game);
+    setEditingGame({
+      status: game.status,
+      team1score: game.team1score,
+      team2score: game.team2score,
+    });
+  };
+
+  const handleSaveGame = async () => {
+    if (!selectedGame || !editingGame) return;
+    
+    try {
+      setAdminLoading(true);
+      const gameRef = doc(db, 'games', selectedGame.id);
+      await updateDoc(gameRef, {
+        status: editingGame.status,
+        team1score: editingGame.team1score,
+        team2score: editingGame.team2score,
+      });
+      
+      // Update local state
+      setGames((prev) =>
+        prev.map((g) =>
+          g.id === selectedGame.id
+            ? { ...g, status: editingGame.status, team1score: editingGame.team1score, team2score: editingGame.team2score }
+            : g
+        )
+      );
+      
+      Alert.alert('Success', 'Game updated successfully');
+      setSelectedGame(null);
+      setEditingGame(null);
+    } catch (e) {
+      console.error('Failed to update game:', e);
+      Alert.alert('Error', 'Failed to update game');
+    } finally {
+      setAdminLoading(false);
+    }
+  };
+
   // Loading state
   if (loading) {
     return (
@@ -308,6 +522,11 @@ export default function ProfileScreen() {
         <Ionicons name="close" size={26} color={TEXT} />
       </TouchableOpacity>
 
+      {/* Settings Icon for Admin Panel */}
+      <TouchableOpacity style={s.settingsIcon} onPress={handleSettingsPress}>
+        <Ionicons name="settings-outline" size={26} color={TEXT} />
+      </TouchableOpacity>
+
       <ScrollView contentContainerStyle={s.scroll} bounces={false}>
         <Text style={s.title}>My Profile</Text>
         <View style={s.sheet}>
@@ -317,10 +536,7 @@ export default function ProfileScreen() {
                 <Image source={{ uri: photoUri }} style={s.avatar} />
               ) : (
                 <View style={[s.avatar, s.avatarPlaceholder]}>
-                  <Image
-                    source={DEFAULT_AVATAR}
-                    style={s.avatarImg}
-                  />
+                  <Image source={DEFAULT_AVATAR} style={s.avatarImg} />
                 </View>
               )}
             </TouchableOpacity>
@@ -412,7 +628,6 @@ export default function ProfileScreen() {
       >
         <View style={s.backdrop}>
           <View style={s.modalCard}>
-            {/* X button in corner */}
             <TouchableOpacity style={s.modalCloseX} onPress={() => setAvatarOpen(false)}>
               <Ionicons name="close" size={26} color={TEXT} />
             </TouchableOpacity>
@@ -424,10 +639,7 @@ export default function ProfileScreen() {
                 <Image source={{ uri: photoUri }} style={s.modalAvatarImg} />
               ) : (
                 <View style={[s.modalAvatarImg, s.modalPlaceholder]}>
-                  <Image
-                    source={DEFAULT_AVATAR}
-                    style={s.avatarImg}
-                  />
+                  <Image source={DEFAULT_AVATAR} style={s.avatarImg} />
                 </View>
               )}
             </View>
@@ -437,6 +649,355 @@ export default function ProfileScreen() {
               <Text style={s.bigBtnText}>{uploading ? 'Uploading…' : 'Change Photo'}</Text>
             </TouchableOpacity>
           </View>
+        </View>
+      </Modal>
+
+      {/* Password Prompt Modal */}
+      <Modal
+        visible={showPasswordPrompt}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowPasswordPrompt(false)}
+      >
+        <View style={s.backdrop}>
+          <View style={[s.modalCard, { width: '85%' }]}>
+            <TouchableOpacity style={s.modalCloseX} onPress={() => setShowPasswordPrompt(false)}>
+              <Ionicons name="close" size={26} color={TEXT} />
+            </TouchableOpacity>
+
+            <Text style={s.modalTitle}>Admin Access</Text>
+            <Text style={[s.supportText, { marginBottom: 16 }]}>Enter admin password</Text>
+
+            <TextInput
+              style={s.passwordInput}
+              placeholder="Password"
+              placeholderTextColor="#94a3b8"
+              value={passwordInput}
+              onChangeText={setPasswordInput}
+              secureTextEntry
+              autoCapitalize="none"
+              onSubmitEditing={handlePasswordSubmit}
+            />
+
+            <TouchableOpacity style={s.bigBtn} onPress={handlePasswordSubmit}>
+              <Text style={s.bigBtnText}>Submit</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Admin Panel Modal */}
+      <Modal
+        visible={showAdminPanel}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowAdminPanel(false)}
+      >
+        <View style={s.adminContainer}>
+          <View style={s.adminHeader}>
+            <Text style={s.adminTitle}>Admin Panel</Text>
+            <TouchableOpacity onPress={() => setShowAdminPanel(false)}>
+              <Ionicons name="close" size={28} color={TEXT} />
+            </TouchableOpacity>
+          </View>
+
+          {/* Admin Tabs */}
+          <View style={s.adminTabs}>
+            <TouchableOpacity
+              style={[s.adminTab, adminTab === 'players' && s.adminTabActive]}
+              onPress={() => {
+                setAdminTab('players');
+                setSelectedPlayer(null);
+                setSelectedGame(null);
+              }}
+            >
+              <Text style={[s.adminTabText, adminTab === 'players' && s.adminTabTextActive]}>
+                Players
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[s.adminTab, adminTab === 'games' && s.adminTabActive]}
+              onPress={() => {
+                setAdminTab('games');
+                setSelectedPlayer(null);
+                setSelectedGame(null);
+              }}
+            >
+              <Text style={[s.adminTabText, adminTab === 'games' && s.adminTabTextActive]}>
+                Games
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          {adminLoading && (
+            <View style={{ padding: 20, alignItems: 'center' }}>
+              <ActivityIndicator size="large" color={YELLOW} />
+            </View>
+          )}
+
+          {/* Players Tab */}
+          {adminTab === 'players' && !adminLoading && (
+            <>
+              {!selectedPlayer ? (
+                <>
+                  {/* Player Search */}
+                  <View style={s.searchContainer}>
+                    <Ionicons name="search-outline" size={20} color={TEXT} />
+                    <TextInput
+                      style={s.searchInput}
+                      placeholder="Search players..."
+                      placeholderTextColor="#94a3b8"
+                      value={playerSearchQuery}
+                      onChangeText={setPlayerSearchQuery}
+                    />
+                    {playerSearchQuery.length > 0 && (
+                      <TouchableOpacity onPress={() => setPlayerSearchQuery('')}>
+                        <Ionicons name="close-circle" size={20} color={TEXT} />
+                      </TouchableOpacity>
+                    )}
+                  </View>
+
+                  {/* Players List */}
+                  <FlatList
+                    data={filteredPlayers}
+                    keyExtractor={(item) => item.id}
+                    renderItem={({ item }) => (
+                      <TouchableOpacity
+                        style={s.adminListItem}
+                        onPress={() => handlePlayerSelect(item)}
+                      >
+                        <View style={{ flex: 1 }}>
+                          <Text style={s.adminListName}>
+                            {item.display_name || item.id}
+                          </Text>
+                          <Text style={s.adminListSub}>Team: {item.team_id || 'N/A'}</Text>
+                        </View>
+                        <Ionicons name="chevron-forward" size={20} color={TEXT} />
+                      </TouchableOpacity>
+                    )}
+                    style={s.adminList}
+                  />
+                </>
+              ) : (
+                <ScrollView style={s.adminEditContainer}>
+                  <View style={s.adminEditHeader}>
+                    <TouchableOpacity onPress={() => setSelectedPlayer(null)}>
+                      <Ionicons name="arrow-back" size={24} color={TEXT} />
+                    </TouchableOpacity>
+                    <Text style={s.adminEditTitle}>
+                      {selectedPlayer.display_name || selectedPlayer.id}
+                    </Text>
+                  </View>
+
+                  <Text style={s.adminEditSubtitle}>
+                    Team: {selectedPlayer.team_id || 'N/A'}
+                  </Text>
+
+                  <Text style={[s.label, { marginTop: 20, marginBottom: 12 }]}>Season Stats</Text>
+
+                  {STAT_NAMES.map((statName, index) => (
+                    <View key={index} style={s.statEditRow}>
+                      <Text style={s.statEditName}>{statName}</Text>
+                      <View style={s.statEditControls}>
+                        <TouchableOpacity
+                          style={s.statEditBtn}
+                          onPress={() => handleStatChange(index, -1)}
+                        >
+                          <Ionicons name="remove" size={20} color={NAVY} />
+                        </TouchableOpacity>
+                        <Text style={s.statEditValue}>{editingStats[index] || 0}</Text>
+                        <TouchableOpacity
+                          style={s.statEditBtn}
+                          onPress={() => handleStatChange(index, 1)}
+                        >
+                          <Ionicons name="add" size={20} color={NAVY} />
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                  ))}
+
+                  <TouchableOpacity
+                    style={[s.bigBtn, { marginTop: 20, marginBottom: 20 }]}
+                    onPress={handleSavePlayer}
+                    disabled={adminLoading}
+                  >
+                    <Ionicons name="save-outline" size={20} color={NAVY} />
+                    <Text style={s.bigBtnText}>
+                      {adminLoading ? 'Saving...' : 'Save Changes'}
+                    </Text>
+                  </TouchableOpacity>
+                </ScrollView>
+              )}
+            </>
+          )}
+
+          {/* Games Tab */}
+          {adminTab === 'games' && !adminLoading && (
+            <>
+              {!selectedGame ? (
+                <>
+                  {/* Game Search */}
+                  <View style={s.searchContainer}>
+                    <Ionicons name="search-outline" size={20} color={TEXT} />
+                    <TextInput
+                      style={s.searchInput}
+                      placeholder="Search games..."
+                      placeholderTextColor="#94a3b8"
+                      value={gameSearchQuery}
+                      onChangeText={setGameSearchQuery}
+                    />
+                    {gameSearchQuery.length > 0 && (
+                      <TouchableOpacity onPress={() => setGameSearchQuery('')}>
+                        <Ionicons name="close-circle" size={20} color={TEXT} />
+                      </TouchableOpacity>
+                    )}
+                  </View>
+
+                  {/* Games List */}
+                  <FlatList
+                    data={filteredGames}
+                    keyExtractor={(item) => item.id}
+                    renderItem={({ item }) => (
+                      <TouchableOpacity
+                        style={s.adminListItem}
+                        onPress={() => handleGameSelect(item)}
+                      >
+                        <View style={{ flex: 1 }}>
+                          <Text style={s.adminListName}>
+                            {item.team1ID} vs {item.team2ID}
+                          </Text>
+                          <Text style={s.adminListSub}>
+                            Status: {item.status} • Score: {item.team1score} - {item.team2score}
+                          </Text>
+                        </View>
+                        <Ionicons name="chevron-forward" size={20} color={TEXT} />
+                      </TouchableOpacity>
+                    )}
+                    style={s.adminList}
+                  />
+                </>
+              ) : (
+                <ScrollView style={s.adminEditContainer}>
+                  <View style={s.adminEditHeader}>
+                    <TouchableOpacity onPress={() => setSelectedGame(null)}>
+                      <Ionicons name="arrow-back" size={24} color={TEXT} />
+                    </TouchableOpacity>
+                    <Text style={s.adminEditTitle}>Edit Game</Text>
+                  </View>
+
+                  <View style={s.gameTeamsContainer}>
+                    <View style={s.gameTeamBox}>
+                      <Text style={s.gameTeamLabel}>Team 1</Text>
+                      <Text style={s.gameTeamName}>{selectedGame.team1ID}</Text>
+                    </View>
+                    <Text style={s.gameVs}>VS</Text>
+                    <View style={s.gameTeamBox}>
+                      <Text style={s.gameTeamLabel}>Team 2</Text>
+                      <Text style={s.gameTeamName}>{selectedGame.team2ID}</Text>
+                    </View>
+                  </View>
+
+                  {/* Status Selection */}
+                  <Text style={[s.label, { marginTop: 20, marginBottom: 12 }]}>Game Status</Text>
+                  <View style={s.statusButtons}>
+                    {GAME_STATUS_OPTIONS.map((status) => (
+                      <TouchableOpacity
+                        key={status}
+                        style={[
+                          s.statusBtn,
+                          editingGame?.status === status && s.statusBtnActive,
+                        ]}
+                        onPress={() =>
+                          setEditingGame((prev) => (prev ? { ...prev, status } : null))
+                        }
+                      >
+                        <Text
+                          style={[
+                            s.statusBtnText,
+                            editingGame?.status === status && s.statusBtnTextActive,
+                          ]}
+                        >
+                          {status}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+
+                  {/* Score Editing */}
+                  <Text style={[s.label, { marginTop: 20, marginBottom: 12 }]}>Scores</Text>
+                  
+                  <View style={s.scoreEditRow}>
+                    <Text style={s.scoreTeamName}>{selectedGame.team1ID}</Text>
+                    <View style={s.statEditControls}>
+                      <TouchableOpacity
+                        style={s.statEditBtn}
+                        onPress={() =>
+                          setEditingGame((prev) =>
+                            prev
+                              ? { ...prev, team1score: Math.max(0, prev.team1score - 1) }
+                              : null
+                          )
+                        }
+                      >
+                        <Ionicons name="remove" size={20} color={NAVY} />
+                      </TouchableOpacity>
+                      <Text style={s.statEditValue}>{editingGame?.team1score || 0}</Text>
+                      <TouchableOpacity
+                        style={s.statEditBtn}
+                        onPress={() =>
+                          setEditingGame((prev) =>
+                            prev ? { ...prev, team1score: prev.team1score + 1 } : null
+                          )
+                        }
+                      >
+                        <Ionicons name="add" size={20} color={NAVY} />
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+
+                  <View style={s.scoreEditRow}>
+                    <Text style={s.scoreTeamName}>{selectedGame.team2ID}</Text>
+                    <View style={s.statEditControls}>
+                      <TouchableOpacity
+                        style={s.statEditBtn}
+                        onPress={() =>
+                          setEditingGame((prev) =>
+                            prev
+                              ? { ...prev, team2score: Math.max(0, prev.team2score - 1) }
+                              : null
+                          )
+                        }
+                      >
+                        <Ionicons name="remove" size={20} color={NAVY} />
+                      </TouchableOpacity>
+                      <Text style={s.statEditValue}>{editingGame?.team2score || 0}</Text>
+                      <TouchableOpacity
+                        style={s.statEditBtn}
+                        onPress={() =>
+                          setEditingGame((prev) =>
+                            prev ? { ...prev, team2score: prev.team2score + 1 } : null
+                          )
+                        }
+                      >
+                        <Ionicons name="add" size={20} color={NAVY} />
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+
+                  <TouchableOpacity
+                    style={[s.bigBtn, { marginTop: 20, marginBottom: 20 }]}
+                    onPress={handleSaveGame}
+                    disabled={adminLoading}
+                  >
+                    <Ionicons name="save-outline" size={20} color={NAVY} />
+                    <Text style={s.bigBtnText}>
+                      {adminLoading ? 'Saving...' : 'Save Changes'}
+                    </Text>
+                  </TouchableOpacity>
+                </ScrollView>
+              )}
+            </>
+          )}
         </View>
       </Modal>
     </KeyboardAvoidingView>
@@ -456,14 +1017,35 @@ const s = StyleSheet.create({
     marginTop: 15,
     marginBottom: 30,
   },
-  title: { color: YELLOW, fontWeight: '700', fontSize: 17, textAlign: 'center', marginBottom: 20, marginTop: -10, fontFamily: FONT_FAMILIES.archivoBlack },
+  title: {
+    color: YELLOW,
+    fontWeight: '700',
+    fontSize: 17,
+    textAlign: 'center',
+    marginBottom: 20,
+    marginTop: -10,
+    fontFamily: FONT_FAMILIES.archivoBlack,
+  },
 
   avatarRow: { flexDirection: 'row', alignItems: 'center', gap: 16, marginBottom: 14 },
-  avatar: { width: 84, height: 84, borderRadius: 42, borderWidth: 1, borderColor: 'rgba(255,215,0,0.35)' },
+  avatar: {
+    width: 84,
+    height: 84,
+    borderRadius: 42,
+    borderWidth: 1,
+    borderColor: 'rgba(255,215,0,0.35)',
+  },
   avatarPlaceholder: { alignItems: 'center', justifyContent: 'center', backgroundColor: CARD },
 
   infoCol: { flex: 1, minWidth: 0 },
-  label: { color: TEXT, fontSize: 12, fontWeight: '700', marginBottom: 2, opacity: 0.9, fontFamily: FONT_FAMILIES.archivoBlack},
+  label: {
+    color: TEXT,
+    fontSize: 12,
+    fontWeight: '700',
+    marginBottom: 2,
+    opacity: 0.9,
+    fontFamily: FONT_FAMILIES.archivoBlack,
+  },
   value: { color: YELLOW, fontSize: 16, fontWeight: '900', fontFamily: FONT_FAMILIES.archivoBlack },
 
   smallBtn: {
@@ -477,10 +1059,20 @@ const s = StyleSheet.create({
     borderRadius: 8,
   },
   avatarImg: { width: '100%', height: '100%' },
-  smallBtnText: { color: NAVY, fontWeight: '900', fontSize: 12, fontFamily: FONT_FAMILIES.archivoBlack},
+  smallBtnText: {
+    color: NAVY,
+    fontWeight: '900',
+    fontSize: 12,
+    fontFamily: FONT_FAMILIES.archivoBlack,
+  },
 
   field: { marginTop: 10 },
-  editLabel: { color: TEXT, marginBottom: 6, fontWeight: '700',fontFamily: FONT_FAMILIES.archivoBlack},
+  editLabel: {
+    color: TEXT,
+    marginBottom: 6,
+    fontWeight: '700',
+    fontFamily: FONT_FAMILIES.archivoBlack,
+  },
   input: {
     backgroundColor: CARD,
     borderRadius: 10,
@@ -493,10 +1085,22 @@ const s = StyleSheet.create({
   },
 
   actionsRow: { flexDirection: 'row', gap: 10, marginTop: 16 },
-  actionBtn: { flex: 1, backgroundColor: YELLOW, borderRadius: 10, paddingVertical: 12, alignItems: 'center' },
+  actionBtn: {
+    flex: 1,
+    backgroundColor: YELLOW,
+    borderRadius: 10,
+    paddingVertical: 12,
+    alignItems: 'center',
+  },
   actionText: { color: NAVY, fontWeight: '900', fontFamily: FONT_FAMILIES.archivoBlack },
 
-  supportText: { color: TEXT, fontSize: 13, textAlign: 'center', marginBottom: 10, fontFamily: FONT_FAMILIES.archivoBlack},
+  supportText: {
+    color: TEXT,
+    fontSize: 13,
+    textAlign: 'center',
+    marginBottom: 10,
+    fontFamily: FONT_FAMILIES.archivoBlack,
+  },
   copyChip: {
     alignSelf: 'center',
     flexDirection: 'row',
@@ -509,10 +1113,20 @@ const s = StyleSheet.create({
     borderColor: 'rgba(255,215,0,0.35)',
     backgroundColor: '#082d54',
   },
-  copyChipText: { color: YELLOW, fontWeight: '900', fontSize: 16, fontFamily: FONT_FAMILIES.archivoBlack },
+  copyChipText: {
+    color: YELLOW,
+    fontWeight: '900',
+    fontSize: 16,
+    fontFamily: FONT_FAMILIES.archivoBlack,
+  },
   copiedHint: { color: YELLOW, fontWeight: '800', marginTop: 8, textAlign: 'center' },
 
-  backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.55)', justifyContent: 'center', alignItems: 'center' },
+  backdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.55)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   modalCard: {
     width: '92%',
     backgroundColor: NAVY,
@@ -524,7 +1138,13 @@ const s = StyleSheet.create({
     position: 'relative',
   },
   modalCloseX: { position: 'absolute', top: 10, right: 10, padding: 6, zIndex: 10 },
-  modalTitle: { color: YELLOW, fontWeight: '900', fontSize: 22, marginBottom: 14, fontFamily: FONT_FAMILIES.archivoBlack },
+  modalTitle: {
+    color: YELLOW,
+    fontWeight: '900',
+    fontSize: 22,
+    marginBottom: 14,
+    fontFamily: FONT_FAMILIES.archivoBlack,
+  },
   modalAvatarWrap: {
     width: 240,
     height: 240,
@@ -548,5 +1168,277 @@ const s = StyleSheet.create({
     borderRadius: 10,
     marginBottom: 12,
   },
-  bigBtnText: { color: NAVY, fontWeight: '900', fontSize: 16, fontFamily: FONT_FAMILIES.archivoBlack},
+  bigBtnText: {
+    color: NAVY,
+    fontWeight: '900',
+    fontSize: 16,
+    fontFamily: FONT_FAMILIES.archivoBlack,
+  },
+
+  settingsIcon: {
+    position: 'absolute',
+    bottom: 20,
+    right: 20,
+    padding: 12,
+    backgroundColor: CARD,
+    borderRadius: 30,
+    borderWidth: 1,
+    borderColor: LINE,
+    zIndex: 10,
+  },
+
+  passwordInput: {
+    width: '100%',
+    backgroundColor: CARD,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    color: TEXT,
+    fontFamily: FONT_FAMILIES.archivoNarrow,
+    borderWidth: 1,
+    borderColor: LINE,
+    marginBottom: 16,
+  },
+
+  // Admin Panel Styles
+  adminContainer: {
+    flex: 1,
+    backgroundColor: NAVY,
+    marginTop: 60,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    borderWidth: 1,
+    borderColor: LINE,
+  },
+  adminHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: LINE,
+  },
+  adminTitle: {
+    color: YELLOW,
+    fontSize: 24,
+    fontWeight: '900',
+    fontFamily: FONT_FAMILIES.archivoBlack,
+  },
+
+  adminTabs: {
+    flexDirection: 'row',
+    padding: 12,
+    gap: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: LINE,
+  },
+  adminTab: {
+    flex: 1,
+    paddingVertical: 12,
+    backgroundColor: CARD,
+    borderRadius: 10,
+    alignItems: 'center',
+  },
+  adminTabActive: {
+    backgroundColor: YELLOW,
+  },
+  adminTabText: {
+    color: TEXT,
+    fontWeight: '800',
+    fontSize: 16,
+    fontFamily: FONT_FAMILIES.archivoBlack,
+  },
+  adminTabTextActive: {
+    color: NAVY,
+  },
+
+  searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: CARD,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    margin: 12,
+    borderWidth: 1,
+    borderColor: LINE,
+    gap: 8,
+  },
+  searchInput: {
+    flex: 1,
+    color: TEXT,
+    fontSize: 16,
+    fontFamily: FONT_FAMILIES.archivoNarrow,
+  },
+
+  adminList: {
+    flex: 1,
+    padding: 12,
+  },
+  adminListItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: CARD,
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: LINE,
+  },
+  adminListName: {
+    color: TEXT,
+    fontSize: 16,
+    fontWeight: '800',
+    fontFamily: FONT_FAMILIES.archivoBlack,
+  },
+  adminListSub: {
+    color: TEXT,
+    fontSize: 12,
+    marginTop: 4,
+    opacity: 0.7,
+    fontFamily: FONT_FAMILIES.archivoNarrow,
+  },
+
+  adminEditContainer: {
+    flex: 1,
+    padding: 16,
+  },
+  adminEditHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginBottom: 8,
+  },
+  adminEditTitle: {
+    color: YELLOW,
+    fontSize: 20,
+    fontWeight: '900',
+    fontFamily: FONT_FAMILIES.archivoBlack,
+  },
+  adminEditSubtitle: {
+    color: TEXT,
+    fontSize: 14,
+    marginBottom: 4,
+    fontFamily: FONT_FAMILIES.archivoNarrow,
+  },
+
+  statEditRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: CARD,
+    borderRadius: 10,
+    padding: 14,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: LINE,
+  },
+  statEditName: {
+    color: TEXT,
+    fontSize: 14,
+    fontWeight: '700',
+    flex: 1,
+    fontFamily: FONT_FAMILIES.archivoBlack,
+  },
+  statEditControls: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  statEditBtn: {
+    backgroundColor: YELLOW,
+    borderRadius: 8,
+    padding: 6,
+  },
+  statEditValue: {
+    color: YELLOW,
+    fontSize: 18,
+    fontWeight: '900',
+    minWidth: 40,
+    textAlign: 'center',
+    fontFamily: FONT_FAMILIES.archivoBlack,
+  },
+
+  gameTeamsContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 16,
+  },
+  gameTeamBox: {
+    flex: 1,
+    backgroundColor: CARD,
+    borderRadius: 12,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: LINE,
+    alignItems: 'center',
+  },
+  gameTeamLabel: {
+    color: TEXT,
+    fontSize: 12,
+    opacity: 0.7,
+    marginBottom: 4,
+    fontFamily: FONT_FAMILIES.archivoNarrow,
+  },
+  gameTeamName: {
+    color: YELLOW,
+    fontSize: 14,
+    fontWeight: '800',
+    textAlign: 'center',
+    fontFamily: FONT_FAMILIES.archivoBlack,
+  },
+  gameVs: {
+    color: TEXT,
+    fontSize: 16,
+    fontWeight: '900',
+    marginHorizontal: 12,
+    fontFamily: FONT_FAMILIES.archivoBlack,
+  },
+
+  statusButtons: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  statusBtn: {
+    flex: 1,
+    paddingVertical: 12,
+    backgroundColor: CARD,
+    borderRadius: 10,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: LINE,
+  },
+  statusBtnActive: {
+    backgroundColor: YELLOW,
+    borderColor: YELLOW,
+  },
+  statusBtnText: {
+    color: TEXT,
+    fontWeight: '800',
+    fontSize: 14,
+    fontFamily: FONT_FAMILIES.archivoBlack,
+  },
+  statusBtnTextActive: {
+    color: NAVY,
+  },
+
+  scoreEditRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: CARD,
+    borderRadius: 10,
+    padding: 14,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: LINE,
+  },
+  scoreTeamName: {
+    color: TEXT,
+    fontSize: 14,
+    fontWeight: '700',
+    flex: 1,
+    fontFamily: FONT_FAMILIES.archivoBlack,
+  },
 });
