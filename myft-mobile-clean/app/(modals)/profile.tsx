@@ -71,6 +71,7 @@ interface Team {
   id: string;
   name?: string;
   record?: number[]; // [wins, losses]
+  pointDifferential?: number; // Point differential (can be negative)
 }
 
 export default function ProfileScreen() {
@@ -546,6 +547,32 @@ export default function ProfileScreen() {
   const getTeamRecord = (teamId: string): number[] => {
     const team = teams.find(t => t.id === teamId);
     return team?.record || [0, 0];
+  };
+
+  // Helper to get team point differential
+  const getTeamPointDifferential = (teamId: string): number => {
+    const team = teams.find(t => t.id === teamId);
+    return team?.pointDifferential ?? 0;
+  };
+
+  // Helper to update team point differential
+  const updateTeamPointDifferential = async (teamId: string, pd: number) => {
+    try {
+      const teamRef = doc(db, 'teams', teamId);
+      await updateDoc(teamRef, {
+        pointDifferential: pd
+      });
+      
+      // Update local teams state
+      setTeams((prev) =>
+        prev.map((t) =>
+          t.id === teamId ? { ...t, pointDifferential: pd } : t
+        )
+      );
+    } catch (e) {
+      console.error('Failed to update team point differential:', e);
+      throw e;
+    }
   };
 
   // Loading state
@@ -1161,6 +1188,95 @@ export default function ProfileScreen() {
                           </TouchableOpacity>
                         </View>
                       </View>
+                    </View>
+                  </View>
+
+                  {/* Point Differential Editing */}
+                  <Text style={[s.label, { marginTop: 20, marginBottom: 12 }]}>Point Differential</Text>
+
+                  {/* Team 1 Point Differential */}
+                  <View style={s.teamRecordContainer}>
+                    <Text style={s.teamRecordLabel}>{editingGame?.team1ID || 'Team 1'}</Text>
+                    
+                    <View style={s.statEditControls}>
+                      <TouchableOpacity
+                        style={s.statEditBtn}
+                        onPress={async () => {
+                          const teamId = editingGame?.team1ID;
+                          if (!teamId) return;
+                          const currentPD = getTeamPointDifferential(teamId);
+                          const newPD = currentPD - 1;
+                          try {
+                            await updateTeamPointDifferential(teamId, newPD);
+                          } catch (e) {
+                            Alert.alert('Error', 'Failed to update point differential');
+                          }
+                        }}
+                      >
+                        <Ionicons name="remove" size={20} color={NAVY} />
+                      </TouchableOpacity>
+                      <Text style={s.statEditValue}>
+                        {getTeamPointDifferential(editingGame?.team1ID || '')}
+                      </Text>
+                      <TouchableOpacity
+                        style={s.statEditBtn}
+                        onPress={async () => {
+                          const teamId = editingGame?.team1ID;
+                          if (!teamId) return;
+                          const currentPD = getTeamPointDifferential(teamId);
+                          const newPD = currentPD + 1;
+                          try {
+                            await updateTeamPointDifferential(teamId, newPD);
+                          } catch (e) {
+                            Alert.alert('Error', 'Failed to update point differential');
+                          }
+                        }}
+                      >
+                        <Ionicons name="add" size={20} color={NAVY} />
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+
+                  {/* Team 2 Point Differential */}
+                  <View style={s.teamRecordContainer}>
+                    <Text style={s.teamRecordLabel}>{editingGame?.team2ID || 'Team 2'}</Text>
+                    
+                    <View style={s.statEditControls}>
+                      <TouchableOpacity
+                        style={s.statEditBtn}
+                        onPress={async () => {
+                          const teamId = editingGame?.team2ID;
+                          if (!teamId) return;
+                          const currentPD = getTeamPointDifferential(teamId);
+                          const newPD = currentPD - 1;
+                          try {
+                            await updateTeamPointDifferential(teamId, newPD);
+                          } catch (e) {
+                            Alert.alert('Error', 'Failed to update point differential');
+                          }
+                        }}
+                      >
+                        <Ionicons name="remove" size={20} color={NAVY} />
+                      </TouchableOpacity>
+                      <Text style={s.statEditValue}>
+                        {getTeamPointDifferential(editingGame?.team2ID || '')}
+                      </Text>
+                      <TouchableOpacity
+                        style={s.statEditBtn}
+                        onPress={async () => {
+                          const teamId = editingGame?.team2ID;
+                          if (!teamId) return;
+                          const currentPD = getTeamPointDifferential(teamId);
+                          const newPD = currentPD + 1;
+                          try {
+                            await updateTeamPointDifferential(teamId, newPD);
+                          } catch (e) {
+                            Alert.alert('Error', 'Failed to update point differential');
+                          }
+                        }}
+                      >
+                        <Ionicons name="add" size={20} color={NAVY} />
+                      </TouchableOpacity>
                     </View>
                   </View>
 

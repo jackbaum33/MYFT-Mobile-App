@@ -35,7 +35,7 @@ export interface Team {
   captain: string; // <-- we'll populate this from Firestore captain_name
   record: { wins: number; losses: number };
   players: Player[];
-  strengthOfSchedule?: number; // <-- ADD strength of schedule
+  pointDifferential?: number; // <-- Point differential (can be negative)
 }
 
 export interface FantasyRoster {
@@ -123,7 +123,7 @@ const loadTeamsAndPlayers = async (): Promise<Team[]> => {
       division: Division; 
       captain: string; 
       record: { wins: number; losses: number };
-      strengthOfSchedule?: number; // <-- ADD HERE
+      pointDifferential?: number; // <-- Point differential
     }
   >();
 
@@ -152,7 +152,7 @@ const loadTeamsAndPlayers = async (): Promise<Team[]> => {
       // ✅ prefer captain_name, fall back to captain
       captain: data?.captain_name ?? data?.captain ?? '',
       record,
-      strengthOfSchedule: data?.strengthOfSchedule, // <-- READ FROM FIRESTORE
+      pointDifferential: data?.pointDifferential, // <-- READ FROM FIRESTORE
     });
   });
 
@@ -194,7 +194,7 @@ const loadTeamsAndPlayers = async (): Promise<Team[]> => {
       captain: meta?.captain ?? '', // ✅ will now contain captain_name value
       record: meta?.record ?? { wins: 0, losses: 0 },
       players,
-      strengthOfSchedule: meta?.strengthOfSchedule, // <-- ADD TO TEAM OBJECT
+      pointDifferential: meta?.pointDifferential, // <-- ADD TO TEAM OBJECT
     };
   });
 
