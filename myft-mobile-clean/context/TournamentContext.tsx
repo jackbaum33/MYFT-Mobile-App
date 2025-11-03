@@ -35,6 +35,7 @@ export interface Team {
   captain: string; // <-- we'll populate this from Firestore captain_name
   record: { wins: number; losses: number };
   players: Player[];
+  strengthOfSchedule?: number; // <-- ADD strength of schedule
 }
 
 export interface FantasyRoster {
@@ -117,7 +118,13 @@ const loadTeamsAndPlayers = async (): Promise<Team[]> => {
   const teamsSnap = await getDocs(collection(db, 'teams'));
   const teamMeta = new Map<
     string,
-    { name: string; division: Division; captain: string; record: { wins: number; losses: number } }
+    { 
+      name: string; 
+      division: Division; 
+      captain: string; 
+      record: { wins: number; losses: number };
+      strengthOfSchedule?: number; // <-- ADD HERE
+    }
   >();
 
   teamsSnap.forEach((d) => {
@@ -145,6 +152,7 @@ const loadTeamsAndPlayers = async (): Promise<Team[]> => {
       // ✅ prefer captain_name, fall back to captain
       captain: data?.captain_name ?? data?.captain ?? '',
       record,
+      strengthOfSchedule: data?.strengthOfSchedule, // <-- READ FROM FIRESTORE
     });
   });
 
@@ -186,6 +194,7 @@ const loadTeamsAndPlayers = async (): Promise<Team[]> => {
       captain: meta?.captain ?? '', // ✅ will now contain captain_name value
       record: meta?.record ?? { wins: 0, losses: 0 },
       players,
+      strengthOfSchedule: meta?.strengthOfSchedule, // <-- ADD TO TEAM OBJECT
     };
   });
 

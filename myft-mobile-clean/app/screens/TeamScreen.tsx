@@ -1,4 +1,4 @@
-// screens/TeamScreen.tsx - React Navigation Version
+// screens/TeamScreen.tsx - React Navigation Version with Record Sorting
 import React, { useMemo, useState } from 'react';
 import { View, Text, TouchableOpacity, FlatList, StyleSheet, Image } from 'react-native';
 import { useNavigation, NavigationProp } from '@react-navigation/native';
@@ -21,10 +21,46 @@ export default function TeamScreen() {
   const { teams } = useTournament();
   const [division, setDivision] = useState<'boys' | 'girls'>('boys');
 
-  const filteredTeams = useMemo(
-    () => teams.filter(t => t.division === division),
-    [teams, division]
-  );
+  const filteredTeams = useMemo(() => {
+    // Filter by division
+    const divisionTeams = teams.filter(t => t.division === division);
+    
+    
+    // Sort by record (wins descending), then by strength of schedule (descending) as tiebreaker, then by losses (ascending)
+    const sorted = divisionTeams.sort((a, b) => {
+      // First, compare by wins (more wins = higher ranking)
+      const winsA = a.record?.wins ?? 0;
+      const winsB = b.record?.wins ?? 0;
+      
+      if (winsA !== winsB) {
+        return winsB - winsA; // Descending order (more wins first)
+      }
+      
+      // If wins are equal, use strength of schedule as tiebreaker
+      // Convert to numbers explicitly in case they're stored as strings
+      const sosRawA = (a as any).strengthOfSchedule;
+      const sosRawB = (b as any).strengthOfSchedule;
+      const sosA = Number(sosRawA) || 0;
+      const sosB = Number(sosRawB) || 0;
+      
+      if (sosA !== sosB) {
+        return sosB - sosA; // Descending order (higher SOS first)
+      }
+      
+      // If wins and SOS are equal, compare by losses (fewer losses = higher ranking)
+      const lossesA = a.record?.losses ?? 0;
+      const lossesB = b.record?.losses ?? 0;
+      
+      if (lossesA !== lossesB) {
+        return lossesA - lossesB; // Ascending order (fewer losses first)
+      }
+      
+      // If everything is equal, maintain stable sort by team name
+      return a.name.localeCompare(b.name);
+    });
+    
+    return sorted;
+  }, [teams, division]);
 
   // Navigation handler
   const navigateToTeam = (teamId: string) => {
