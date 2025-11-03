@@ -1,4 +1,4 @@
-// screens/FantasyScreen.tsx - WITH PROPER LOADING HANDLING
+// screens/FantasyScreen.tsx - COMPLETELY REBUILT FOR STABILITY
 import React, { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import {
   View,
@@ -105,6 +105,18 @@ const PlayerImage = React.memo(({
 
 PlayerImage.displayName = 'PlayerImage';
 
+// ===== SIMPLE PLAYER AVATAR (Fallback) =====
+const PlayerAvatar = React.memo(({ name }: { name: string }) => {
+  const initial = name ? name.charAt(0).toUpperCase() : '?';
+  return (
+    <View style={styles.avatar}>
+      <Text style={styles.avatarText}>{initial}</Text>
+    </View>
+  );
+});
+
+PlayerAvatar.displayName = 'PlayerAvatar';
+
 export default function FantasyScreen() {
   const { teams, userRoster, updateRoster, calculatePoints } = useTournament();
   const { user: signedIn } = useAuth();
@@ -112,42 +124,35 @@ export default function FantasyScreen() {
   /** -------------------------
    *   Lock state
    *  ------------------------- */
-  const isLocked = useMemo(() => {
-    return new Date() >= LOCK_DATE;
-  }, []);
+  const isLocked = useMemo(() => new Date() >= LOCK_DATE, []);
 
   /** -------------------------
-   *   Loading state - CRITICAL FIX
+   *   Loading & Onboarding
    *  ------------------------- */
   const [isDataLoading, setIsDataLoading] = useState(true);
   const [hasOnboarded, setHasOnboarded] = useState(false);
-  const hydratedFromProfileRef = useRef(false);
-  const initialLoadDoneRef = useRef(false);
+  const hydratedRef = useRef(false);
+  const loadedRef = useRef(false);
 
-  // Check if teams/players are loaded
+  // Check if data is ready
   const dataIsReady = useMemo(() => {
     return teams && teams.length > 0 && teams.some(t => t.players && t.players.length > 0);
   }, [teams]);
 
-  // Load user profile: hasOnboarded + saved rosters
+  // Load user profile
   useEffect(() => {
-    if (initialLoadDoneRef.current) return;
+    if (loadedRef.current) return;
+    if (!dataIsReady) return;
     
     let active = true;
     
     (async () => {
       try {
-        // Wait for data to be ready first
-        if (!dataIsReady) {
-          console.log('[fantasy] Waiting for teams data to load...');
-          return;
-        }
-
         if (!signedIn?.uid) {
           if (active) {
             setHasOnboarded(false);
             setIsDataLoading(false);
-            initialLoadDoneRef.current = true;
+            loadedRef.current = true;
           }
           return;
         }
@@ -155,43 +160,39 @@ export default function FantasyScreen() {
         const prof = await getUser(signedIn.uid);
         if (!active) return;
 
-        const onboardFlag = !!(prof as any)?.hasOnboarded;
-        setHasOnboarded(onboardFlag);
+        setHasOnboarded(!!(prof as any)?.hasOnboarded);
 
-        if (!hydratedFromProfileRef.current) {
+        if (!hydratedRef.current) {
           const boys: string[] = Array.isArray((prof as any)?.boys_roster) ? (prof as any).boys_roster : [];
           const girls: string[] = Array.isArray((prof as any)?.girls_roster) ? (prof as any).girls_roster : [];
 
-          // Validate IDs against existing players
           const allPlayerIds = new Set(
             teams.flatMap(t => (t.players || []).map(p => p.id).filter(Boolean))
           );
 
-          const boysIds = [...new Set(boys)]
+          const validBoys = [...new Set(boys)]
             .filter(id => id && typeof id === 'string' && allPlayerIds.has(id))
             .slice(0, 8);
-          const girlsIds = [...new Set(girls)]
+          const validGirls = [...new Set(girls)]
             .filter(id => id && typeof id === 'string' && allPlayerIds.has(id))
-            .slice(0, 8);
+            .slice(0, 4);
 
-          console.log('[fantasy] Loading roster - Boys:', boysIds.length, 'Girls:', girlsIds.length);
+          validBoys.forEach(id => updateRoster('boys', id));
+          validGirls.forEach(id => updateRoster('girls', id));
 
-          boysIds.forEach(id => updateRoster('boys', id));
-          girlsIds.forEach(id => updateRoster('girls', id));
-
-          hydratedFromProfileRef.current = true;
+          hydratedRef.current = true;
         }
         
         if (active) {
           setIsDataLoading(false);
-          initialLoadDoneRef.current = true;
+          loadedRef.current = true;
         }
       } catch (e) {
-        console.warn('[fantasy] load profile failed:', e);
+        console.warn('[fantasy] load failed:', e);
         if (active) {
           setHasOnboarded(false);
           setIsDataLoading(false);
-          initialLoadDoneRef.current = true;
+          loadedRef.current = true;
         }
       }
     })();
@@ -200,41 +201,44 @@ export default function FantasyScreen() {
   }, [signedIn?.uid, updateRoster, dataIsReady, teams]);
 
   /** -------------------------
-   *   View / local state
+   *   View State
    *  ------------------------- */
   const [tab, setTab] = useState<'all' | 'team'>('all');
   const [searchQuery, setSearchQuery] = useState<string>('');
-  
+  const [activeFilter, setActiveFilter] = useState<FilterKey>(null);
+  const [divisionSelected, setDivisionSelected] = useState<'boys' | 'girls' | null>(null);
+  const [schoolSelected, setSchoolSelected] = useState<string | null>(null);
+  const [detail, setDetail] = useState<any | null>(null);
+  const [saving, setSaving] = useState(false);
+
+  // Image error tracking
   const playerImageErrorsRef = useRef<Set<string>>(new Set());
   const handleImageError = useCallback((playerId: string) => {
     playerImageErrorsRef.current.add(playerId);
   }, []);
 
   /** -------------------------
-   *   Filters
+   *   STABLE Player Lists - Using useMemo with stable keys
    *  ------------------------- */
-  const [activeFilter, setActiveFilter] = useState<FilterKey>(null);
-  const [divisionSelected, setDivisionSelected] = useState<'boys' | 'girls' | null>(null);
-  const [schoolSelected, setSchoolSelected] = useState<string | null>(null);
-
-  // Build player list with proper null safety
-  const allPlayers = useMemo(
-    () => {
-      if (!teams || teams.length === 0) return [];
-      
-      return teams
-        .filter(t => t && t.players && Array.isArray(t.players))
-        .flatMap(t => t.players
-          .filter(p => p && p.id && p.name)
-          .map(p => ({ 
-            ...p, 
-            __team: t.name || 'Unknown', 
-            __division: t.division || 'boys'
-          } as any))
-        );
-    },
-    [teams]
-  );
+  const allPlayers = useMemo(() => {
+    if (!teams || teams.length === 0) return [];
+    
+    return teams
+      .filter(t => t && t.players && Array.isArray(t.players))
+      .flatMap(t => t.players
+        .filter(p => p && p.id && p.name)
+        .map(p => ({
+          id: p.id,
+          name: p.name,
+          __team: t.name || 'Unknown',
+          __division: t.division || 'boys',
+          fantasy: calculatePoints(p),
+          stats: p.stats,
+          teamId: p.teamId,
+          division: p.division
+        }))
+      );
+  }, [teams, calculatePoints]);
 
   const schoolOptions = useMemo(
     () => Array.from(new Set(teams.filter(t => t && t.name).map(t => t.name))).sort(),
@@ -247,14 +251,22 @@ export default function FantasyScreen() {
   const selectedGirls = userRoster.girls?.length ?? 0;
   const totalSelected = selectedBoys + selectedGirls;
 
-  /** -------------------------
-   *   Filtering + sorting + searching
-   *  ------------------------- */
+  // STABLE: Selected player IDs as a Set
+  const selectedIdsSet = useMemo(
+    () => new Set([...(userRoster.boys ?? []), ...(userRoster.girls ?? [])]),
+    [userRoster]
+  );
+
+  // Filtered players for "All Players" tab
   const filteredPlayers = useMemo(() => {
-    let arr = [...allPlayers].map(p => ({ ...p, fantasy: calculatePoints(p) }));
-    if (divisionSelected) arr = arr.filter(p => p.__division === divisionSelected);
-    if (schoolSelected) arr = arr.filter(p => p.__team === schoolSelected);
+    let arr = [...allPlayers];
     
+    if (divisionSelected) {
+      arr = arr.filter(p => p.__division === divisionSelected);
+    }
+    if (schoolSelected) {
+      arr = arr.filter(p => p.__team === schoolSelected);
+    }
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase().trim();
       arr = arr.filter(p => {
@@ -264,53 +276,36 @@ export default function FantasyScreen() {
       });
     }
     
-    arr.sort((a, b) => b.fantasy - a.fantasy);
-    return arr;
-  }, [allPlayers, divisionSelected, schoolSelected, searchQuery, calculatePoints]);
+    return arr.sort((a, b) => b.fantasy - a.fantasy);
+  }, [allPlayers, divisionSelected, schoolSelected, searchQuery]);
 
-  /** -------------------------
-   *   "My Team" dataset
-   *  ------------------------- */
+  // "My Team" players - STABLE with Map lookup
   const myTeamPlayers = useMemo(() => {
-    const ids = new Set([...(userRoster.boys ?? []), ...(userRoster.girls ?? [])]);
-    
-    // Create a map for faster lookup
     const playerMap = new Map(allPlayers.map(p => [p.id, p]));
+    const result: any[] = [];
     
-    // Get players in the order they appear in the roster
-    const enriched: any[] = [];
-    ids.forEach(id => {
+    selectedIdsSet.forEach(id => {
       const player = playerMap.get(id);
       if (player) {
-        enriched.push({ ...player, fantasy: calculatePoints(player) });
-      } else {
-        console.warn(`[fantasy] Player ${id} not found in allPlayers`);
+        result.push(player);
       }
     });
     
-    enriched.sort((a, b) => b.fantasy - a.fantasy);
-    
-    console.log('[fantasy] My Team:', {
-      totalIds: ids.size,
-      foundPlayers: enriched.length,
-      allPlayersCount: allPlayers.length
-    });
-    
-    return enriched;
-  }, [allPlayers, userRoster, calculatePoints]);
+    return result.sort((a, b) => b.fantasy - a.fantasy);
+  }, [allPlayers, selectedIdsSet]);
 
   /** -------------------------
-   *   Player detail modal
+   *   Handlers - All Memoized
    *  ------------------------- */
-  const [detail, setDetail] = useState<any | null>(null);
+  const handlePlayerPress = useCallback((player: any) => {
+    setDetail(player);
+  }, []);
 
-  const confirmRemoveFromTeam = useCallback((player: any) => {
+  const handleRemoveFromTeam = useCallback((player: any) => {
     if (isLocked) {
       Alert.alert('Team Locked', 'Fantasy teams can no longer be modified.');
       return;
     }
-    
-    if (!player || !player.__division) return;
     
     const division = player.__division as 'boys' | 'girls';
     Alert.alert(
@@ -330,25 +325,23 @@ export default function FantasyScreen() {
     );
   }, [isLocked, updateRoster]);
 
-  const confirmAddToTeam = useCallback((player: any) => {
+  const handleAddToTeam = useCallback((player: any) => {
     if (isLocked) {
       Alert.alert('Team Locked', 'Fantasy teams can no longer be modified.');
       return;
     }
     
-    if (!player || !player.__division || !player.id) return;
-    
     const division = player.__division as 'boys' | 'girls';
-    const already =
-      (division === 'boys' ? userRoster.boys : userRoster.girls)?.includes(player.id) ?? false;
+    const already = selectedIdsSet.has(player.id);
 
     if (already) {
-      confirmRemoveFromTeam(player);
+      handleRemoveFromTeam(player);
       return;
     }
 
     const cap = division === 'boys' ? maxBoys : maxGirls;
     const count = division === 'boys' ? selectedBoys : selectedGirls;
+    
     if (count >= cap) {
       Alert.alert(
         'Roster Full',
@@ -371,11 +364,8 @@ export default function FantasyScreen() {
         },
       ],
     );
-  }, [isLocked, userRoster, selectedBoys, selectedGirls, updateRoster, confirmRemoveFromTeam]);
+  }, [isLocked, selectedIdsSet, selectedBoys, selectedGirls, updateRoster, handleRemoveFromTeam]);
 
-  /** -------------------------
-   *   Filter button helpers
-   *  ------------------------- */
   const onPressFilter = useCallback((key: Exclude<FilterKey, null>) => {
     if (key === 'division' && divisionSelected) { setDivisionSelected(null); return; }
     if (key === 'school' && schoolSelected) { setSchoolSelected(null); return; }
@@ -383,12 +373,7 @@ export default function FantasyScreen() {
     if (Platform.OS === 'ios') {
       if (key === 'division') {
         ActionSheetIOS.showActionSheetWithOptions(
-          {
-            title: 'Select Division',
-            options: ['Cancel', 'Boys', 'Girls'],
-            cancelButtonIndex: 0,
-            userInterfaceStyle: 'dark',
-          },
+          { title: 'Select Division', options: ['Cancel', 'Boys', 'Girls'], cancelButtonIndex: 0, userInterfaceStyle: 'dark' },
           idx => {
             if (idx === 1) setDivisionSelected('boys');
             else if (idx === 2) setDivisionSelected('girls');
@@ -396,15 +381,8 @@ export default function FantasyScreen() {
         );
       } else if (key === 'school') {
         ActionSheetIOS.showActionSheetWithOptions(
-          {
-            title: 'Select School',
-            options: ['Cancel', ...schoolOptions],
-            cancelButtonIndex: 0,
-            userInterfaceStyle: 'dark',
-          },
-          idx => {
-            if (idx > 0) setSchoolSelected(schoolOptions[idx - 1]);
-          },
+          { title: 'Select School', options: ['Cancel', ...schoolOptions], cancelButtonIndex: 0, userInterfaceStyle: 'dark' },
+          idx => { if (idx > 0) setSchoolSelected(schoolOptions[idx - 1]); },
         );
       }
     } else {
@@ -412,12 +390,7 @@ export default function FantasyScreen() {
     }
   }, [divisionSelected, schoolSelected, schoolOptions]);
 
-  /** -------------------------
-   *   Save team
-   *  ------------------------- */
-  const [saving, setSaving] = useState(false);
-
-  const onSaveTeam = async () => {
+  const onSaveTeam = useCallback(async () => {
     if (!signedIn?.uid) {
       Alert.alert('Not signed in', 'Please sign in to save your team.');
       return;
@@ -438,30 +411,39 @@ export default function FantasyScreen() {
         Alert.alert('Team Saved', `Your team has been saved! You have ${selectedBoys}/${maxBoys} boys and ${selectedGirls}/${maxGirls} girls selected.`);
       }
     } catch (e: any) {
-      console.warn('[fantasy] save team failed:', e);
+      console.warn('[fantasy] save failed:', e);
       Alert.alert('Save Failed', e?.message ?? 'Please try again.');
     } finally {
       setSaving(false);
     }
-  };
+  }, [signedIn?.uid, userRoster, totalSelected, selectedBoys, selectedGirls]);
 
-  /** -------------------------
-   *   Render helpers
-   *  ------------------------- */
-  const PlayerRow = useCallback(({ item }: { item: any }) => {
-    if (!item || !item.id || !item.__division) {
-      return null;
+  const onContinueOnboarding = useCallback(async () => {
+    setHasOnboarded(true);
+    if (signedIn?.uid) {
+      try {
+        await updateUserProfile(signedIn.uid, { hasOnboarded: true });
+      } catch (e) {
+        console.warn('[fantasy] onboard failed:', e);
+      }
     }
-    
-    const division = item.__division as 'boys' | 'girls';
-    const selected =
-      (division === 'boys' ? userRoster.boys : userRoster.girls)?.includes(item.id) ?? false;
+  }, [signedIn?.uid]);
 
+  const clearSearch = useCallback(() => setSearchQuery(''), []);
+
+  const keyExtractor = useCallback((item: any) => item?.id || `key-${Math.random()}`, []);
+
+  /** Renders **/
+  const renderPlayer = ({ item, index }: any) => {
+    if (!item || !item.id || !item.__division) return null;
+    
+    const isSelected = selectedIdsSet.has(item.id);
+    
     return (
       <TouchableOpacity 
         style={styles.row} 
         activeOpacity={0.9} 
-        onPress={() => setDetail(item)}
+        onPress={() => handlePlayerPress(item)}
         disabled={isLocked}
       >
         <PlayerImage 
@@ -470,37 +452,27 @@ export default function FantasyScreen() {
           onError={handleImageError}
         />
         
-        <View style={{ flex: 1, marginLeft: 12 }}>
-          <Text style={styles.primary} numberOfLines={1}>{item.name || 'Unknown Player'}</Text>
+        <View style={styles.playerInfo}>
+          <Text style={styles.primary} numberOfLines={1}>
+            {item.name || 'Unknown Player'}
+          </Text>
           <Text style={styles.sub} numberOfLines={1}>
-            {item.__team || 'Unknown'} • {capitalize(division)}
+            {item.__team || 'Unknown'} • {capitalize(item.__division || 'boys')}
           </Text>
         </View>
+        
         <Text style={styles.points}>{item.fantasy ?? 0} pts</Text>
-        {selected ? <Ionicons name="checkmark-circle" size={20} color={YELLOW} style={{ marginLeft: 8 }} /> : null}
+        
+        {isSelected && (
+          <Ionicons name="checkmark-circle" size={20} color={YELLOW} style={styles.checkmark} />
+        )}
       </TouchableOpacity>
     );
-  }, [userRoster, isLocked, handleImageError]);
-
-  const clearSearch = useCallback(() => {
-    setSearchQuery('');
-  }, []);
-
-  /** -------------------------
-   *   Onboarding screen
-   *  ------------------------- */
-  const onContinueOnboarding = async () => {
-    setHasOnboarded(true);
-    if (signedIn?.uid) {
-      try {
-        await updateUserProfile(signedIn.uid, { hasOnboarded: true });
-      } catch (e) {
-        console.warn('[fantasy] failed to set hasOnboarded:', e);
-      }
-    }
   };
 
-  // LOADING SCREEN - Show while data is loading
+  /** -------------------------
+   *   Screens
+   *  ------------------------- */
   if (isDataLoading || !dataIsReady) {
     return (
       <View style={styles.loadingContainer}>
@@ -515,9 +487,7 @@ export default function FantasyScreen() {
       <View style={styles.onboardOuter}>
         <Image source={LOGO} style={styles.logo} resizeMode="contain" />
         <Text style={styles.onboardTitle}>Welcome to MYFT 2025 Fantasy Football!</Text>
-        <Text style={styles.onboardSub}>
-          Press continue to get started building your roster!
-        </Text>
+        <Text style={styles.onboardSub}>Press continue to get started building your roster!</Text>
         <TouchableOpacity style={styles.cta} onPress={onContinueOnboarding}>
           <Text style={styles.ctaText}>Continue</Text>
         </TouchableOpacity>
@@ -530,21 +500,18 @@ export default function FantasyScreen() {
       <View style={styles.lockedContainer}>
         <Ionicons name="lock-closed" size={80} color={YELLOW} />
         <Text style={styles.lockedTitle}>Fantasy Teams Locked</Text>
-        <Text style={styles.lockedText}>
-          No more changes to fantasy teams can be made.
-        </Text>
-        <Text style={styles.lockedSubtext}>
-          Your roster has been finalized for the tournament.
-        </Text>
+        <Text style={styles.lockedText}>No more changes to fantasy teams can be made.</Text>
+        <Text style={styles.lockedSubtext}>Your roster has been finalized for the tournament.</Text>
       </View>
     );
   }
 
   /** -------------------------
-   *   Main screen
+   *   Main Screen
    *  ------------------------- */
   return (
     <View style={styles.container}>
+      {/* Header */}
       <View style={styles.topRow}>
         <View style={styles.counter}>
           <Text style={styles.counterText}>Boys: {selectedBoys}/{maxBoys}</Text>
@@ -562,6 +529,7 @@ export default function FantasyScreen() {
         </TouchableOpacity>
       </View>
 
+      {/* Tabs */}
       <View style={styles.toggleRow}>
         <TouchableOpacity
           onPress={() => setTab('all')}
@@ -577,15 +545,14 @@ export default function FantasyScreen() {
         </TouchableOpacity>
       </View>
 
+      {/* Filters - Only show on All Players tab */}
       {tab === 'all' && (
         <>
           <Text style={styles.filterLabel}>Filters</Text>
-
           <View style={styles.filterRow}>
             <TouchableOpacity
               onPress={() => onPressFilter('division')}
               style={[styles.filterBtn, !!divisionSelected && styles.filterBtnActive]}
-              activeOpacity={0.9}
             >
               <Text style={[styles.filterBtnText, !!divisionSelected && styles.filterBtnTextActive]}>
                 {`Division${divisionSelected ? `: ${capitalize(divisionSelected)}` : ''}`}
@@ -595,7 +562,6 @@ export default function FantasyScreen() {
             <TouchableOpacity
               onPress={() => onPressFilter('school')}
               style={[styles.filterBtn, !!schoolSelected && styles.filterBtnActive]}
-              activeOpacity={0.9}
             >
               <Text style={[styles.filterBtnText, !!schoolSelected && styles.filterBtnTextActive]}>
                 {`School${schoolSelected ? `: ${schoolSelected}` : ''}`}
@@ -606,13 +572,13 @@ export default function FantasyScreen() {
               <TouchableOpacity
                 onPress={() => { setDivisionSelected(null); setSchoolSelected(null); }}
                 style={styles.filterBtn}
-                activeOpacity={0.9}
               >
                 <Text style={styles.filterBtnText}>Clear</Text>
               </TouchableOpacity>
             )}
           </View>
 
+          {/* Search */}
           <View style={styles.searchContainer}>
             <View style={styles.searchInputContainer}>
               <Ionicons name="search-outline" size={20} color={TEXT} style={styles.searchIcon} />
@@ -638,6 +604,7 @@ export default function FantasyScreen() {
             )}
           </View>
 
+          {/* Android dropdown */}
           {Platform.OS !== 'ios' && activeFilter && (
             <View style={styles.dropdown}>
               {activeFilter === 'division' &&
@@ -657,31 +624,33 @@ export default function FantasyScreen() {
         </>
       )}
 
+      {/* Lists - CRITICAL: Separate keys prevent scroll position conflicts */}
       {tab === 'all' ? (
         <FlatList
+          key="all-players-list"
           data={filteredPlayers}
-          keyExtractor={(p: any) => p?.id || `player-${Math.random()}`}
-          renderItem={({ item }) => <PlayerRow item={item} />}
-          contentContainerStyle={{ paddingBottom: 20 }}
+          renderItem={renderPlayer}
+          keyExtractor={keyExtractor}
+          contentContainerStyle={{ paddingBottom: 24 }}
           showsVerticalScrollIndicator={false}
           removeClippedSubviews={true}
-          maxToRenderPerBatch={10}
+          maxToRenderPerBatch={15}
           windowSize={10}
-          initialNumToRender={15}
+          initialNumToRender={20}
         />
       ) : (
         <FlatList
+          key="my-team-list"
           data={myTeamPlayers}
-          keyExtractor={(p: any) => p?.id || `team-${Math.random()}`}
-          renderItem={({ item }) => <PlayerRow item={item} />}
-          ListEmptyComponent={
-            <Text style={styles.empty}>No players yet. Pick from All Players.</Text>
-          }
-          contentContainerStyle={{ paddingBottom: 20 }}
+          renderItem={renderPlayer}
+          keyExtractor={keyExtractor}
+          ListEmptyComponent={<Text style={styles.empty}>No players yet. Pick from All Players.</Text>}
+          contentContainerStyle={{ paddingBottom: 24 }}
           showsVerticalScrollIndicator={false}
         />
       )}
 
+      {/* Modal */}
       <Modal
         visible={!!detail}
         transparent
@@ -705,31 +674,22 @@ export default function FantasyScreen() {
 
                 <View style={styles.statRow}>
                   <Text style={styles.statText}>Fantasy Points: </Text>
-                  <Text style={[styles.statText, { color: YELLOW, fontWeight: '900' }]}>
-                    {detail.fantasy ?? calculatePoints(detail) ?? 0}
+                  <Text style={[styles.statText, styles.pointsHighlight]}>
+                    {detail.fantasy ?? 0}
                   </Text>
                 </View>
 
-                {(() => {
-                  const division = detail.__division as 'boys' | 'girls';
-                  const isSelected =
-                    (division === 'boys' ? userRoster.boys : userRoster.girls)?.includes(detail.id) ?? false;
-
-                  if (isSelected) {
-                    return (
-                      <TouchableOpacity style={styles.removeBtn} onPress={() => confirmRemoveFromTeam(detail)}>
-                        <Ionicons name="trash-outline" size={18} color="#fff" />
-                        <Text style={styles.removeBtnText}>Remove Player</Text>
-                      </TouchableOpacity>
-                    );
-                  }
-                  return (
-                    <TouchableOpacity style={styles.addBtn} onPress={() => confirmAddToTeam(detail)}>
-                      <Ionicons name="add-circle-outline" size={18} color={NAVY} />
-                      <Text style={styles.addBtnText}>Add Player</Text>
-                    </TouchableOpacity>
-                  );
-                })()}
+                {selectedIdsSet.has(detail.id) ? (
+                  <TouchableOpacity style={styles.removeBtn} onPress={() => handleRemoveFromTeam(detail)}>
+                    <Ionicons name="trash-outline" size={18} color="#fff" />
+                    <Text style={styles.removeBtnText}>Remove Player</Text>
+                  </TouchableOpacity>
+                ) : (
+                  <TouchableOpacity style={styles.addBtn} onPress={() => handleAddToTeam(detail)}>
+                    <Ionicons name="add-circle-outline" size={18} color={NAVY} />
+                    <Text style={styles.addBtnText}>Add Player</Text>
+                  </TouchableOpacity>
+                )}
 
                 <TouchableOpacity style={styles.closeBtn} onPress={() => setDetail(null)}>
                   <Text style={styles.closeBtnText}>Close</Text>
@@ -745,57 +705,22 @@ export default function FantasyScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: NAVY, padding: 12 },
+  
+  loadingContainer: { flex: 1, backgroundColor: NAVY, justifyContent: 'center', alignItems: 'center' },
+  loadingText: { color: TEXT, fontSize: 16, marginTop: 16, fontFamily: FONT_FAMILIES.archivoNarrow },
 
-  // LOADING SCREEN
-  loadingContainer: {
-    flex: 1,
-    backgroundColor: NAVY,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  loadingText: {
-    color: TEXT,
-    fontSize: 16,
-    marginTop: 16,
-    fontFamily: FONT_FAMILIES.archivoNarrow,
-  },
-
-  lockedContainer: {
-    flex: 1,
-    backgroundColor: NAVY,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-  },
-  lockedTitle: {
-    color: YELLOW,
-    fontSize: 28,
-    fontWeight: '900',
-    textAlign: 'center',
-    marginTop: 20,
-    fontFamily: FONT_FAMILIES.archivoBlack,
-  },
-  lockedText: {
-    color: TEXT,
-    fontSize: 18,
-    textAlign: 'center',
-    marginTop: 12,
-    fontFamily: FONT_FAMILIES.archivoNarrow,
-  },
-  lockedSubtext: {
-    color: TEXT,
-    fontSize: 14,
-    textAlign: 'center',
-    marginTop: 8,
-    opacity: 0.8,
-    fontFamily: FONT_FAMILIES.archivoNarrow,
-  },
+  lockedContainer: { flex: 1, backgroundColor: NAVY, justifyContent: 'center', alignItems: 'center', padding: 20 },
+  lockedTitle: { color: YELLOW, fontSize: 28, fontWeight: '900', textAlign: 'center', marginTop: 20, fontFamily: FONT_FAMILIES.archivoBlack },
+  lockedText: { color: TEXT, fontSize: 18, textAlign: 'center', marginTop: 12, fontFamily: FONT_FAMILIES.archivoNarrow },
+  lockedSubtext: { color: TEXT, fontSize: 14, textAlign: 'center', marginTop: 8, opacity: 0.8, fontFamily: FONT_FAMILIES.archivoNarrow },
 
   onboardOuter: { flex: 1, backgroundColor: NAVY, alignItems: 'center', justifyContent: 'center', padding: 20, marginTop: -50 },
   onboardTitle: { color: YELLOW, fontSize: 24, fontWeight: '900', textAlign: 'center', marginTop: 12, fontFamily: FONT_FAMILIES.archivoBlack },
-  onboardSub: { color: TEXT, opacity: 0.9, textAlign: 'center', marginTop: 8, fontFamily: FONT_FAMILIES.archivoNarrow},
+  onboardSub: { color: TEXT, opacity: 0.9, textAlign: 'center', marginTop: 8, fontFamily: FONT_FAMILIES.archivoNarrow },
   cta: { marginTop: 16, backgroundColor: YELLOW, paddingHorizontal: 18, paddingVertical: 12, borderRadius: 10 },
   ctaText: { color: NAVY, fontWeight: '900', fontFamily: FONT_FAMILIES.archivoBlack },
+
+  logo: { width: '70%', height: 150, alignSelf: 'center', marginBottom: 10, marginTop: -40 },
 
   topRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10 },
   counter: { backgroundColor: '#0b3c70', paddingHorizontal: 10, paddingVertical: 8, borderRadius: 10, borderWidth: 1, borderColor: LINE },
@@ -807,10 +732,9 @@ const styles = StyleSheet.create({
   toggleBtn: { flex: 1, paddingVertical: 10, borderRadius: 10, backgroundColor: '#062a4e', alignItems: 'center' },
   toggleActive: { backgroundColor: '#0b3c70' },
   toggleText: { color: TEXT, fontWeight: '800', fontFamily: FONT_FAMILIES.archivoBlack },
-  toggleTextActive: { color: YELLOW, fontFamily: FONT_FAMILIES.archivoBlack},
+  toggleTextActive: { color: YELLOW, fontFamily: FONT_FAMILIES.archivoBlack },
 
   filterLabel: { color: YELLOW, fontWeight: '700', fontSize: 16, marginBottom: 8, fontFamily: FONT_FAMILIES.archivoBlack },
-
   filterRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 12, flexWrap: 'wrap', gap: 8 },
   filterBtn: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, backgroundColor: CARD },
   filterBtnActive: { backgroundColor: YELLOW },
@@ -818,40 +742,15 @@ const styles = StyleSheet.create({
   filterBtnTextActive: { color: NAVY, fontFamily: FONT_FAMILIES.archivoBlack },
 
   searchContainer: { marginBottom: 12 },
-  searchInputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: CARD,
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    borderWidth: 1,
-    borderColor: LINE,
-  },
+  searchInputContainer: { flexDirection: 'row', alignItems: 'center', backgroundColor: CARD, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 4, borderWidth: 1, borderColor: LINE },
   searchIcon: { marginRight: 8 },
-  searchInput: {
-    flex: 1,
-    color: TEXT,
-    fontSize: 16,
-    fontFamily: FONT_FAMILIES.archivoNarrow,
-    paddingVertical: 12,
-  },
-  clearButton: {
-    padding: 4,
-    marginLeft: 8,
-  },
-  searchResults: {
-    color: TEXT,
-    fontSize: 12,
-    marginTop: 4,
-    marginLeft: 4,
-    fontFamily: FONT_FAMILIES.archivoNarrow,
-    opacity: 0.8,
-  },
+  searchInput: { flex: 1, color: TEXT, fontSize: 16, fontFamily: FONT_FAMILIES.archivoNarrow, paddingVertical: 12 },
+  clearButton: { padding: 4, marginLeft: 8 },
+  searchResults: { color: TEXT, fontSize: 12, marginTop: 4, marginLeft: 4, fontFamily: FONT_FAMILIES.archivoNarrow, opacity: 0.8 },
 
   dropdown: { backgroundColor: CARD, borderRadius: 10, borderWidth: 1, borderColor: 'rgba(255,255,255,0.18)', padding: 8, marginBottom: 8 },
   dropdownItem: { color: TEXT, paddingVertical: 10, fontWeight: '800', fontFamily: FONT_FAMILIES.archivoBlack },
-
+  
   row: { flexDirection: 'row', alignItems: 'center', backgroundColor: CARD, borderRadius: 12, padding: 14, marginBottom: 10, borderWidth: 1, borderColor: LINE },
   
   playerImage: {},
@@ -865,19 +764,16 @@ const styles = StyleSheet.create({
     opacity: 0.5,
   },
   
+  avatar: { width: 32, height: 32, borderRadius: 16, backgroundColor: '#0b3c70', alignItems: 'center', justifyContent: 'center' },
+  avatarText: { color: YELLOW, fontSize: 14, fontWeight: '900', fontFamily: FONT_FAMILIES.archivoBlack },
+  
+  playerInfo: { flex: 1, marginLeft: 12 },
   primary: { color: TEXT, fontWeight: '800', fontSize: 16, fontFamily: FONT_FAMILIES.archivoBlack },
-  sub: { color: TEXT, fontSize: 12, marginTop: 2, fontFamily: FONT_FAMILIES.archivoNarrow},
-  points: { color: YELLOW, fontWeight: '900', fontSize: 16, marginLeft: 8, fontFamily: FONT_FAMILIES.archivoBlack},
+  sub: { color: TEXT, fontSize: 12, marginTop: 2, fontFamily: FONT_FAMILIES.archivoNarrow },
+  points: { color: YELLOW, fontWeight: '900', fontSize: 16, marginLeft: 8, fontFamily: FONT_FAMILIES.archivoBlack },
+  checkmark: { marginLeft: 8 },
 
-  empty: { color: TEXT, textAlign: 'center', marginTop: 30 },
-
-  logo: {
-    width: '70%',
-    height: 150,
-    alignSelf: 'center',
-    marginBottom: 10,
-    marginTop: -40,
-  },
+  empty: { color: TEXT, textAlign: 'center', marginTop: 30, fontFamily: FONT_FAMILIES.archivoNarrow },
 
   backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'center', alignItems: 'center' },
   modalCard: { width: '88%', backgroundColor: NAVY, borderRadius: 16, padding: 16, alignItems: 'center', borderWidth: 1, borderColor: 'rgba(255,215,0,0.25)' },
@@ -885,10 +781,11 @@ const styles = StyleSheet.create({
   modalTitle: { color: YELLOW, fontSize: 20, fontWeight: '900', fontFamily: FONT_FAMILIES.archivoBlack, marginTop: 12 },
   modalMeta: { color: TEXT, marginTop: 6, marginBottom: 12, fontFamily: FONT_FAMILIES.archivoNarrow },
   statRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
-  statText: { color: TEXT, fontWeight: '800', fontFamily: FONT_FAMILIES.archivoBlack},
+  statText: { color: TEXT, fontWeight: '800', fontFamily: FONT_FAMILIES.archivoBlack },
+  pointsHighlight: { color: YELLOW, fontWeight: '900' },
 
   addBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: YELLOW, paddingHorizontal: 14, paddingVertical: 10, borderRadius: 10, marginBottom: 8 },
-  addBtnText: { color: NAVY, fontWeight: '900', fontFamily: FONT_FAMILIES.archivoBlack},
+  addBtnText: { color: NAVY, fontWeight: '900', fontFamily: FONT_FAMILIES.archivoBlack },
 
   removeBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#E74C3C', paddingHorizontal: 14, paddingVertical: 10, borderRadius: 10, marginBottom: 8 },
   removeBtnText: { color: '#fff', fontWeight: '900', fontFamily: FONT_FAMILIES.archivoBlack },

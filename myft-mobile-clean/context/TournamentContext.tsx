@@ -1,5 +1,5 @@
-// context/TournamentContext.tsx
-import React, { createContext, useContext, useEffect, useMemo, useState, useCallback } from 'react';
+// context/TournamentContext.tsx - FIXED FOR STABLE RENDERS
+import React, { createContext, useContext, useEffect, useMemo, useState, useCallback, useRef } from 'react';
 import { collection, getDocs } from 'firebase/firestore';
 import { db } from '../services/firebaseConfig';
 
@@ -32,10 +32,10 @@ export interface Team {
   id: string;
   name: string;
   division: Division;
-  captain: string; // <-- we'll populate this from Firestore captain_name
+  captain: string;
   record: { wins: number; losses: number };
   players: Player[];
-  pointDifferential?: number; // <-- Point differential (can be negative)
+  pointDifferential?: number;
 }
 
 export interface FantasyRoster {
@@ -50,7 +50,7 @@ type TournamentContextType = {
   updateRoster: (division: Division, playerId: string) => void;
   calculatePoints: (p: Player) => number;
   refreshData: () => Promise<void>;
-  refreshTrigger: number; // NEW: Increments on each refresh
+  refreshTrigger: number;
 };
 
 /** ---------- Scoring Table ---------- **/
@@ -75,7 +75,6 @@ const normDiv = (v: unknown): Division => {
   return 'boys';
 };
 
-// "michigan-boys-1" | "michigan_boys_1" -> "Michigan"
 const schoolFromTeamId = (teamId?: string) => {
   if (!teamId) return '';
   const slug = String(teamId).trim().replace(/_/g, '-');
@@ -83,18 +82,14 @@ const schoolFromTeamId = (teamId?: string) => {
   return first ? first.charAt(0).toUpperCase() + first.slice(1) : '';
 };
 
-// Pick a readable player name from various fields or fallback to slug
 const resolvePlayerName = (data: any, fallbackId: string) => {
   if (data?.display_name) return data.display_name;
-
-  // fallback: humanize the doc id if displayName not set
   return fallbackId
     .split('-')
     .map((w: string) => (w ? w[0].toUpperCase() + w.slice(1) : ''))
     .join(' ');
 };
 
-// Convert seasonTotals array -> PlayerStats
 const statsFromSeasonTotals = (arr?: number[]): PlayerStats => {
   const a = Array.isArray(arr) ? arr : [];
   return {
@@ -114,7 +109,6 @@ const statsFromSeasonTotals = (arr?: number[]): PlayerStats => {
 
 /** ---------- Data Loading Function ---------- **/
 const loadTeamsAndPlayers = async (): Promise<Team[]> => {
-  /** 1) Teams metadata */
   const teamsSnap = await getDocs(collection(db, 'teams'));
   const teamMeta = new Map<
     string,
@@ -123,7 +117,7 @@ const loadTeamsAndPlayers = async (): Promise<Team[]> => {
       division: Division; 
       captain: string; 
       record: { wins: number; losses: number };
-      pointDifferential?: number; // <-- Point differential
+      pointDifferential?: number;
     }
   >();
 
@@ -131,7 +125,6 @@ const loadTeamsAndPlayers = async (): Promise<Team[]> => {
     const data = d.data() as any;
     const division: Division = data?.division ? normDiv(data.division) : normDiv(d.id);
     
-    // Handle record as array [wins, losses] or fallback to object or default
     let record = { wins: 0, losses: 0 };
     if (Array.isArray(data?.record)) {
       record = {
@@ -139,7 +132,6 @@ const loadTeamsAndPlayers = async (): Promise<Team[]> => {
         losses: data.record[1] ?? 0,
       };
     } else if (data?.record && typeof data.record === 'object') {
-      // Fallback for existing object format
       record = {
         wins: data.record.wins ?? 0,
         losses: data.record.losses ?? 0,
@@ -149,14 +141,12 @@ const loadTeamsAndPlayers = async (): Promise<Team[]> => {
     teamMeta.set(d.id, {
       name: data?.name || schoolFromTeamId(d.id),
       division,
-      // ✅ prefer captain_name, fall back to captain
       captain: data?.captain_name ?? data?.captain ?? '',
       record,
-      pointDifferential: data?.pointDifferential, // <-- READ FROM FIRESTORE
+      pointDifferential: data?.pointDifferential,
     });
   });
 
-  /** 2) Players */
   const playersSnap = await getDocs(collection(db, 'players'));
   const playersByTeam = new Map<string, Player[]>();
 
@@ -182,7 +172,6 @@ const loadTeamsAndPlayers = async (): Promise<Team[]> => {
     playersByTeam.set(teamId, list);
   });
 
-  /** 3) Build Team[] */
   const teamIds = Array.from(new Set([...playersByTeam.keys(), ...teamMeta.keys()]));
   const builtTeams: Team[] = teamIds.map((tid) => {
     const meta = teamMeta.get(tid);
@@ -191,10 +180,10 @@ const loadTeamsAndPlayers = async (): Promise<Team[]> => {
       id: tid,
       name: meta?.name ?? schoolFromTeamId(tid),
       division: meta?.division ?? normDiv(tid),
-      captain: meta?.captain ?? '', // ✅ will now contain captain_name value
+      captain: meta?.captain ?? '',
       record: meta?.record ?? { wins: 0, losses: 0 },
       players,
-      pointDifferential: meta?.pointDifferential, // <-- ADD TO TEAM OBJECT
+      pointDifferential: meta?.pointDifferential,
     };
   });
 
@@ -209,11 +198,21 @@ export const TournamentProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   const [teams, setTeams] = useState<Team[]>([]);
   const [userRoster, setUserRoster] = useState<FantasyRoster>({ boys: [], girls: [] });
   const [loading, setLoading] = useState<boolean>(true);
-  const [refreshTrigger, setRefreshTrigger] = useState<number>(0); // NEW
+  const [refreshTrigger, setRefreshTrigger] = useState<number>(0);
+  
+  // CRITICAL FIX: Use ref to prevent refresh during active operations
+  const isRefreshingRef = useRef(false);
 
-  // Load teams + players from Firestore
+  // CRITICAL FIX: Memoize loadData to prevent recreation
   const loadData = useCallback(async () => {
+    // Prevent overlapping refreshes
+    if (isRefreshingRef.current) {
+      console.log('[TournamentContext] Skipping refresh - already in progress');
+      return;
+    }
+
     try {
+      isRefreshingRef.current = true;
       setLoading(true);
       const builtTeams = await loadTeamsAndPlayers();
       setTeams(builtTeams);
@@ -222,6 +221,7 @@ export const TournamentProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       setTeams([]);
     } finally {
       setLoading(false);
+      isRefreshingRef.current = false;
     }
   }, []);
 
@@ -230,25 +230,25 @@ export const TournamentProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     loadData();
   }, [loadData]);
 
-  // Refresh function that can be called externally
-  // NEW: Now increments refreshTrigger after loading
+  // CRITICAL FIX: Stable refreshData function
   const refreshData = useCallback(async () => {
+    console.log('[TournamentContext] Manual refresh triggered');
     await loadData();
-    setRefreshTrigger((prev) => prev + 1); // Increment to notify subscribers
+    setRefreshTrigger((prev) => prev + 1);
   }, [loadData]);
 
-  /** Toggle add/remove a player from a division list */
-  const updateRoster = (division: Division, playerId: string) => {
+  // CRITICAL FIX: Memoize updateRoster to prevent recreation
+  const updateRoster = useCallback((division: Division, playerId: string) => {
     setUserRoster((prev) => {
       const list = prev[division] ?? [];
       const exists = list.includes(playerId);
       const nextList = exists ? list.filter((id) => id !== playerId) : [...list, playerId];
       return { ...prev, [division]: nextList };
     });
-  };
+  }, []);
 
-  /** Fantasy scoring based on Player.stats */
-  const calculatePoints = (p: Player) => {
+  // CRITICAL FIX: Memoize calculatePoints to prevent recreation
+  const calculatePoints = useCallback((p: Player) => {
     const s = p.stats;
     return (
       s.touchdowns * SCORING.touchdown +
@@ -263,11 +263,20 @@ export const TournamentProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       s.interceptions * SCORING.interception +
       s.passingInterceptions * SCORING.passingInterception
     );
-  };
+  }, []);
 
+  // CRITICAL FIX: Only include stable dependencies
   const value = useMemo(
-    () => ({ teams, userRoster, loading, updateRoster, calculatePoints, refreshData, refreshTrigger }), // NEW: Added refreshTrigger
-    [teams, userRoster, loading, refreshData, refreshTrigger] // NEW: Added refreshTrigger to deps
+    () => ({ 
+      teams, 
+      userRoster, 
+      loading, 
+      updateRoster, 
+      calculatePoints, 
+      refreshData,
+      refreshTrigger 
+    }),
+    [teams, userRoster, loading, updateRoster, calculatePoints, refreshData, refreshTrigger]
   );
 
   return <TournamentContext.Provider value={value}>{children}</TournamentContext.Provider>;
