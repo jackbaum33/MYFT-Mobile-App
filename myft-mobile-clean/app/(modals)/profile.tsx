@@ -27,15 +27,13 @@ import { storage, db } from '../../services/firebaseConfig';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { collection, getDocs, doc, updateDoc } from 'firebase/firestore';
 
-const ADMIN_PANEL_PASSWORD = "mYft2025###";
-
 const CARD = '#00417D';
 const NAVY = '#00274C';
 const YELLOW = '#FFCB05';
 const TEXT = '#E9ECEF';
 const LINE = 'rgba(255,255,255,0.25)';
 const DEFAULT_AVATAR = require('../../images/default-avatar.png');
-
+const ADMIN_PANEL_PASSWORD = 'mYft2025###';
 // Stat names in order matching seasonTotals array
 const STAT_NAMES = [
   'Touchdowns',
@@ -67,6 +65,12 @@ interface Game {
   team1score: number;
   team2score: number;
   status: string;
+}
+
+interface Team {
+  id: string;
+  name?: string;
+  record?: number[]; // [wins, losses]
 }
 
 export default function ProfileScreen() {
@@ -103,7 +107,16 @@ export default function ProfileScreen() {
   const [filteredGames, setFilteredGames] = useState<Game[]>([]);
   const [gameSearchQuery, setGameSearchQuery] = useState('');
   const [selectedGame, setSelectedGame] = useState<Game | null>(null);
-  const [editingGame, setEditingGame] = useState<{ status: string; team1score: number; team2score: number } | null>(null);
+  const [editingGame, setEditingGame] = useState<{ 
+    status: string; 
+    team1score: number; 
+    team2score: number;
+    team1ID: string;
+    team2ID: string;
+  } | null>(null);
+  
+  // Teams data for editing game teams
+  const [teams, setTeams] = useState<Team[]>([]);
   
   const [adminLoading, setAdminLoading] = useState(false);
 
@@ -370,6 +383,14 @@ export default function ProfileScreen() {
       });
       setGames(gamesData);
       setFilteredGames(gamesData);
+
+      // Load teams
+      const teamsSnap = await getDocs(collection(db, 'teams'));
+      const teamsData: Team[] = [];
+      teamsSnap.forEach((doc) => {
+        teamsData.push({ id: doc.id, ...doc.data() } as Team);
+      });
+      setTeams(teamsData);
     } catch (e) {
       console.error('Failed to load admin data:', e);
       Alert.alert('Error', 'Failed to load admin data');
@@ -453,6 +474,8 @@ export default function ProfileScreen() {
       status: game.status,
       team1score: game.team1score,
       team2score: game.team2score,
+      team1ID: game.team1ID,
+      team2ID: game.team2ID,
     });
   };
 
@@ -461,18 +484,29 @@ export default function ProfileScreen() {
     
     try {
       setAdminLoading(true);
+      
+      // Update game document
       const gameRef = doc(db, 'games', selectedGame.id);
       await updateDoc(gameRef, {
         status: editingGame.status,
         team1score: editingGame.team1score,
         team2score: editingGame.team2score,
+        team1ID: editingGame.team1ID,
+        team2ID: editingGame.team2ID,
       });
       
       // Update local state
       setGames((prev) =>
         prev.map((g) =>
           g.id === selectedGame.id
-            ? { ...g, status: editingGame.status, team1score: editingGame.team1score, team2score: editingGame.team2score }
+            ? { 
+                ...g, 
+                status: editingGame.status, 
+                team1score: editingGame.team1score, 
+                team2score: editingGame.team2score,
+                team1ID: editingGame.team1ID,
+                team2ID: editingGame.team2ID,
+              }
             : g
         )
       );
@@ -486,6 +520,32 @@ export default function ProfileScreen() {
     } finally {
       setAdminLoading(false);
     }
+  };
+
+  // Helper to update team record
+  const updateTeamRecord = async (teamId: string, wins: number, losses: number) => {
+    try {
+      const teamRef = doc(db, 'teams', teamId);
+      await updateDoc(teamRef, {
+        record: [wins, losses]
+      });
+      
+      // Update local teams state
+      setTeams((prev) =>
+        prev.map((t) =>
+          t.id === teamId ? { ...t, record: [wins, losses] } : t
+        )
+      );
+    } catch (e) {
+      console.error('Failed to update team record:', e);
+      throw e;
+    }
+  };
+
+  // Get team record by ID
+  const getTeamRecord = (teamId: string): number[] => {
+    const team = teams.find(t => t.id === teamId);
+    return team?.record || [0, 0];
   };
 
   // Loading state
@@ -864,6 +924,9 @@ export default function ProfileScreen() {
                       >
                         <View style={{ flex: 1 }}>
                           <Text style={s.adminListName}>
+                            {item.id}
+                          </Text>
+                          <Text style={s.adminListSub}>
                             {item.team1ID} vs {item.team2ID}
                           </Text>
                           <Text style={s.adminListSub}>
@@ -885,15 +948,219 @@ export default function ProfileScreen() {
                     <Text style={s.adminEditTitle}>Edit Game</Text>
                   </View>
 
-                  <View style={s.gameTeamsContainer}>
-                    <View style={s.gameTeamBox}>
-                      <Text style={s.gameTeamLabel}>Team 1</Text>
-                      <Text style={s.gameTeamName}>{selectedGame.team1ID}</Text>
+                  <Text style={s.adminEditSubtitle}>Game ID: {selectedGame.id}</Text>
+
+                  {/* Team IDs Editing */}
+                  <Text style={[s.label, { marginTop: 20, marginBottom: 12 }]}>Team IDs</Text>
+                  
+                  <View style={s.teamIdContainer}>
+                    <Text style={s.teamIdLabel}>Team 1 ID</Text>
+                    <TextInput
+                      style={s.teamIdInput}
+                      value={editingGame?.team1ID || ''}
+                      onChangeText={(text) =>
+                        setEditingGame((prev) => (prev ? { ...prev, team1ID: text } : null))
+                      }
+                      placeholder="team1-id"
+                      placeholderTextColor="#94a3b8"
+                      autoCapitalize="none"
+                      autoCorrect={false}
+                    />
+                  </View>
+
+                  <View style={s.teamIdContainer}>
+                    <Text style={s.teamIdLabel}>Team 2 ID</Text>
+                    <TextInput
+                      style={s.teamIdInput}
+                      value={editingGame?.team2ID || ''}
+                      onChangeText={(text) =>
+                        setEditingGame((prev) => (prev ? { ...prev, team2ID: text } : null))
+                      }
+                      placeholder="team2-id"
+                      placeholderTextColor="#94a3b8"
+                      autoCapitalize="none"
+                      autoCorrect={false}
+                    />
+                  </View>
+
+                  {/* Team Records Editing */}
+                  <Text style={[s.label, { marginTop: 20, marginBottom: 12 }]}>Team Records</Text>
+                  
+                  {/* Team 1 Record */}
+                  <View style={s.teamRecordContainer}>
+                    <Text style={s.teamRecordLabel}>{editingGame?.team1ID || 'Team 1'}</Text>
+                    
+                    <View style={s.recordRow}>
+                      <View style={s.recordColumn}>
+                        <Text style={s.recordColumnLabel}>Wins</Text>
+                        <View style={s.statEditControls}>
+                          <TouchableOpacity
+                            style={s.statEditBtn}
+                            onPress={async () => {
+                              const teamId = editingGame?.team1ID;
+                              if (!teamId) return;
+                              const [wins, losses] = getTeamRecord(teamId);
+                              const newWins = Math.max(0, wins - 1);
+                              try {
+                                await updateTeamRecord(teamId, newWins, losses);
+                              } catch (e) {
+                                Alert.alert('Error', 'Failed to update team record');
+                              }
+                            }}
+                          >
+                            <Ionicons name="remove" size={20} color={NAVY} />
+                          </TouchableOpacity>
+                          <Text style={s.statEditValue}>
+                            {getTeamRecord(editingGame?.team1ID || '')[0]}
+                          </Text>
+                          <TouchableOpacity
+                            style={s.statEditBtn}
+                            onPress={async () => {
+                              const teamId = editingGame?.team1ID;
+                              if (!teamId) return;
+                              const [wins, losses] = getTeamRecord(teamId);
+                              const newWins = wins + 1;
+                              try {
+                                await updateTeamRecord(teamId, newWins, losses);
+                              } catch (e) {
+                                Alert.alert('Error', 'Failed to update team record');
+                              }
+                            }}
+                          >
+                            <Ionicons name="add" size={20} color={NAVY} />
+                          </TouchableOpacity>
+                        </View>
+                      </View>
+
+                      <View style={s.recordColumn}>
+                        <Text style={s.recordColumnLabel}>Losses</Text>
+                        <View style={s.statEditControls}>
+                          <TouchableOpacity
+                            style={s.statEditBtn}
+                            onPress={async () => {
+                              const teamId = editingGame?.team1ID;
+                              if (!teamId) return;
+                              const [wins, losses] = getTeamRecord(teamId);
+                              const newLosses = Math.max(0, losses - 1);
+                              try {
+                                await updateTeamRecord(teamId, wins, newLosses);
+                              } catch (e) {
+                                Alert.alert('Error', 'Failed to update team record');
+                              }
+                            }}
+                          >
+                            <Ionicons name="remove" size={20} color={NAVY} />
+                          </TouchableOpacity>
+                          <Text style={s.statEditValue}>
+                            {getTeamRecord(editingGame?.team1ID || '')[1]}
+                          </Text>
+                          <TouchableOpacity
+                            style={s.statEditBtn}
+                            onPress={async () => {
+                              const teamId = editingGame?.team1ID;
+                              if (!teamId) return;
+                              const [wins, losses] = getTeamRecord(teamId);
+                              const newLosses = losses + 1;
+                              try {
+                                await updateTeamRecord(teamId, wins, newLosses);
+                              } catch (e) {
+                                Alert.alert('Error', 'Failed to update team record');
+                              }
+                            }}
+                          >
+                            <Ionicons name="add" size={20} color={NAVY} />
+                          </TouchableOpacity>
+                        </View>
+                      </View>
                     </View>
-                    <Text style={s.gameVs}>VS</Text>
-                    <View style={s.gameTeamBox}>
-                      <Text style={s.gameTeamLabel}>Team 2</Text>
-                      <Text style={s.gameTeamName}>{selectedGame.team2ID}</Text>
+                  </View>
+
+                  {/* Team 2 Record */}
+                  <View style={s.teamRecordContainer}>
+                    <Text style={s.teamRecordLabel}>{editingGame?.team2ID || 'Team 2'}</Text>
+                    
+                    <View style={s.recordRow}>
+                      <View style={s.recordColumn}>
+                        <Text style={s.recordColumnLabel}>Wins</Text>
+                        <View style={s.statEditControls}>
+                          <TouchableOpacity
+                            style={s.statEditBtn}
+                            onPress={async () => {
+                              const teamId = editingGame?.team2ID;
+                              if (!teamId) return;
+                              const [wins, losses] = getTeamRecord(teamId);
+                              const newWins = Math.max(0, wins - 1);
+                              try {
+                                await updateTeamRecord(teamId, newWins, losses);
+                              } catch (e) {
+                                Alert.alert('Error', 'Failed to update team record');
+                              }
+                            }}
+                          >
+                            <Ionicons name="remove" size={20} color={NAVY} />
+                          </TouchableOpacity>
+                          <Text style={s.statEditValue}>
+                            {getTeamRecord(editingGame?.team2ID || '')[0]}
+                          </Text>
+                          <TouchableOpacity
+                            style={s.statEditBtn}
+                            onPress={async () => {
+                              const teamId = editingGame?.team2ID;
+                              if (!teamId) return;
+                              const [wins, losses] = getTeamRecord(teamId);
+                              const newWins = wins + 1;
+                              try {
+                                await updateTeamRecord(teamId, newWins, losses);
+                              } catch (e) {
+                                Alert.alert('Error', 'Failed to update team record');
+                              }
+                            }}
+                          >
+                            <Ionicons name="add" size={20} color={NAVY} />
+                          </TouchableOpacity>
+                        </View>
+                      </View>
+
+                      <View style={s.recordColumn}>
+                        <Text style={s.recordColumnLabel}>Losses</Text>
+                        <View style={s.statEditControls}>
+                          <TouchableOpacity
+                            style={s.statEditBtn}
+                            onPress={async () => {
+                              const teamId = editingGame?.team2ID;
+                              if (!teamId) return;
+                              const [wins, losses] = getTeamRecord(teamId);
+                              const newLosses = Math.max(0, losses - 1);
+                              try {
+                                await updateTeamRecord(teamId, wins, newLosses);
+                              } catch (e) {
+                                Alert.alert('Error', 'Failed to update team record');
+                              }
+                            }}
+                          >
+                            <Ionicons name="remove" size={20} color={NAVY} />
+                          </TouchableOpacity>
+                          <Text style={s.statEditValue}>
+                            {getTeamRecord(editingGame?.team2ID || '')[1]}
+                          </Text>
+                          <TouchableOpacity
+                            style={s.statEditBtn}
+                            onPress={async () => {
+                              const teamId = editingGame?.team2ID;
+                              if (!teamId) return;
+                              const [wins, losses] = getTeamRecord(teamId);
+                              const newLosses = losses + 1;
+                              try {
+                                await updateTeamRecord(teamId, wins, newLosses);
+                              } catch (e) {
+                                Alert.alert('Error', 'Failed to update team record');
+                              }
+                            }}
+                          >
+                            <Ionicons name="add" size={20} color={NAVY} />
+                          </TouchableOpacity>
+                        </View>
+                      </View>
                     </View>
                   </View>
 
@@ -927,7 +1194,7 @@ export default function ProfileScreen() {
                   <Text style={[s.label, { marginTop: 20, marginBottom: 12 }]}>Scores</Text>
                   
                   <View style={s.scoreEditRow}>
-                    <Text style={s.scoreTeamName}>{selectedGame.team1ID}</Text>
+                    <Text style={s.scoreTeamName}>{editingGame?.team1ID || 'Team 1'}</Text>
                     <View style={s.statEditControls}>
                       <TouchableOpacity
                         style={s.statEditBtn}
@@ -956,7 +1223,7 @@ export default function ProfileScreen() {
                   </View>
 
                   <View style={s.scoreEditRow}>
-                    <Text style={s.scoreTeamName}>{selectedGame.team2ID}</Text>
+                    <Text style={s.scoreTeamName}>{editingGame?.team2ID || 'Team 2'}</Text>
                     <View style={s.statEditControls}>
                       <TouchableOpacity
                         style={s.statEditBtn}
@@ -1439,6 +1706,59 @@ const s = StyleSheet.create({
     fontSize: 14,
     fontWeight: '700',
     flex: 1,
+    fontFamily: FONT_FAMILIES.archivoBlack,
+  },
+
+  // Team ID and Record Styles
+  teamIdContainer: {
+    marginBottom: 16,
+  },
+  teamIdLabel: {
+    color: TEXT,
+    fontSize: 14,
+    fontWeight: '700',
+    marginBottom: 8,
+    fontFamily: FONT_FAMILIES.archivoBlack,
+  },
+  teamIdInput: {
+    backgroundColor: CARD,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    color: TEXT,
+    fontFamily: FONT_FAMILIES.archivoNarrow,
+    borderWidth: 1,
+    borderColor: LINE,
+    fontSize: 14,
+  },
+  teamRecordContainer: {
+    backgroundColor: CARD,
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: LINE,
+  },
+  teamRecordLabel: {
+    color: YELLOW,
+    fontSize: 16,
+    fontWeight: '800',
+    marginBottom: 12,
+    fontFamily: FONT_FAMILIES.archivoBlack,
+  },
+  recordRow: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  recordColumn: {
+    flex: 1,
+  },
+  recordColumnLabel: {
+    color: TEXT,
+    fontSize: 12,
+    fontWeight: '700',
+    marginBottom: 8,
+    textAlign: 'center',
     fontFamily: FONT_FAMILIES.archivoBlack,
   },
 });
