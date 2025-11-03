@@ -1,4 +1,4 @@
-// screens/FantasyScreen.tsx - SEAMLESS AUTO-REFRESH VERSION
+// screens/FantasyScreen.tsx - WITH PROPER LOADING HANDLING
 import React, { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import {
   View,
@@ -13,6 +13,7 @@ import {
   Platform,
   ActionSheetIOS,
   TextInput,
+  ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { FONT_FAMILIES } from '../../fonts';
@@ -44,7 +45,6 @@ function capitalize(s: string) {
 }
 
 // ===== OPTIMIZED PLAYER IMAGE COMPONENT =====
-// Memoized to prevent unnecessary re-renders
 const PlayerImage = React.memo(({ 
   playerId, 
   size = 32,
@@ -117,28 +117,41 @@ export default function FantasyScreen() {
   }, []);
 
   /** -------------------------
-   *   Boot / profile state
+   *   Loading state - CRITICAL FIX
    *  ------------------------- */
+  const [isDataLoading, setIsDataLoading] = useState(true);
   const [hasOnboarded, setHasOnboarded] = useState(false);
   const hydratedFromProfileRef = useRef(false);
   const initialLoadDoneRef = useRef(false);
 
+  // Check if teams/players are loaded
+  const dataIsReady = useMemo(() => {
+    return teams && teams.length > 0 && teams.some(t => t.players && t.players.length > 0);
+  }, [teams]);
+
   // Load user profile: hasOnboarded + saved rosters
-  // ONLY runs once on mount, never again
   useEffect(() => {
-    // Skip if we've already done the initial load
     if (initialLoadDoneRef.current) return;
     
     let active = true;
+    
     (async () => {
       try {
+        // Wait for data to be ready first
+        if (!dataIsReady) {
+          console.log('[fantasy] Waiting for teams data to load...');
+          return;
+        }
+
         if (!signedIn?.uid) {
           if (active) {
             setHasOnboarded(false);
+            setIsDataLoading(false);
             initialLoadDoneRef.current = true;
           }
           return;
         }
+
         const prof = await getUser(signedIn.uid);
         if (!active) return;
 
@@ -149,8 +162,19 @@ export default function FantasyScreen() {
           const boys: string[] = Array.isArray((prof as any)?.boys_roster) ? (prof as any).boys_roster : [];
           const girls: string[] = Array.isArray((prof as any)?.girls_roster) ? (prof as any).girls_roster : [];
 
-          const boysIds = [...new Set(boys)].slice(0, 8);
-          const girlsIds = [...new Set(girls)].slice(0, 8);
+          // Validate IDs against existing players
+          const allPlayerIds = new Set(
+            teams.flatMap(t => (t.players || []).map(p => p.id).filter(Boolean))
+          );
+
+          const boysIds = [...new Set(boys)]
+            .filter(id => id && typeof id === 'string' && allPlayerIds.has(id))
+            .slice(0, 8);
+          const girlsIds = [...new Set(girls)]
+            .filter(id => id && typeof id === 'string' && allPlayerIds.has(id))
+            .slice(0, 8);
+
+          console.log('[fantasy] Loading roster - Boys:', boysIds.length, 'Girls:', girlsIds.length);
 
           boysIds.forEach(id => updateRoster('boys', id));
           girlsIds.forEach(id => updateRoster('girls', id));
@@ -159,18 +183,21 @@ export default function FantasyScreen() {
         }
         
         if (active) {
+          setIsDataLoading(false);
           initialLoadDoneRef.current = true;
         }
       } catch (e) {
         console.warn('[fantasy] load profile failed:', e);
         if (active) {
           setHasOnboarded(false);
+          setIsDataLoading(false);
           initialLoadDoneRef.current = true;
         }
       }
     })();
+    
     return () => { active = false; };
-  }, [signedIn?.uid, updateRoster]);
+  }, [signedIn?.uid, updateRoster, dataIsReady, teams]);
 
   /** -------------------------
    *   View / local state
@@ -178,7 +205,6 @@ export default function FantasyScreen() {
   const [tab, setTab] = useState<'all' | 'team'>('all');
   const [searchQuery, setSearchQuery] = useState<string>('');
   
-  // FIXED: Use ref to persist error state across re-renders
   const playerImageErrorsRef = useRef<Set<string>>(new Set());
   const handleImageError = useCallback((playerId: string) => {
     playerImageErrorsRef.current.add(playerId);
@@ -191,13 +217,27 @@ export default function FantasyScreen() {
   const [divisionSelected, setDivisionSelected] = useState<'boys' | 'girls' | null>(null);
   const [schoolSelected, setSchoolSelected] = useState<string | null>(null);
 
+  // Build player list with proper null safety
   const allPlayers = useMemo(
-    () => teams.flatMap(t => t.players.map(p => ({ ...p, __team: t.name, __division: t.division } as any))),
+    () => {
+      if (!teams || teams.length === 0) return [];
+      
+      return teams
+        .filter(t => t && t.players && Array.isArray(t.players))
+        .flatMap(t => t.players
+          .filter(p => p && p.id && p.name)
+          .map(p => ({ 
+            ...p, 
+            __team: t.name || 'Unknown', 
+            __division: t.division || 'boys'
+          } as any))
+        );
+    },
     [teams]
   );
 
   const schoolOptions = useMemo(
-    () => Array.from(new Set(teams.map(t => t.name))).sort(),
+    () => Array.from(new Set(teams.filter(t => t && t.name).map(t => t.name))).sort(),
     [teams]
   );
 
@@ -215,12 +255,11 @@ export default function FantasyScreen() {
     if (divisionSelected) arr = arr.filter(p => p.__division === divisionSelected);
     if (schoolSelected) arr = arr.filter(p => p.__team === schoolSelected);
     
-    // Search filter
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase().trim();
       arr = arr.filter(p => {
-        const name = p.name.toLowerCase();
-        const team = p.__team.toLowerCase();
+        const name = (p.name || '').toLowerCase();
+        const team = (p.__team || '').toLowerCase();
         return name.includes(query) || team.includes(query);
       });
     }
@@ -234,10 +273,29 @@ export default function FantasyScreen() {
    *  ------------------------- */
   const myTeamPlayers = useMemo(() => {
     const ids = new Set([...(userRoster.boys ?? []), ...(userRoster.girls ?? [])]);
-    const enriched = allPlayers
-      .filter(p => ids.has(p.id))
-      .map(p => ({ ...p, fantasy: calculatePoints(p) }))
-      .sort((a, b) => b.fantasy - a.fantasy);
+    
+    // Create a map for faster lookup
+    const playerMap = new Map(allPlayers.map(p => [p.id, p]));
+    
+    // Get players in the order they appear in the roster
+    const enriched: any[] = [];
+    ids.forEach(id => {
+      const player = playerMap.get(id);
+      if (player) {
+        enriched.push({ ...player, fantasy: calculatePoints(player) });
+      } else {
+        console.warn(`[fantasy] Player ${id} not found in allPlayers`);
+      }
+    });
+    
+    enriched.sort((a, b) => b.fantasy - a.fantasy);
+    
+    console.log('[fantasy] My Team:', {
+      totalIds: ids.size,
+      foundPlayers: enriched.length,
+      allPlayersCount: allPlayers.length
+    });
+    
     return enriched;
   }, [allPlayers, userRoster, calculatePoints]);
 
@@ -252,10 +310,12 @@ export default function FantasyScreen() {
       return;
     }
     
+    if (!player || !player.__division) return;
+    
     const division = player.__division as 'boys' | 'girls';
     Alert.alert(
       'Remove from Team',
-      `Remove ${player.name} from your Fantasy roster?`,
+      `Remove ${player.name || 'this player'} from your Fantasy roster?`,
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -275,6 +335,8 @@ export default function FantasyScreen() {
       Alert.alert('Team Locked', 'Fantasy teams can no longer be modified.');
       return;
     }
+    
+    if (!player || !player.__division || !player.id) return;
     
     const division = player.__division as 'boys' | 'girls';
     const already =
@@ -297,7 +359,7 @@ export default function FantasyScreen() {
 
     Alert.alert(
       'Add to Team',
-      `Add ${player.name} to your Fantasy roster?`,
+      `Add ${player.name || 'this player'} to your Fantasy roster?`,
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -351,7 +413,7 @@ export default function FantasyScreen() {
   }, [divisionSelected, schoolSelected, schoolOptions]);
 
   /** -------------------------
-   *   Save team (writes to Firestore)
+   *   Save team
    *  ------------------------- */
   const [saving, setSaving] = useState(false);
 
@@ -384,9 +446,13 @@ export default function FantasyScreen() {
   };
 
   /** -------------------------
-   *   Render helpers - MEMOIZED
+   *   Render helpers
    *  ------------------------- */
   const PlayerRow = useCallback(({ item }: { item: any }) => {
+    if (!item || !item.id || !item.__division) {
+      return null;
+    }
+    
     const division = item.__division as 'boys' | 'girls';
     const selected =
       (division === 'boys' ? userRoster.boys : userRoster.girls)?.includes(item.id) ?? false;
@@ -405,18 +471,17 @@ export default function FantasyScreen() {
         />
         
         <View style={{ flex: 1, marginLeft: 12 }}>
-          <Text style={styles.primary} numberOfLines={1}>{item.name}</Text>
+          <Text style={styles.primary} numberOfLines={1}>{item.name || 'Unknown Player'}</Text>
           <Text style={styles.sub} numberOfLines={1}>
-            {item.__team} • {capitalize(division)}
+            {item.__team || 'Unknown'} • {capitalize(division)}
           </Text>
         </View>
-        <Text style={styles.points}>{item.fantasy} pts</Text>
+        <Text style={styles.points}>{item.fantasy ?? 0} pts</Text>
         {selected ? <Ionicons name="checkmark-circle" size={20} color={YELLOW} style={{ marginLeft: 8 }} /> : null}
       </TouchableOpacity>
     );
   }, [userRoster, isLocked, handleImageError]);
 
-  // Clear search
   const clearSearch = useCallback(() => {
     setSearchQuery('');
   }, []);
@@ -435,6 +500,16 @@ export default function FantasyScreen() {
     }
   };
 
+  // LOADING SCREEN - Show while data is loading
+  if (isDataLoading || !dataIsReady) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color={YELLOW} />
+        <Text style={styles.loadingText}>Loading players...</Text>
+      </View>
+    );
+  }
+
   if (!hasOnboarded) {
     return (
       <View style={styles.onboardOuter}>
@@ -450,9 +525,6 @@ export default function FantasyScreen() {
     );
   }
 
-  /** -------------------------
-   *   Locked screen
-   *  ------------------------- */
   if (isLocked) {
     return (
       <View style={styles.lockedContainer}>
@@ -469,11 +541,10 @@ export default function FantasyScreen() {
   }
 
   /** -------------------------
-   *   Main screen - NO LOADING STATES ON REFRESH
+   *   Main screen
    *  ------------------------- */
   return (
     <View style={styles.container}>
-      {/* Header / progress */}
       <View style={styles.topRow}>
         <View style={styles.counter}>
           <Text style={styles.counterText}>Boys: {selectedBoys}/{maxBoys}</Text>
@@ -491,7 +562,6 @@ export default function FantasyScreen() {
         </TouchableOpacity>
       </View>
 
-      {/* Tabs */}
       <View style={styles.toggleRow}>
         <TouchableOpacity
           onPress={() => setTab('all')}
@@ -507,7 +577,6 @@ export default function FantasyScreen() {
         </TouchableOpacity>
       </View>
 
-      {/* Filters (All Players) */}
       {tab === 'all' && (
         <>
           <Text style={styles.filterLabel}>Filters</Text>
@@ -544,7 +613,6 @@ export default function FantasyScreen() {
             )}
           </View>
 
-          {/* Search bar */}
           <View style={styles.searchContainer}>
             <View style={styles.searchInputContainer}>
               <Ionicons name="search-outline" size={20} color={TEXT} style={styles.searchIcon} />
@@ -570,7 +638,6 @@ export default function FantasyScreen() {
             )}
           </View>
 
-          {/* Inline sheet for Android/others */}
           {Platform.OS !== 'ios' && activeFilter && (
             <View style={styles.dropdown}>
               {activeFilter === 'division' &&
@@ -590,15 +657,13 @@ export default function FantasyScreen() {
         </>
       )}
 
-      {/* Lists - Data updates seamlessly without loading states */}
       {tab === 'all' ? (
         <FlatList
           data={filteredPlayers}
-          keyExtractor={(p: any) => p.id}
+          keyExtractor={(p: any) => p?.id || `player-${Math.random()}`}
           renderItem={({ item }) => <PlayerRow item={item} />}
           contentContainerStyle={{ paddingBottom: 20 }}
           showsVerticalScrollIndicator={false}
-          // Performance optimizations
           removeClippedSubviews={true}
           maxToRenderPerBatch={10}
           windowSize={10}
@@ -607,7 +672,7 @@ export default function FantasyScreen() {
       ) : (
         <FlatList
           data={myTeamPlayers}
-          keyExtractor={(p: any) => p.id}
+          keyExtractor={(p: any) => p?.id || `team-${Math.random()}`}
           renderItem={({ item }) => <PlayerRow item={item} />}
           ListEmptyComponent={
             <Text style={styles.empty}>No players yet. Pick from All Players.</Text>
@@ -617,7 +682,6 @@ export default function FantasyScreen() {
         />
       )}
 
-      {/* Player details modal */}
       <Modal
         visible={!!detail}
         transparent
@@ -634,15 +698,15 @@ export default function FantasyScreen() {
                   onError={handleImageError}
                 />
                 
-                <Text style={styles.modalTitle}>{detail.name}</Text>
+                <Text style={styles.modalTitle}>{detail.name || 'Unknown Player'}</Text>
                 <Text style={styles.modalMeta}>
-                  {detail.__team} • {capitalize(detail.__division)}
+                  {detail.__team || 'Unknown'} • {capitalize(detail.__division || 'boys')}
                 </Text>
 
                 <View style={styles.statRow}>
                   <Text style={styles.statText}>Fantasy Points: </Text>
                   <Text style={[styles.statText, { color: YELLOW, fontWeight: '900' }]}>
-                    {detail.fantasy ?? calculatePoints(detail)}
+                    {detail.fantasy ?? calculatePoints(detail) ?? 0}
                   </Text>
                 </View>
 
@@ -679,13 +743,23 @@ export default function FantasyScreen() {
   );
 }
 
-/** -------------------------
- *   Styles
- *  ------------------------- */
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: NAVY, padding: 12 },
 
-  // Locked screen
+  // LOADING SCREEN
+  loadingContainer: {
+    flex: 1,
+    backgroundColor: NAVY,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    color: TEXT,
+    fontSize: 16,
+    marginTop: 16,
+    fontFamily: FONT_FAMILIES.archivoNarrow,
+  },
+
   lockedContainer: {
     flex: 1,
     backgroundColor: NAVY,
@@ -717,28 +791,24 @@ const styles = StyleSheet.create({
     fontFamily: FONT_FAMILIES.archivoNarrow,
   },
 
-  // Onboarding
   onboardOuter: { flex: 1, backgroundColor: NAVY, alignItems: 'center', justifyContent: 'center', padding: 20, marginTop: -50 },
   onboardTitle: { color: YELLOW, fontSize: 24, fontWeight: '900', textAlign: 'center', marginTop: 12, fontFamily: FONT_FAMILIES.archivoBlack },
   onboardSub: { color: TEXT, opacity: 0.9, textAlign: 'center', marginTop: 8, fontFamily: FONT_FAMILIES.archivoNarrow},
   cta: { marginTop: 16, backgroundColor: YELLOW, paddingHorizontal: 18, paddingVertical: 12, borderRadius: 10 },
   ctaText: { color: NAVY, fontWeight: '900', fontFamily: FONT_FAMILIES.archivoBlack },
 
-  // Top bar
   topRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10 },
   counter: { backgroundColor: '#0b3c70', paddingHorizontal: 10, paddingVertical: 8, borderRadius: 10, borderWidth: 1, borderColor: LINE },
   counterText: { color: TEXT, fontWeight: '800', fontFamily: FONT_FAMILIES.archivoBlack },
   saveBtn: { marginLeft: 'auto', flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: YELLOW, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 10 },
   saveBtnText: { color: NAVY, fontWeight: '900', fontFamily: FONT_FAMILIES.archivoBlack },
 
-  // Tabs
   toggleRow: { flexDirection: 'row', gap: 8, marginBottom: 12 },
   toggleBtn: { flex: 1, paddingVertical: 10, borderRadius: 10, backgroundColor: '#062a4e', alignItems: 'center' },
   toggleActive: { backgroundColor: '#0b3c70' },
   toggleText: { color: TEXT, fontWeight: '800', fontFamily: FONT_FAMILIES.archivoBlack },
   toggleTextActive: { color: YELLOW, fontFamily: FONT_FAMILIES.archivoBlack},
 
-  // Filters
   filterLabel: { color: YELLOW, fontWeight: '700', fontSize: 16, marginBottom: 8, fontFamily: FONT_FAMILIES.archivoBlack },
 
   filterRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 12, flexWrap: 'wrap', gap: 8 },
@@ -747,7 +817,6 @@ const styles = StyleSheet.create({
   filterBtnText: { color: TEXT, fontWeight: '800', fontFamily: FONT_FAMILIES.archivoBlack },
   filterBtnTextActive: { color: NAVY, fontFamily: FONT_FAMILIES.archivoBlack },
 
-  // Search
   searchContainer: { marginBottom: 12 },
   searchInputContainer: {
     flexDirection: 'row',
@@ -783,20 +852,14 @@ const styles = StyleSheet.create({
   dropdown: { backgroundColor: CARD, borderRadius: 10, borderWidth: 1, borderColor: 'rgba(255,255,255,0.18)', padding: 8, marginBottom: 8 },
   dropdownItem: { color: TEXT, paddingVertical: 10, fontWeight: '800', fontFamily: FONT_FAMILIES.archivoBlack },
 
-  // Rows
   row: { flexDirection: 'row', alignItems: 'center', backgroundColor: CARD, borderRadius: 12, padding: 14, marginBottom: 10, borderWidth: 1, borderColor: LINE },
   
-  // Player image styles
-  playerImage: {
-    // Dynamic size will be applied via style prop
-  },
+  playerImage: {},
   playerImagePlaceholder: {
     backgroundColor: '#062a4e',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  
-  // Shimmer effect for loading
   shimmer: {
     backgroundColor: '#0b3c70',
     opacity: 0.5,
@@ -816,7 +879,6 @@ const styles = StyleSheet.create({
     marginTop: -40,
   },
 
-  // Modal
   backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'center', alignItems: 'center' },
   modalCard: { width: '88%', backgroundColor: NAVY, borderRadius: 16, padding: 16, alignItems: 'center', borderWidth: 1, borderColor: 'rgba(255,215,0,0.25)' },
   
