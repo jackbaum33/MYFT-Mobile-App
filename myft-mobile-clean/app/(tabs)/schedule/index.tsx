@@ -1,12 +1,13 @@
-// schedule/index.tsx - React Navigation Version with Auto-Refresh Support
+// schedule/index.tsx - React Navigation Version with Auto-Refresh Support and Status Filtering
 import React, { useEffect, useMemo, useState } from 'react';
-import { View, Text, StyleSheet, FlatList, Pressable, Image } from 'react-native';
+import { View, Text, StyleSheet, FlatList, Pressable, Image, TouchableOpacity, Modal } from 'react-native';
 import { NavigationProp, useNavigation } from '@react-navigation/native';
 import { collection, getDocs, orderBy, query, Timestamp } from 'firebase/firestore';
 import { db } from '../../../services/firebaseConfig';
 import { useTournament } from '../../../context/TournamentContext';
 import { getTeamLogo } from '../../../team_logos';
 import { FONT_FAMILIES } from '../../../fonts';
+import { Ionicons } from '@expo/vector-icons';
 
 // Import the navigation types from your layout
 import { ScheduleStackParamList } from './_layout';
@@ -17,6 +18,7 @@ const CARD = '#00417D';
 const NAVY = '#00274C';
 const YELLOW = '#FFCB05';
 const TEXT = '#E9ECEF';
+const LINE = 'rgba(255,255,255,0.25)';
 
 type FSGame = {
   startTime: Timestamp;                // Firestore Timestamp
@@ -26,7 +28,7 @@ type FSGame = {
   team2ID?: string;
   team1score?: number;
   team2score?: number;
-  status?: 'scheduled' | 'live' | 'final' | string;
+  status?: 'Scheduled' | 'Live' | 'Final' | string;
 };
 
 type UICardGame = {
@@ -42,6 +44,8 @@ type UICardGame = {
 };
 
 type DayBucket = { label: string; games: UICardGame[] };
+
+type StatusFilter = 'All' | 'Live' | 'Scheduled' | 'Final';
 
 function fmtTime(ts?: Timestamp) {
   if (!ts) return '';
@@ -67,6 +71,24 @@ function prettyDayLabel(key: string) {
   return dt.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' });
 }
 
+// Sort games by status priority: Live → Scheduled → Final
+function sortByStatus(games: UICardGame[]): UICardGame[] {
+  const statusPriority: Record<string, number> = {
+    'Live': 0,
+    'live': 0,
+    'Scheduled': 1,
+    'scheduled': 1,
+    'Final': 2,
+    'final': 2,
+  };
+
+  return [...games].sort((a, b) => {
+    const priorityA = statusPriority[a.status] ?? 999;
+    const priorityB = statusPriority[b.status] ?? 999;
+    return priorityA - priorityB;
+  });
+}
+
 export default function ScheduleIndex() {
   const navigation = useNavigation<ScheduleNavigationProp>();
   const { teams, refreshTrigger } = useTournament(); // Get refreshTrigger from context
@@ -74,6 +96,8 @@ export default function ScheduleIndex() {
   const [loading, setLoading] = useState(true);
   const [days, setDays] = useState<DayBucket[]>([]);
   const [dayIndex, setDayIndex] = useState(0);
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('All');
+  const [showDropdown, setShowDropdown] = useState(false);
 
   // Load games from Firestore and group by day
   // UPDATED: Now responds to refreshTrigger from context
@@ -94,7 +118,7 @@ export default function ScheduleIndex() {
             field: g.field ?? '',
             team1: g.team1ID ?? '',
             team2: g.team2ID ?? '',
-            status: g.status ?? 'scheduled',
+            status: g.status ?? 'Scheduled',
             score1: Number(g.team1score ?? 0),
             score2: Number(g.team2score ?? 0),
             dayKey: key,
@@ -113,7 +137,7 @@ export default function ScheduleIndex() {
           .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
           .map(([key, list]) => ({
             label: prettyDayLabel(key),
-            games: list,
+            games: sortByStatus(list), // Sort games by status within each day
           }));
 
         if (active) {
@@ -132,7 +156,17 @@ export default function ScheduleIndex() {
   }, [refreshTrigger]); // Added refreshTrigger as dependency
 
   const day = days[dayIndex];
-  const games = day?.games ?? [];
+  
+  // Filter games by status
+  const games = useMemo(() => {
+    const allGames = day?.games ?? [];
+    if (statusFilter === 'All') {
+      return allGames;
+    }
+    return allGames.filter(game => 
+      game.status.toLowerCase() === statusFilter.toLowerCase()
+    );
+  }, [day, statusFilter]);
 
   const teamById = (id?: string) =>
     teams.find(t => t.id.toLowerCase() === (id ?? '').toLowerCase());
@@ -156,13 +190,19 @@ export default function ScheduleIndex() {
     const logo1 = getTeamLogo(logo1Name);
     const logo2 = getTeamLogo(logo2Name);
 
+    // Status color coding
+    const statusColor = 
+      item.status.toLowerCase() === 'live' ? '#4CAF50' :
+      item.status.toLowerCase() === 'final' ? '#9E9E9E' :
+      YELLOW;
+
     return (
       <Pressable
         onPress={() => navigateToGame(item.id)}
         style={s.card}
       >
         <View style={s.headerRow}>
-          <Text style={s.status}>{item.status}</Text>
+          <Text style={[s.status, { color: statusColor }]}>{item.status}</Text>
         </View>
 
         <View style={s.row}>
@@ -214,6 +254,62 @@ export default function ScheduleIndex() {
         )}
       </View>
 
+      {/* Status Filter Dropdown */}
+      <View style={s.filterContainer}>
+        <TouchableOpacity
+          style={s.dropdownButton}
+          onPress={() => setShowDropdown(true)}
+          activeOpacity={0.7}
+        >
+          <Text style={s.dropdownButtonText}>
+            {statusFilter === 'All' ? 'Filter by Status' : statusFilter}
+          </Text>
+          <Ionicons name="chevron-down" size={18} color={TEXT} />
+        </TouchableOpacity>
+        
+        {statusFilter !== 'All' && (
+          <TouchableOpacity
+            style={s.clearButton}
+            onPress={() => setStatusFilter('All')}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="close-circle" size={20} color={TEXT} />
+          </TouchableOpacity>
+        )}
+      </View>
+
+      {/* Dropdown Modal */}
+      <Modal
+        visible={showDropdown}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowDropdown(false)}
+      >
+        <Pressable 
+          style={s.dropdownBackdrop} 
+          onPress={() => setShowDropdown(false)}
+        >
+          <View style={s.dropdownMenu}>
+            {(['Live', 'Scheduled', 'Final'] as StatusFilter[]).map((status) => (
+              <TouchableOpacity
+                key={status}
+                style={s.dropdownItem}
+                onPress={() => {
+                  setStatusFilter(status);
+                  setShowDropdown(false);
+                }}
+                activeOpacity={0.7}
+              >
+                <Text style={s.dropdownItemText}>{status}</Text>
+                {statusFilter === status && (
+                  <Ionicons name="checkmark" size={20} color={YELLOW} />
+                )}
+              </TouchableOpacity>
+            ))}
+          </View>
+        </Pressable>
+      </Modal>
+
       {/* Scrollable grid of games */}
       <FlatList
         data={games}
@@ -226,7 +322,7 @@ export default function ScheduleIndex() {
         ListEmptyComponent={
           <View style={{ padding: 24 }}>
             <Text style={{ color: TEXT, textAlign: 'center' }}>
-              {loading ? 'Loading…' : 'No games found.'}
+              {loading ? 'Loading…' : statusFilter === 'All' ? 'No games found.' : `No ${statusFilter} games.`}
             </Text>
           </View>
         }
@@ -243,6 +339,72 @@ const s = StyleSheet.create({
   tabText: { color: '#FFFFFF', fontWeight: '700', letterSpacing: 1, fontFamily: FONT_FAMILIES.archivoBlack },
   tabTextActive: { color: '#FFFFFF', fontFamily: FONT_FAMILIES.archivoBlack },
   underline: { height: 3, backgroundColor: YELLOW, borderRadius: 2, marginTop: 6 },
+
+  // Status Filter Styles
+  filterContainer: {
+    flexDirection: 'row',
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    gap: 8,
+    marginBottom: 8,
+    alignItems: 'center',
+  },
+  dropdownButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    backgroundColor: CARD,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: LINE,
+  },
+  dropdownButtonText: {
+    color: TEXT,
+    fontWeight: '700',
+    fontSize: 14,
+    fontFamily: FONT_FAMILIES.archivoBlack,
+  },
+  clearButton: {
+    padding: 8,
+    backgroundColor: CARD,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: LINE,
+  },
+  dropdownBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  dropdownMenu: {
+    backgroundColor: NAVY,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: LINE,
+    width: '80%',
+    maxWidth: 300,
+    overflow: 'hidden',
+  },
+  dropdownItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: LINE,
+  },
+  dropdownItemText: {
+    color: TEXT,
+    fontSize: 16,
+    fontWeight: '700',
+    fontFamily: FONT_FAMILIES.archivoBlack,
+  },
 
   card: {
     backgroundColor: CARD,
