@@ -61,7 +61,15 @@
       }
     },
     "plugins": [
-      "expo-font"
+      "expo-font",
+      [
+        "expo-notifications",
+        {
+          "icon": "./images/MYFT_APP_LOGO.png",
+          "color": "#FFCB05",
+          "sounds": []
+        }
+      ]
     ]
   }
 }

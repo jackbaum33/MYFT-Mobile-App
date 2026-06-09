@@ -1,11 +1,12 @@
 // app/_layout.tsx - Authentication-aware root layout (restored with safety checks)
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth } from '../services/firebaseConfig';
 import { userExists } from '../services/users';
+import { registerForPushNotifications } from '../services/notifications';
 import TabNavigator from './TabNavigator';
 import ProfileModal from './(modals)/profile';
 import LoginScreen from './login';
@@ -86,6 +87,7 @@ function RootNavigator() {
   const [isLoading, setIsLoading] = useState(true);
   const [hasProfile, setHasProfile] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
+  const notifRegisteredRef = useRef(false);
 
   const checkUserProfile = async (firebaseUser: any) => {
     if (firebaseUser) {
@@ -150,6 +152,14 @@ function RootNavigator() {
 
     return unsubscribe;
   }, []);
+
+  // Register for push notifications once the user is authenticated with a profile
+  useEffect(() => {
+    if (user && hasProfile && !notifRegisteredRef.current) {
+      notifRegisteredRef.current = true;
+      registerForPushNotifications(user.uid).catch(() => {});
+    }
+  }, [user, hasProfile]);
 
   const handleRetry = () => {
     setAuthError(null);
