@@ -1,4 +1,5 @@
-import * as functions from 'firebase-functions';
+import { onDocumentUpdated } from 'firebase-functions/v2/firestore';
+import { onSchedule } from 'firebase-functions/v2/scheduler';
 import * as admin from 'firebase-admin';
 import { Expo, ExpoPushMessage } from 'expo-server-sdk';
 
@@ -59,70 +60,57 @@ function teamLabel(teamId: string): string {
 
 // --- Cloud Functions ---
 
-/**
- * Firestore trigger: fires whenever a game document is updated.
- * Sends a push notification when the lead flips or the game becomes tied.
- */
-export const onGameUpdate = functions.firestore
-  .document('games/{gameId}')
-  .onUpdate(async (change) => {
-    const before = change.before.data();
-    const after = change.after.data();
+export const onGameUpdate = onDocumentUpdated('games/{gameId}', async (event) => {
+  const before = event.data?.before.data();
+  const after = event.data?.after.data();
+  if (!before || !after) return;
 
-    // Only care about games currently in progress
-    if ((after.status ?? '').toLowerCase() !== 'live') return;
+  if ((after.status ?? '').toLowerCase() !== 'live') return;
 
-    const s1Before = Number(before.team1score ?? 0);
-    const s2Before = Number(before.team2score ?? 0);
-    const s1After = Number(after.team1score ?? 0);
-    const s2After = Number(after.team2score ?? 0);
+  const s1Before = Number(before.team1score ?? 0);
+  const s2Before = Number(before.team2score ?? 0);
+  const s1After = Number(after.team1score ?? 0);
+  const s2After = Number(after.team2score ?? 0);
 
-    // No score change — nothing to do
-    if (s1Before === s1After && s2Before === s2After) return;
+  if (s1Before === s1After && s2Before === s2After) return;
 
-    const wasTied = s1Before === s2Before;
-    const isTied = s1After === s2After;
-    const t1WasLeading = s1Before > s2Before;
-    const t1IsLeading = s1After > s2After;
-    const leadFlipped = !isTied && t1WasLeading !== t1IsLeading;
+  const wasTied = s1Before === s2Before;
+  const isTied = s1After === s2After;
+  const t1WasLeading = s1Before > s2Before;
+  const t1IsLeading = s1After > s2After;
+  const leadFlipped = !isTied && t1WasLeading !== t1IsLeading;
 
-    // Only notify on tie or lead change
-    if (!leadFlipped && !(isTied && !wasTied)) return;
+  if (!leadFlipped && !(isTied && !wasTied)) return;
 
-    const t1 = teamLabel(String(after.team1ID ?? 'Team 1'));
-    const t2 = teamLabel(String(after.team2ID ?? 'Team 2'));
-    const scoreStr = `${s1After}–${s2After}`;
+  const t1 = teamLabel(String(after.team1ID ?? 'Team 1'));
+  const t2 = teamLabel(String(after.team2ID ?? 'Team 2'));
+  const scoreStr = `${s1After}–${s2After}`;
 
-    let title: string;
-    let body: string;
+  let title: string;
+  let body: string;
 
-    if (isTied && !wasTied) {
-      title = 'Tied Game!';
-      body = `${t1} ${scoreStr} ${t2}`;
-    } else {
-      const leader = t1IsLeading ? t1 : t2;
-      title = 'Lead Change!';
-      body = `${leader} takes the lead  •  ${t1} ${scoreStr} ${t2}`;
-    }
+  if (isTied && !wasTied) {
+    title = 'Tied Game!';
+    body = `${t1} ${scoreStr} ${t2}`;
+  } else {
+    const leader = t1IsLeading ? t1 : t2;
+    title = 'Lead Change!';
+    body = `${leader} takes the lead  •  ${t1} ${scoreStr} ${t2}`;
+  }
 
-    const tokens = await getAllPushTokens();
-    await sendPush(tokens, title, body);
-  });
+  const tokens = await getAllPushTokens();
+  await sendPush(tokens, title, body);
+});
 
-/**
- * Scheduled function (every 5 minutes): finds schedule events starting in the
- * next 10–20 minutes and sends a reminder to all users if not already sent.
- */
-export const sendEventReminders = functions.pubsub
-  .schedule('every 5 minutes')
-  .timeZone('America/New_York')
-  .onRun(async () => {
+export const sendEventReminders = onSchedule(
+  { schedule: 'every 5 minutes', timeZone: 'America/New_York' },
+  async () => {
     const now = admin.firestore.Timestamp.now();
     const windowStart = admin.firestore.Timestamp.fromMillis(
-      now.toMillis() + 10 * 60 * 1000 // 10 min from now
+      now.toMillis() + 10 * 60 * 1000
     );
     const windowEnd = admin.firestore.Timestamp.fromMillis(
-      now.toMillis() + 20 * 60 * 1000 // 20 min from now
+      now.toMillis() + 20 * 60 * 1000
     );
 
     const snap = await db
@@ -139,13 +127,12 @@ export const sendEventReminders = functions.pubsub
     const batch = db.batch();
 
     for (const eventDoc of snap.docs) {
-      const event = eventDoc.data();
+      const eventData = eventDoc.data();
 
-      // Skip if we already sent a reminder for this event
-      if (event.reminderSentAt) continue;
+      if (eventData.reminderSentAt) continue;
 
       const title = 'Starting Soon';
-      const body = `${event.title} begins in ~15 minutes at ${event.location}`;
+      const body = `${eventData.title} begins in ~15 minutes at ${eventData.location}`;
 
       await sendPush(tokens, title, body, { eventId: eventDoc.id });
 
@@ -155,4 +142,5 @@ export const sendEventReminders = functions.pubsub
     }
 
     await batch.commit();
-  });
+  }
+);
