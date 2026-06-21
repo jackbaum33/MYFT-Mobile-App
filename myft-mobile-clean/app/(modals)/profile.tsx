@@ -65,6 +65,7 @@ interface Game {
   team1score: number;
   team2score: number;
   status: string;
+  playerStats?: Record<string, number[]>;
 }
 
 interface Team {

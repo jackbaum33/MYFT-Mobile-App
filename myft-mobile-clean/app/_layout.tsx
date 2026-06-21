@@ -1,5 +1,4 @@
-// app/_layout.tsx - Authentication-aware root layout (restored with safety checks)
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
@@ -12,7 +11,14 @@ import ProfileModal from './(modals)/profile';
 import LoginScreen from './login';
 import { TournamentProvider } from '../context/TournamentContext';
 import { AuthProvider } from '../context/AuthContext';
-import { View, Text, ActivityIndicator } from 'react-native';
+import {
+  Animated,
+  Dimensions,
+  Easing,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 
 export type RootStackParamList = {
   Main: undefined;
@@ -22,71 +28,141 @@ export type RootStackParamList = {
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
-function AuthLoadingScreen() {
+// ─── Animated splash overlay ────────────────────────────────────────────────
+
+function AnimatedSplash({
+  authReady,
+  onFinished,
+}: {
+  authReady: boolean;
+  onFinished: () => void;
+}) {
+  const { width } = Dimensions.get('window');
+  const logoOpacity = useRef(new Animated.Value(0)).current;
+  const progress = useRef(new Animated.Value(0)).current;
+  const splashOpacity = useRef(new Animated.Value(1)).current;
+  const dismissedRef = useRef(false);
+  const animDoneRef = useRef(false);
+
+  const dismiss = useCallback(() => {
+    if (dismissedRef.current) return;
+    dismissedRef.current = true;
+    Animated.timing(splashOpacity, {
+      toValue: 0,
+      duration: 600,
+      useNativeDriver: true,
+    }).start(() => onFinished());
+  }, [onFinished, splashOpacity]);
+
+  // Play the animation sequence on mount
+  useEffect(() => {
+    Animated.sequence([
+      // 1. Logo fades in
+      Animated.timing(logoOpacity, {
+        toValue: 1,
+        duration: 400,
+        useNativeDriver: true,
+      }),
+      // 2. Football flies across
+      Animated.timing(progress, {
+        toValue: 1,
+        duration: 1000,
+        easing: Easing.inOut(Easing.ease),
+        useNativeDriver: true,
+      }),
+      // 3. Brief pause before fade
+      Animated.delay(200),
+    ]).start(() => {
+      animDoneRef.current = true;
+      if (authReady) dismiss();
+    });
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // If auth resolves after the animation finishes, dismiss immediately
+  useEffect(() => {
+    if (authReady && animDoneRef.current) dismiss();
+  }, [authReady, dismiss]);
+
+  const footballX = progress.interpolate({
+    inputRange: [0, 1],
+    outputRange: [-width * 0.65, width * 0.65],
+  });
+  const footballY = progress.interpolate({
+    inputRange: [0, 0.5, 1],
+    outputRange: [20, -140, 20],
+  });
+  const footballRotate = progress.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['-30deg', '30deg'],
+  });
+
   return (
-    <View style={{ 
-      flex: 1, 
-      backgroundColor: '#00274C', 
-      justifyContent: 'center', 
-      alignItems: 'center' 
-    }}>
-      <ActivityIndicator size="large" color="#FFCB05" />
-      <Text style={{ 
-        color: '#FFCB05', 
-        marginTop: 16, 
-        fontSize: 16 
-      }}>
-        Loading...
-      </Text>
-    </View>
+    <Animated.View style={[StyleSheet.absoluteFillObject, styles.splash, { opacity: splashOpacity }]}>
+      <Animated.Image
+        source={require('../images/MYFT_APP_LOGO.png')}
+        style={[styles.logo, { opacity: logoOpacity }]}
+        resizeMode="contain"
+      />
+      <Animated.Text
+        style={[
+          styles.football,
+          {
+            transform: [
+              { translateX: footballX },
+              { translateY: footballY },
+              { rotate: footballRotate },
+            ],
+          },
+        ]}
+      >
+        🏈
+      </Animated.Text>
+    </Animated.View>
   );
 }
 
-function AuthErrorScreen({ error, onRetry }: { error: string, onRetry: () => void }) {
+const styles = StyleSheet.create({
+  splash: {
+    backgroundColor: '#00274C',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  logo: {
+    width: 240,
+    height: 240,
+  },
+  football: {
+    position: 'absolute',
+    fontSize: 48,
+  },
+});
+
+// ─── Error screen ────────────────────────────────────────────────────────────
+
+function AuthErrorScreen({ error, onRetry }: { error: string; onRetry: () => void }) {
   return (
-    <View style={{ 
-      flex: 1, 
-      backgroundColor: '#00274C', 
-      justifyContent: 'center', 
-      alignItems: 'center',
-      padding: 20
-    }}>
-      <Text style={{ 
-        color: '#FF6B6B', 
-        fontSize: 18,
-        fontWeight: 'bold',
-        marginBottom: 10,
-        textAlign: 'center'
-      }}>
+    <View style={{ flex: 1, backgroundColor: '#00274C', justifyContent: 'center', alignItems: 'center', padding: 20 }}>
+      <Text style={{ color: '#FF6B6B', fontSize: 18, fontWeight: 'bold', marginBottom: 10, textAlign: 'center' }}>
         Authentication Error
       </Text>
-      <Text style={{ 
-        color: '#E9ECEF', 
-        fontSize: 14,
-        textAlign: 'center',
-        marginBottom: 20
-      }}>
+      <Text style={{ color: '#E9ECEF', fontSize: 14, textAlign: 'center', marginBottom: 20 }}>
         {error}
       </Text>
-      <Text 
-        style={{ 
-          color: '#FFCB05', 
-          fontSize: 16,
-          textDecorationLine: 'underline'
-        }}
-        onPress={onRetry}
-      >
+      <Text style={{ color: '#FFCB05', fontSize: 16, textDecorationLine: 'underline' }} onPress={onRetry}>
         Retry
       </Text>
     </View>
   );
 }
 
+// ─── Root navigator ──────────────────────────────────────────────────────────
+
 function RootNavigator() {
   const [user, setUser] = useState<any>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [authReady, setAuthReady] = useState(false);
   const [hasProfile, setHasProfile] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
+  const [splashVisible, setSplashVisible] = useState(true);
   const notifRegisteredRef = useRef(false);
 
   const checkUserProfile = async (firebaseUser: any) => {
@@ -95,7 +171,6 @@ function RootNavigator() {
       try {
         const profileExists = await userExists(firebaseUser.uid);
         console.log('📋 Profile exists:', profileExists);
-        
         setUser(firebaseUser);
         setHasProfile(profileExists);
         setAuthError(null);
@@ -111,26 +186,19 @@ function RootNavigator() {
     }
   };
 
-  // Expose the profile check function globally so login can trigger it
   useEffect(() => {
     (global as any).refreshUserProfile = async () => {
       console.log('🔄 Manually refreshing user profile...');
-      if (auth.currentUser) {
-        await checkUserProfile(auth.currentUser);
-      }
+      if (auth.currentUser) await checkUserProfile(auth.currentUser);
     };
-    
-    return () => {
-      delete (global as any).refreshUserProfile;
-    };
+    return () => { delete (global as any).refreshUserProfile; };
   }, []);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(
-      auth, 
+      auth,
       async (firebaseUser) => {
         console.log('🔄 Auth state changed:', firebaseUser ? 'User signed in' : 'User signed out');
-        
         try {
           await checkUserProfile(firebaseUser);
         } catch (error: any) {
@@ -139,21 +207,18 @@ function RootNavigator() {
           setHasProfile(false);
           setAuthError(error.message || 'Authentication failed');
         } finally {
-          setIsLoading(false);
+          setAuthReady(true);
         }
       },
       (error: any) => {
-        // Auth listener error handler
         console.error('Firebase auth listener error:', error);
-        setIsLoading(false);
+        setAuthReady(true);
         setAuthError(error.message || 'Firebase connection failed');
       }
     );
-
     return unsubscribe;
   }, []);
 
-  // Register for push notifications once the user is authenticated with a profile
   useEffect(() => {
     if (user && hasProfile && !notifRegisteredRef.current) {
       notifRegisteredRef.current = true;
@@ -163,60 +228,65 @@ function RootNavigator() {
 
   const handleRetry = () => {
     setAuthError(null);
-    setIsLoading(true);
-    // Trigger auth state check again
+    setAuthReady(false);
     if (auth.currentUser) {
-      checkUserProfile(auth.currentUser).finally(() => setIsLoading(false));
+      checkUserProfile(auth.currentUser).finally(() => setAuthReady(true));
     } else {
-      setIsLoading(false);
+      setAuthReady(true);
     }
   };
 
-  if (authError) {
-    return <AuthErrorScreen error={authError} onRetry={handleRetry} />;
-  }
-
-  if (isLoading) {
-    return <AuthLoadingScreen />;
-  }
-
-  // Show login if no user or no profile
   const shouldShowLogin = !user || !hasProfile;
 
   return (
-    <Stack.Navigator screenOptions={{ headerShown: false }}>
-      {shouldShowLogin ? (
-        // Auth stack - only login screen
-        <Stack.Screen name="Login" component={LoginScreen} />
+    <View style={{ flex: 1 }}>
+      {/* Navigator renders underneath the splash so the correct screen is ready when splash fades */}
+      {authError ? (
+        <AuthErrorScreen error={authError} onRetry={handleRetry} />
+      ) : authReady ? (
+        <Stack.Navigator screenOptions={{ headerShown: false }}>
+          {shouldShowLogin ? (
+            <Stack.Screen name="Login" component={LoginScreen} />
+          ) : (
+            <>
+              <Stack.Screen name="Main" component={TabNavigator} />
+              <Stack.Group screenOptions={{ presentation: 'modal' }}>
+                <Stack.Screen
+                  name="Profile"
+                  component={ProfileModal}
+                  options={{
+                    headerShown: true,
+                    title: 'Profile',
+                    headerStyle: { backgroundColor: '#00274C' },
+                    headerTintColor: '#FFCB05',
+                  }}
+                />
+              </Stack.Group>
+            </>
+          )}
+        </Stack.Navigator>
       ) : (
-        // App stack - main app + modals
-        <>
-          <Stack.Screen name="Main" component={TabNavigator} />
-          
-          <Stack.Group screenOptions={{ presentation: 'modal' }}>
-            <Stack.Screen 
-              name="Profile" 
-              component={ProfileModal}
-              options={{
-                headerShown: true,
-                title: 'Profile',
-                headerStyle: { backgroundColor: '#00274C' },
-                headerTintColor: '#FFCB05',
-              }}
-            />
-          </Stack.Group>
-        </>
+        <View style={{ flex: 1, backgroundColor: '#00274C' }} />
       )}
-    </Stack.Navigator>
+
+      {splashVisible && (
+        <AnimatedSplash
+          authReady={authReady}
+          onFinished={() => setSplashVisible(false)}
+        />
+      )}
+    </View>
   );
 }
+
+// ─── Root layout ─────────────────────────────────────────────────────────────
 
 export default function RootLayout() {
   return (
     <AuthProvider>
       <TournamentProvider>
         <NavigationContainer>
-        <StatusBar style="light" backgroundColor="#00274C" />
+          <StatusBar style="light" backgroundColor="#00274C" />
           <RootNavigator />
         </NavigationContainer>
       </TournamentProvider>

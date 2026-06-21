@@ -33,7 +33,7 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.sendEventReminders = exports.onGameUpdate = void 0;
+exports.sendEventReminders = exports.onGameUpdate = exports.aggregatePlayerStats = void 0;
 const firestore_1 = require("firebase-functions/v2/firestore");
 const scheduler_1 = require("firebase-functions/v2/scheduler");
 const admin = __importStar(require("firebase-admin"));
@@ -83,6 +83,63 @@ function teamLabel(teamId) {
         .join(' ');
 }
 // --- Cloud Functions ---
+/**
+ * Firestore trigger: whenever a game document is written, re-aggregate
+ * seasonTotals for any player whose per-game stats changed.
+ *
+ * Stats array indices (matches client-side statsFromSeasonTotals):
+ *   0  touchdowns        6  catches
+ *   1  passingTDs        7  flagsPulled
+ *   2  minimalReceptions 8  sacks
+ *   3  shortReceptions   9  interceptions
+ *   4  mediumReceptions  10 passingInterceptions
+ *   5  longReceptions
+ */
+exports.aggregatePlayerStats = (0, firestore_1.onDocumentUpdated)('games/{gameId}', async (event) => {
+    var _a, _b, _c, _d, _e, _f;
+    const before = (_a = event.data) === null || _a === void 0 ? void 0 : _a.before.data();
+    const after = (_b = event.data) === null || _b === void 0 ? void 0 : _b.after.data();
+    if (!before || !after)
+        return;
+    const statsBefore = (_c = before.playerStats) !== null && _c !== void 0 ? _c : {};
+    const statsAfter = (_d = after.playerStats) !== null && _d !== void 0 ? _d : {};
+    // Collect only players whose stats actually changed to minimise Firestore writes
+    const changedPlayerIds = new Set();
+    const allKeys = new Set([...Object.keys(statsBefore), ...Object.keys(statsAfter)]);
+    for (const pid of allKeys) {
+        if (JSON.stringify((_e = statsBefore[pid]) !== null && _e !== void 0 ? _e : null) !== JSON.stringify((_f = statsAfter[pid]) !== null && _f !== void 0 ? _f : null)) {
+            changedPlayerIds.add(pid);
+        }
+    }
+    if (changedPlayerIds.size === 0)
+        return;
+    // Scan every game and accumulate totals for affected players
+    const allGames = await db.collection('games').get();
+    const totals = new Map();
+    for (const pid of changedPlayerIds) {
+        totals.set(pid, new Array(11).fill(0));
+    }
+    allGames.forEach((gameDoc) => {
+        var _a, _b;
+        const ps = (_a = gameDoc.data().playerStats) !== null && _a !== void 0 ? _a : {};
+        for (const pid of changedPlayerIds) {
+            const gs = ps[pid];
+            if (!Array.isArray(gs))
+                continue;
+            const running = totals.get(pid);
+            for (let i = 0; i < 11; i++) {
+                running[i] += Number((_b = gs[i]) !== null && _b !== void 0 ? _b : 0);
+            }
+        }
+    });
+    // Write updated seasonTotals in a single batch
+    const batch = db.batch();
+    for (const [pid, total] of totals) {
+        batch.update(db.doc(`players/${pid}`), { seasonTotals: total });
+    }
+    await batch.commit();
+    console.log(`[aggregatePlayerStats] updated ${totals.size} player(s):`, [...changedPlayerIds]);
+});
 exports.onGameUpdate = (0, firestore_1.onDocumentUpdated)('games/{gameId}', async (event) => {
     var _a, _b, _c, _d, _e, _f, _g, _h, _j;
     const before = (_a = event.data) === null || _a === void 0 ? void 0 : _a.before.data();

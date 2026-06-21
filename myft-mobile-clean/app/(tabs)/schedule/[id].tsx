@@ -24,6 +24,7 @@ type FSGame = {
   team2ID?: string;
   team1score?: number;
   team2score?: number;
+  playerStats?: Record<string, number[]>;
 };
 
 const CARD = '#00417D';
@@ -128,14 +129,30 @@ export default function GameDetail() {
 
   const rows = useMemo(() => {
     const team = side === 'team1' ? t1 : t2;
-    const list = (team?.players ?? []).map(p => ({
-      playerId: p.id,
-      name: p.name,
-      td: p.stats.touchdowns ?? 0,
-      line: { ...p.stats },
-    }));
-    return list;
-  }, [side, t1, t2]);
+    const gamePlayerStats: Record<string, number[]> = game?.playerStats ?? {};
+    return (team?.players ?? [])
+      .filter(p => gamePlayerStats[p.id] !== undefined)
+      .map(p => {
+        const arr = gamePlayerStats[p.id] ?? [];
+        return {
+          playerId: p.id,
+          name: p.name,
+          line: {
+            touchdowns:           arr[0]  ?? 0,
+            passingTDs:           arr[1]  ?? 0,
+            minimalReceptions:    arr[2]  ?? 0,
+            shortReceptions:      arr[3]  ?? 0,
+            mediumReceptions:     arr[4]  ?? 0,
+            longReceptions:       arr[5]  ?? 0,
+            catches:              arr[6]  ?? 0,
+            flagsPulled:          arr[7]  ?? 0,
+            sacks:                arr[8]  ?? 0,
+            interceptions:        arr[9]  ?? 0,
+            passingInterceptions: arr[10] ?? 0,
+          },
+        };
+      });
+  }, [side, t1, t2, game?.playerStats]);
 
   const computeBreakdown = (line: NonNullable<typeof detail>['line']) => {
     const items = [
@@ -207,7 +224,7 @@ export default function GameDetail() {
 
       <Text style={styles.status}>{prettyStatus}</Text>
 
-      {/* Toggle which team roster (season totals) to show */}
+      {/* Toggle which team's game stats to show */}
       <View style={styles.toggleRow}>
         <TouchableOpacity
           onPress={() => setSide('team1')}
@@ -227,43 +244,42 @@ export default function GameDetail() {
         </TouchableOpacity>
       </View>
 
-      {/* Spreadsheet-like box */}
+      {/* Per-game player stats */}
       <View style={styles.tableCard}>
         <FlatList
           data={rows}
           keyExtractor={(r) => r.playerId}
           ItemSeparatorComponent={() => <View style={styles.rowSep} />}
+          ListEmptyComponent={
+            <Text style={[styles.empty, { padding: 16 }]}>
+              No stats recorded for this game yet.
+            </Text>
+          }
           renderItem={({ item }) => {
             const imageUrl = getPlayerImageUrl(item.playerId);
             const hasError = imageErrors.has(item.playerId);
-            
             return (
               <View style={styles.row}>
-                {/* Player Image */}
                 {!hasError ? (
-                  <Image 
-                    source={{ uri: imageUrl }} 
+                  <Image
+                    source={{ uri: imageUrl }}
                     style={styles.playerImage}
-                    onError={() => {
-                      setImageErrors(prev => new Set(prev).add(item.playerId));
-                    }}
+                    onError={() => setImageErrors(prev => new Set(prev).add(item.playerId))}
                   />
                 ) : (
                   <View style={styles.playerImagePlaceholder}>
                     <Ionicons name="person" size={18} color={TEXT} />
                   </View>
                 )}
-                
                 <Text style={[styles.cell, styles.cName]} numberOfLines={1} ellipsizeMode="tail">
                   {item.name}
                 </Text>
-
                 <TouchableOpacity
                   style={styles.detailBtn}
                   onPress={() => setDetail({ name: item.name, line: item.line })}
                   activeOpacity={0.85}
                 >
-                  <Text style={styles.detailBtnText}>Total Stat Breakdown</Text>
+                  <Text style={styles.detailBtnText}>Game Stats</Text>
                 </TouchableOpacity>
               </View>
             );
@@ -271,7 +287,7 @@ export default function GameDetail() {
         />
       </View>
 
-      {/* Modal: per-player full breakdown (uses SEASON totals) */}
+      {/* Modal: per-player game stat breakdown */}
       <Modal
         visible={!!detail}
         transparent
@@ -284,7 +300,7 @@ export default function GameDetail() {
               const { rows, grandTotal } = computeBreakdown(detail.line);
               return (
                 <>
-                  <Text style={styles.modalTitle}>{detail.name}'s Stats</Text>
+                  <Text style={styles.modalTitle}>{detail.name}'s Game Stats</Text>
 
                   <View style={[styles.modalRow, styles.rowHead]}>
                     <Text style={[styles.cellLabel, { flex: 1 }]}>Metric</Text>
