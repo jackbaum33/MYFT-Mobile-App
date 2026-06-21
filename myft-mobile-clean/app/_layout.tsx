@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
@@ -19,6 +19,7 @@ import {
   Text,
   View,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 
 export type RootStackParamList = {
   Main: undefined;
@@ -43,6 +44,9 @@ function AnimatedSplash({
   const splashOpacity = useRef(new Animated.Value(1)).current;
   const dismissedRef = useRef(false);
   const animDoneRef = useRef(false);
+  // Ref keeps the latest authReady value accessible inside the stale animation closure
+  const authReadyRef = useRef(authReady);
+  useEffect(() => { authReadyRef.current = authReady; }, [authReady]);
 
   const dismiss = useCallback(() => {
     if (dismissedRef.current) return;
@@ -66,15 +70,15 @@ function AnimatedSplash({
       // 2. Football flies across
       Animated.timing(progress, {
         toValue: 1,
-        duration: 1000,
-        easing: Easing.inOut(Easing.ease),
+        duration: 1400,
+        easing: Easing.linear,
         useNativeDriver: true,
       }),
       // 3. Brief pause before fade
       Animated.delay(200),
     ]).start(() => {
       animDoneRef.current = true;
-      if (authReady) dismiss();
+      if (authReadyRef.current) dismiss(); // use ref — closure would capture stale prop
     });
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -87,13 +91,53 @@ function AnimatedSplash({
     inputRange: [0, 1],
     outputRange: [-width * 0.65, width * 0.65],
   });
+
+  // True parabola: y(t) = 680t² − 680t + 10  →  peaks at −160 when t = 0.5
   const footballY = progress.interpolate({
-    inputRange: [0, 0.5, 1],
-    outputRange: [20, -140, 20],
+    inputRange: [0, 1 / 6, 2 / 6, 0.5, 4 / 6, 5 / 6, 1],
+    outputRange: [10, -84, -141, -160, -141, -84, 10],
   });
+
+  // 21-point smooth rotation + fading dots — computed once from device width
+  const { rotInput, rotOutput, dots } = useMemo(() => {
+    // Rotation: exact atan2 angle at every 5% of the flight
+    // dy/dt = 1360t − 680  |  dx/dt = total X travel (1.3 × screen width)
+    const N_ROT = 30;
+    const dxdt = width * 1.3;
+    const rotInput = Array.from({ length: N_ROT }, (_, i) => i / (N_ROT - 1));
+    const rotOutput = rotInput.map(t => {
+      const rad = Math.atan2(1360 * t - 680, dxdt) * 1.15; // scale up for visible tilt
+      return `${(rad * 180 / Math.PI).toFixed(2)}deg`;
+    });
+
+    // Dots: appear as ball passes, fade out ~0.5 s later
+    const N_DOTS = 12;
+    const LIFE = 500 / 1400; // 0.5 s expressed as a fraction of the 1400 ms flight
+    const dots = Array.from({ length: N_DOTS }, (_, i) => {
+      const t = i / (N_DOTS - 1);
+      const x = width * 0.65 * (2 * t - 1);
+      const y = 680 * t * t - 680 * t + 10;
+
+      // Guarantee strictly-increasing keyframe times even at boundary dots (t=0, t=1)
+      const k0 = Math.max(0, t - 0.012);
+      const k1 = Math.max(k0 + 0.001, Math.min(1, t));
+      const k2 = Math.max(k1 + 0.001, Math.min(1, t + LIFE));
+      const k3 = Math.max(k2 + 0.001, Math.min(1, t + LIFE + 0.04));
+
+      const opacity = progress.interpolate({
+        inputRange:  [k0,  k1,  k2,  k3],
+        outputRange: [0, 0.7, 0.7,   0],
+        extrapolate: 'clamp',
+      });
+      return { x, y, opacity };
+    });
+
+    return { rotInput, rotOutput, dots };
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   const footballRotate = progress.interpolate({
-    inputRange: [0, 1],
-    outputRange: ['-30deg', '30deg'],
+    inputRange: rotInput,
+    outputRange: rotOutput,
   });
 
   return (
@@ -103,7 +147,25 @@ function AnimatedSplash({
         style={[styles.logo, { opacity: logoOpacity }]}
         resizeMode="contain"
       />
-      <Animated.Text
+
+      {/* Dashed trail — rendered behind the ball */}
+      {dots.map((dot, i) => (
+        <Animated.View
+          key={i}
+          style={{
+            position: 'absolute',
+            width: 5,
+            height: 5,
+            borderRadius: 2.5,
+            backgroundColor: '#FFCB05',
+            opacity: dot.opacity,
+            transform: [{ translateX: dot.x }, { translateY: dot.y }],
+          }}
+        />
+      ))}
+
+      {/* Ball */}
+      <Animated.View
         style={[
           styles.football,
           {
@@ -115,8 +177,8 @@ function AnimatedSplash({
           },
         ]}
       >
-        🏈
-      </Animated.Text>
+        <Ionicons name="american-football-outline" size={48} color="#FFCB05" />
+      </Animated.View>
     </Animated.View>
   );
 }
@@ -133,7 +195,6 @@ const styles = StyleSheet.create({
   },
   football: {
     position: 'absolute',
-    fontSize: 48,
   },
 });
 
