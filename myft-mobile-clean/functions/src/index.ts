@@ -7,6 +7,8 @@ admin.initializeApp();
 const db = admin.firestore();
 const expo = new Expo();
 
+export { generateBracketOnPoolComplete, advanceBracketOnGameFinal } from './bracket';
+
 // --- helpers ---
 
 async function getAllPushTokens(): Promise<string[]> {

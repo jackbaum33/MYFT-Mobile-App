@@ -8,6 +8,7 @@ import { useTournament } from '../../../context/TournamentContext';
 import { getTeamLogo } from '../../../team_logos';
 import { FONT_FAMILIES } from '../../../fonts';
 import { Ionicons } from '@expo/vector-icons';
+import BracketView from './BracketView';
 
 // Import the navigation types from your layout
 import { ScheduleStackParamList } from './_layout';
@@ -28,10 +29,17 @@ type FSGame = {
   team2ID?: string;
   team1score?: number;
   team2score?: number;
-  status?: 'Scheduled' | 'Live' | 'Final' | string;
+  status?: 'Scheduled' | 'Live' | 'Final' | 'TBD' | 'Bye' | string;
+  // Playoff bracket fields — only present on Cloud Function-generated bracket games
+  round?: number;
+  roundLabel?: string;
+  bracketSlot?: number;
+  seed1?: number;
+  seed2?: number;
+  isBye?: boolean;
 };
 
-type UICardGame = {
+export type UICardGame = {
   id: string;
   time: string;       // e.g. "3:30 PM"
   field: string;
@@ -41,9 +49,16 @@ type UICardGame = {
   score1: number;
   score2: number;
   dayKey: string;     // YYYY-MM-DD
+  division?: string;
+  round?: number;
+  roundLabel?: string;
+  bracketSlot?: number;
+  seed1?: number;
+  seed2?: number;
+  isBye?: boolean;
 };
 
-type DayBucket = { label: string; games: UICardGame[] };
+type DayBucket = { label: string; games: UICardGame[]; isBracket: boolean };
 
 type StatusFilter = 'All' | 'Live' | 'Scheduled' | 'Final';
 
@@ -122,6 +137,13 @@ export default function ScheduleIndex() {
             score1: Number(g.team1score ?? 0),
             score2: Number(g.team2score ?? 0),
             dayKey: key,
+            division: g.division,
+            round: g.round,
+            roundLabel: g.roundLabel,
+            bracketSlot: g.bracketSlot,
+            seed1: g.seed1,
+            seed2: g.seed2,
+            isBye: g.isBye,
           };
         });
 
@@ -138,6 +160,7 @@ export default function ScheduleIndex() {
           .map(([key, list]) => ({
             label: prettyDayLabel(key),
             games: sortByStatus(list), // Sort games by status within each day
+            isBracket: list.some(g => g.round !== undefined),
           }));
 
         if (active) {
@@ -254,63 +277,70 @@ export default function ScheduleIndex() {
         )}
       </View>
 
-      {/* Status Filter Dropdown */}
-      <View style={s.filterContainer}>
-        <TouchableOpacity
-          style={s.dropdownButton}
-          onPress={() => setShowDropdown(true)}
-          activeOpacity={0.7}
-        >
-          <Text style={s.dropdownButtonText}>
-            {statusFilter === 'All' ? 'Filter by Status' : statusFilter}
-          </Text>
-          <Ionicons name="chevron-down" size={18} color={TEXT} />
-        </TouchableOpacity>
-        
-        {statusFilter !== 'All' && (
-          <TouchableOpacity
-            style={s.clearButton}
-            onPress={() => setStatusFilter('All')}
-            activeOpacity={0.7}
-          >
-            <Ionicons name="close-circle" size={20} color={TEXT} />
-          </TouchableOpacity>
-        )}
-      </View>
+      {/* Status Filter Dropdown — hidden for bracket days, which organize by round instead */}
+      {!day?.isBracket && (
+        <>
+          <View style={s.filterContainer}>
+            <TouchableOpacity
+              style={s.dropdownButton}
+              onPress={() => setShowDropdown(true)}
+              activeOpacity={0.7}
+            >
+              <Text style={s.dropdownButtonText}>
+                {statusFilter === 'All' ? 'Filter by Status' : statusFilter}
+              </Text>
+              <Ionicons name="chevron-down" size={18} color={TEXT} />
+            </TouchableOpacity>
 
-      {/* Dropdown Modal */}
-      <Modal
-        visible={showDropdown}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setShowDropdown(false)}
-      >
-        <Pressable 
-          style={s.dropdownBackdrop} 
-          onPress={() => setShowDropdown(false)}
-        >
-          <View style={s.dropdownMenu}>
-            {(['Live', 'Scheduled', 'Final'] as StatusFilter[]).map((status) => (
+            {statusFilter !== 'All' && (
               <TouchableOpacity
-                key={status}
-                style={s.dropdownItem}
-                onPress={() => {
-                  setStatusFilter(status);
-                  setShowDropdown(false);
-                }}
+                style={s.clearButton}
+                onPress={() => setStatusFilter('All')}
                 activeOpacity={0.7}
               >
-                <Text style={s.dropdownItemText}>{status}</Text>
-                {statusFilter === status && (
-                  <Ionicons name="checkmark" size={20} color={YELLOW} />
-                )}
+                <Ionicons name="close-circle" size={20} color={TEXT} />
               </TouchableOpacity>
-            ))}
+            )}
           </View>
-        </Pressable>
-      </Modal>
 
-      {/* Scrollable grid of games */}
+          {/* Dropdown Modal */}
+          <Modal
+            visible={showDropdown}
+            transparent
+            animationType="fade"
+            onRequestClose={() => setShowDropdown(false)}
+          >
+            <Pressable
+              style={s.dropdownBackdrop}
+              onPress={() => setShowDropdown(false)}
+            >
+              <View style={s.dropdownMenu}>
+                {(['Live', 'Scheduled', 'Final'] as StatusFilter[]).map((status) => (
+                  <TouchableOpacity
+                    key={status}
+                    style={s.dropdownItem}
+                    onPress={() => {
+                      setStatusFilter(status);
+                      setShowDropdown(false);
+                    }}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={s.dropdownItemText}>{status}</Text>
+                    {statusFilter === status && (
+                      <Ionicons name="checkmark" size={20} color={YELLOW} />
+                    )}
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </Pressable>
+          </Modal>
+        </>
+      )}
+
+      {/* Playoff bracket for bracket days, flat grid of games otherwise */}
+      {day?.isBracket ? (
+        <BracketView games={day.games} teams={teams} onPressGame={navigateToGame} />
+      ) : (
       <FlatList
         data={games}
         keyExtractor={(g) => g.id}
@@ -327,6 +357,7 @@ export default function ScheduleIndex() {
           </View>
         }
       />
+      )}
     </View>
   );
 }
