@@ -1,53 +1,16 @@
 import { onDocumentUpdated } from 'firebase-functions/v2/firestore';
 import { onSchedule } from 'firebase-functions/v2/scheduler';
 import * as admin from 'firebase-admin';
-import { Expo, ExpoPushMessage } from 'expo-server-sdk';
 
 admin.initializeApp();
 const db = admin.firestore();
-const expo = new Expo();
 
 export { generateBracketOnPoolComplete, advanceBracketOnGameFinal } from './bracket';
+export { notifyLeagueCreated, notifyDraftTurn } from './leagues';
+
+import { getAllPushTokens, sendPush } from './push';
 
 // --- helpers ---
-
-async function getAllPushTokens(): Promise<string[]> {
-  const snap = await db.collection('users').get();
-  const tokens: string[] = [];
-  snap.forEach((docSnap) => {
-    const token: unknown = docSnap.data().pushToken;
-    if (typeof token === 'string' && Expo.isExpoPushToken(token)) {
-      tokens.push(token);
-    }
-  });
-  return tokens;
-}
-
-async function sendPush(
-  tokens: string[],
-  title: string,
-  body: string,
-  data?: Record<string, string>
-): Promise<void> {
-  if (tokens.length === 0) return;
-
-  const messages: ExpoPushMessage[] = tokens.map((to) => ({
-    to,
-    title,
-    body,
-    data: data ?? {},
-    sound: 'default',
-  }));
-
-  const chunks = expo.chunkPushNotifications(messages);
-  for (const chunk of chunks) {
-    try {
-      await expo.sendPushNotificationsAsync(chunk);
-    } catch (e) {
-      console.error('[push] Failed to send chunk:', e);
-    }
-  }
-}
 
 // Convert a team ID like "michigan-boys" → "Michigan", "ohio-state-boys" → "Ohio State"
 function teamLabel(teamId: string): string {

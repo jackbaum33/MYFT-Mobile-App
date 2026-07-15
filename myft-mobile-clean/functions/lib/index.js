@@ -33,49 +33,20 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.sendEventReminders = exports.onGameUpdate = exports.aggregatePlayerStats = exports.advanceBracketOnGameFinal = exports.generateBracketOnPoolComplete = void 0;
+exports.sendEventReminders = exports.onGameUpdate = exports.aggregatePlayerStats = exports.notifyDraftTurn = exports.notifyLeagueCreated = exports.advanceBracketOnGameFinal = exports.generateBracketOnPoolComplete = void 0;
 const firestore_1 = require("firebase-functions/v2/firestore");
 const scheduler_1 = require("firebase-functions/v2/scheduler");
 const admin = __importStar(require("firebase-admin"));
-const expo_server_sdk_1 = require("expo-server-sdk");
 admin.initializeApp();
 const db = admin.firestore();
-const expo = new expo_server_sdk_1.Expo();
 var bracket_1 = require("./bracket");
 Object.defineProperty(exports, "generateBracketOnPoolComplete", { enumerable: true, get: function () { return bracket_1.generateBracketOnPoolComplete; } });
 Object.defineProperty(exports, "advanceBracketOnGameFinal", { enumerable: true, get: function () { return bracket_1.advanceBracketOnGameFinal; } });
+var leagues_1 = require("./leagues");
+Object.defineProperty(exports, "notifyLeagueCreated", { enumerable: true, get: function () { return leagues_1.notifyLeagueCreated; } });
+Object.defineProperty(exports, "notifyDraftTurn", { enumerable: true, get: function () { return leagues_1.notifyDraftTurn; } });
+const push_1 = require("./push");
 // --- helpers ---
-async function getAllPushTokens() {
-    const snap = await db.collection('users').get();
-    const tokens = [];
-    snap.forEach((docSnap) => {
-        const token = docSnap.data().pushToken;
-        if (typeof token === 'string' && expo_server_sdk_1.Expo.isExpoPushToken(token)) {
-            tokens.push(token);
-        }
-    });
-    return tokens;
-}
-async function sendPush(tokens, title, body, data) {
-    if (tokens.length === 0)
-        return;
-    const messages = tokens.map((to) => ({
-        to,
-        title,
-        body,
-        data: data !== null && data !== void 0 ? data : {},
-        sound: 'default',
-    }));
-    const chunks = expo.chunkPushNotifications(messages);
-    for (const chunk of chunks) {
-        try {
-            await expo.sendPushNotificationsAsync(chunk);
-        }
-        catch (e) {
-            console.error('[push] Failed to send chunk:', e);
-        }
-    }
-}
 // Convert a team ID like "michigan-boys" → "Michigan", "ohio-state-boys" → "Ohio State"
 function teamLabel(teamId) {
     const parts = teamId.split('-');
@@ -178,8 +149,8 @@ exports.onGameUpdate = (0, firestore_1.onDocumentUpdated)('games/{gameId}', asyn
         title = 'Lead Change!';
         body = `${leader} takes the lead  •  ${t1} ${scoreStr} ${t2}`;
     }
-    const tokens = await getAllPushTokens();
-    await sendPush(tokens, title, body);
+    const tokens = await (0, push_1.getAllPushTokens)();
+    await (0, push_1.sendPush)(tokens, title, body);
 });
 exports.sendEventReminders = (0, scheduler_1.onSchedule)({ schedule: 'every 5 minutes', timeZone: 'America/New_York' }, async () => {
     const now = admin.firestore.Timestamp.now();
@@ -192,7 +163,7 @@ exports.sendEventReminders = (0, scheduler_1.onSchedule)({ schedule: 'every 5 mi
         .get();
     if (snap.empty)
         return;
-    const tokens = await getAllPushTokens();
+    const tokens = await (0, push_1.getAllPushTokens)();
     if (tokens.length === 0)
         return;
     const batch = db.batch();
@@ -202,7 +173,7 @@ exports.sendEventReminders = (0, scheduler_1.onSchedule)({ schedule: 'every 5 mi
             continue;
         const title = 'Starting Soon';
         const body = `${eventData.title} begins in ~15 minutes at ${eventData.location}`;
-        await sendPush(tokens, title, body, { eventId: eventDoc.id });
+        await (0, push_1.sendPush)(tokens, title, body, { eventId: eventDoc.id });
         batch.update(eventDoc.ref, {
             reminderSentAt: admin.firestore.FieldValue.serverTimestamp(),
         });

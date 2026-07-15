@@ -3,10 +3,16 @@ import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import FantasyIndexScreen from './index';
 import PlayerScreen from './player/[id]';
+import LeagueDetailScreen from '../../screens/LeagueDetailScreen';
+import CreateLeagueScreen from '../../screens/CreateLeagueScreen';
+import DraftRoomScreen from '../../screens/DraftRoomScreen';
 
 export type FantasyStackParamList = {
   FantasyIndex: undefined;
   Player: { id: string };
+  LeagueDetail: { id: string };
+  CreateLeague: undefined;
+  DraftRoom: { id: string };
 };
 
 const Stack = createNativeStackNavigator<FantasyStackParamList>();
@@ -24,21 +30,36 @@ export default function FantasyLayout() {
         },
       }}
     >
-      <Stack.Screen 
-        name="FantasyIndex" 
+      <Stack.Screen
+        name="FantasyIndex"
         component={FantasyIndexScreen}
-        options={{ 
+        options={{
           title: 'Fantasy',
-          headerShown: true 
+          headerShown: true
         }}
       />
-      <Stack.Screen 
-        name="Player" 
+      <Stack.Screen
+        name="Player"
         component={PlayerScreen}
-        options={{ 
+        options={{
           title: 'Player Details',
-          headerShown: true 
+          headerShown: true
         }}
+      />
+      <Stack.Screen
+        name="LeagueDetail"
+        component={LeagueDetailScreen}
+        options={{ title: 'League', headerShown: true }}
+      />
+      <Stack.Screen
+        name="CreateLeague"
+        component={CreateLeagueScreen}
+        options={{ title: 'Create League', headerShown: true }}
+      />
+      <Stack.Screen
+        name="DraftRoom"
+        component={DraftRoomScreen}
+        options={{ title: 'Draft Room', headerShown: true }}
       />
     </Stack.Navigator>
   );
