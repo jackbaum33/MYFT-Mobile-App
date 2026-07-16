@@ -3,10 +3,22 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { FieldValue } from "firebase-admin/firestore";
-import { db } from "@/lib/firebaseAdmin";
+import { db, bucket } from "@/lib/firebaseAdmin";
 import { requireSession } from "@/lib/session";
-import { slugify } from "@/lib/utils";
+import { slugify, teamLogoPath } from "@/lib/utils";
 import type { GameDoc } from "@/lib/types";
+
+async function uploadTeamLogo(teamId: string, file: File): Promise<void> {
+  const buffer = Buffer.from(await file.arrayBuffer());
+  const gcsFile = bucket.file(teamLogoPath(teamId));
+  await gcsFile.save(buffer, {
+    contentType: file.type || "image/png",
+    metadata: { cacheControl: "public, max-age=31536000" },
+  });
+  // The app builds a tokenless `...?alt=media` URL directly, so the object
+  // must be genuinely public (mirrors players/actions.ts).
+  await gcsFile.makePublic();
+}
 
 export async function createTeam(formData: FormData): Promise<void> {
   await requireSession();
@@ -14,6 +26,7 @@ export async function createTeam(formData: FormData): Promise<void> {
   const name = String(formData.get("name") ?? "").trim();
   const division = String(formData.get("division") ?? "boys");
   const captain = String(formData.get("captain") ?? "").trim();
+  const logo = formData.get("logo");
   if (!name) throw new Error("Name is required");
 
   const base = `${slugify(name)}-${division}`;
@@ -32,12 +45,18 @@ export async function createTeam(formData: FormData): Promise<void> {
     pointDifferential: 0,
   });
 
+  if (logo instanceof File && logo.size > 0) {
+    await uploadTeamLogo(id, logo);
+  }
+
   revalidatePath("/teams");
   redirect(`/teams/${id}`);
 }
 
 export async function updateTeamMeta(teamId: string, formData: FormData): Promise<void> {
   await requireSession();
+
+  const logo = formData.get("logo");
 
   await db.doc(`teams/${teamId}`).update({
     name: String(formData.get("name") ?? "").trim(),
@@ -48,6 +67,10 @@ export async function updateTeamMeta(teamId: string, formData: FormData): Promis
     },
     pointDifferential: Number(formData.get("pointDifferential") ?? 0),
   });
+
+  if (logo instanceof File && logo.size > 0) {
+    await uploadTeamLogo(teamId, logo);
+  }
 
   revalidatePath(`/teams/${teamId}`);
   revalidatePath("/teams");

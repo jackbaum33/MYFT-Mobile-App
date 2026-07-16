@@ -1,9 +1,11 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { StatusBar } from 'expo-status-bar';
+import Constants from 'expo-constants';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { onAuthStateChanged } from 'firebase/auth';
-import { auth } from '../services/firebaseConfig';
+import { doc, getDoc } from 'firebase/firestore';
+import { auth, db } from '../services/firebaseConfig';
 import { userExists } from '../services/users';
 import { registerForPushNotifications } from '../services/notifications';
 import TabNavigator from './TabNavigator';
@@ -15,11 +17,75 @@ import {
   Animated,
   Dimensions,
   Easing,
+  Linking,
+  Modal,
   StyleSheet,
   Text,
+  TouchableOpacity,
   View,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+
+// ─── Version check ───────────────────────────────────────────────────────────
+
+// Compares dotted version strings numerically (e.g. "2.0.10" > "2.0.9").
+function isVersionBelow(current: string, minimum: string): boolean {
+  const c = current.split('.').map((n) => parseInt(n, 10) || 0);
+  const m = minimum.split('.').map((n) => parseInt(n, 10) || 0);
+  for (let i = 0; i < Math.max(c.length, m.length); i++) {
+    const cv = c[i] ?? 0;
+    const mv = m[i] ?? 0;
+    if (cv !== mv) return cv < mv;
+  }
+  return false;
+}
+
+function UpdateRequiredModal({ updateUrl }: { updateUrl?: string }) {
+  return (
+    <Modal visible transparent animationType="fade" onRequestClose={() => {}}>
+      <View style={updateStyles.backdrop}>
+        <View style={updateStyles.card}>
+          <Ionicons name="cloud-download-outline" size={48} color="#FFCB05" />
+          <Text style={updateStyles.title}>Update Required</Text>
+          <Text style={updateStyles.body}>
+            A new version of the MYFT app is available. Please update to continue.
+          </Text>
+          <TouchableOpacity
+            style={updateStyles.button}
+            disabled={!updateUrl}
+            onPress={() => updateUrl && Linking.openURL(updateUrl)}
+          >
+            <Text style={updateStyles.buttonText}>Update Now</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
+const updateStyles = StyleSheet.create({
+  backdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+  },
+  card: {
+    width: '100%',
+    maxWidth: 340,
+    backgroundColor: '#00274C',
+    borderRadius: 16,
+    padding: 24,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255,203,5,0.3)',
+  },
+  title: { color: '#FFCB05', fontSize: 20, fontWeight: '900', marginTop: 12, textAlign: 'center' },
+  body: { color: '#E9ECEF', fontSize: 14, textAlign: 'center', marginTop: 10, marginBottom: 18 },
+  button: { backgroundColor: '#FFCB05', borderRadius: 10, paddingVertical: 12, paddingHorizontal: 28 },
+  buttonText: { color: '#00274C', fontWeight: '900', fontSize: 15 },
+});
 
 export type RootStackParamList = {
   Main: undefined;
@@ -224,7 +290,26 @@ function RootNavigator() {
   const [hasProfile, setHasProfile] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
   const [splashVisible, setSplashVisible] = useState(true);
+  const [updateUrl, setUpdateUrl] = useState<string | undefined>(undefined);
+  const [updateRequired, setUpdateRequired] = useState(false);
   const notifRegisteredRef = useRef(false);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const snap = await getDoc(doc(db, 'config', 'tournament'));
+        const data = snap.data();
+        const minAppVersion = data?.minAppVersion;
+        const currentVersion = Constants.expoConfig?.version ?? '0.0.0';
+        if (minAppVersion && isVersionBelow(currentVersion, minAppVersion)) {
+          setUpdateUrl(data?.updateUrl);
+          setUpdateRequired(true);
+        }
+      } catch (e) {
+        console.warn('[RootNavigator] version check failed:', e);
+      }
+    })();
+  }, []);
 
   const checkUserProfile = async (firebaseUser: any) => {
     if (firebaseUser) {
@@ -336,6 +421,8 @@ function RootNavigator() {
           onFinished={() => setSplashVisible(false)}
         />
       )}
+
+      {!splashVisible && updateRequired && <UpdateRequiredModal updateUrl={updateUrl} />}
     </View>
   );
 }

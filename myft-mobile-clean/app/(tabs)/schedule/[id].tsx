@@ -122,10 +122,8 @@ export default function GameDetail() {
   const prettyStatus = s ? s[0].toUpperCase() + s.slice(1) : '';
   const cap1Last = t1?.captain ? t1.captain.trim() : '';
   const cap2Last = t2?.captain ? t2.captain.trim() : '';
-  const nameforLogo1 = game?.team1ID?.split('-')[0];
-  const nameforLogo2 = game?.team2ID?.split('-')[0];
-  const logo1 = getTeamLogo(nameforLogo1);
-  const logo2 = getTeamLogo(nameforLogo2);
+  const logo1 = getTeamLogo(game?.team1ID);
+  const logo2 = getTeamLogo(game?.team2ID);
 
   const rows = useMemo(() => {
     const team = side === 'team1' ? t1 : t2;

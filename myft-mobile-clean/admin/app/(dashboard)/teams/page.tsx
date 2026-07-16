@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { db } from "@/lib/firebaseAdmin";
 import type { TeamDoc } from "@/lib/types";
-import { parseRecord } from "@/lib/utils";
+import { parseRecord, teamLogoUrl } from "@/lib/utils";
 import { pageTitle, btnPrimary, tableWrap, table, th, td, sectionTitle } from "@/lib/ui";
 
 export default async function TeamsPage() {
@@ -16,6 +16,7 @@ export default async function TeamsPage() {
       <table className={table}>
         <thead>
           <tr>
+            <th className={th}></th>
             <th className={th}>Team</th>
             <th className={th}>Captain</th>
             <th className={th}>Record</th>
@@ -27,6 +28,16 @@ export default async function TeamsPage() {
             const { wins, losses } = parseRecord(t.record);
             return (
               <tr key={t.id}>
+                <td className={td}>
+                  {/* eslint-disable-next-line @next/next/no-img-element -- external Firebase Storage URL */}
+                  <img
+                    src={teamLogoUrl(t.id)}
+                    alt={t.name ?? t.id}
+                    width={28}
+                    height={28}
+                    className="h-7 w-7 rounded bg-navy object-contain"
+                  />
+                </td>
                 <td className={td}>
                   <Link href={`/teams/${t.id}`} className="font-semibold hover:text-yellow">
                     {t.name}
@@ -42,7 +53,7 @@ export default async function TeamsPage() {
           })}
           {list.length === 0 && (
             <tr>
-              <td className={td} colSpan={4}>
+              <td className={td} colSpan={5}>
                 No teams yet.
               </td>
             </tr>

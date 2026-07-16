@@ -36,8 +36,7 @@ export default function TeamDetailScreen() {
 
   const team = useMemo(() => teams.find(t => t.id === id), [teams, id]);
   const players = team?.players ?? [];
-  const nameForLogo = team?.id.split('-')[0];
-  const logoSrc = getTeamLogo(nameForLogo);
+  const logoSrc = getTeamLogo(team?.id);
 
   // Set header title when team loads
   useLayoutEffect(() => {

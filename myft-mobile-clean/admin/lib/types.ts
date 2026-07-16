@@ -112,6 +112,9 @@ export type TournamentConfig = {
   boysPlayoffTeams?: number;
   girlsPlayoffTeams?: number;
   saturdayDate?: string;
+  fantasyLockAt?: Timestamp;
+  minAppVersion?: string;
+  updateUrl?: string;
 };
 
 export type ScheduleDoc = {
@@ -120,6 +123,13 @@ export type ScheduleDoc = {
   address?: string;
   startAt?: Timestamp;
   reminderSentAt?: Timestamp;
+};
+
+export type BoardMemberDoc = {
+  name?: string;
+  title?: string;
+  email?: string;
+  order?: number;
 };
 
 export type UserProfile = {

@@ -208,10 +208,8 @@ export default function ScheduleIndex() {
   const GameCard = ({ item }: { item: UICardGame }) => {
     const t1 = teamById(item.team1);
     const t2 = teamById(item.team2);
-    const logo1Name = item.team1.split('-')[0];
-    const logo2Name = item.team2.split('-')[0];
-    const logo1 = getTeamLogo(logo1Name);
-    const logo2 = getTeamLogo(logo2Name);
+    const logo1 = getTeamLogo(item.team1);
+    const logo2 = getTeamLogo(item.team2);
 
     // Status color coding
     const statusColor = 

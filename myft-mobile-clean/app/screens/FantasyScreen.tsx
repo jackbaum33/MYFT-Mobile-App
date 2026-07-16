@@ -16,6 +16,8 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { doc, getDoc } from 'firebase/firestore';
+import { db } from '../../services/firebaseConfig';
 import { FONT_FAMILIES } from '../../fonts';
 import { useTournament } from '../../context/TournamentContext';
 import { useAuth } from '../../context/AuthContext';
@@ -28,9 +30,6 @@ const TEXT = '#E9ECEF';
 const LINE = 'rgba(255,255,255,0.12)';
 
 const LOGO = require('../../images/MYFT_LOGO.png');
-
-// Lock date: November 7, 2025 at 7:00 AM
-const LOCK_DATE = new Date('2025-11-07T07:00:00');
 
 // Helper to get player image URL
 function getPlayerImageUrl(playerId: string): string {
@@ -124,7 +123,25 @@ export default function FantasyScreen() {
   /** -------------------------
    *   Lock state
    *  ------------------------- */
-  const isLocked = useMemo(() => new Date() >= LOCK_DATE, []);
+  const [lockDate, setLockDate] = useState<Date | null>(null);
+
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const snap = await getDoc(doc(db, 'config', 'tournament'));
+        if (!mounted) return;
+        const ts = snap.data()?.fantasyLockAt;
+        if (typeof ts?.toDate === 'function') setLockDate(ts.toDate());
+      } catch (e) {
+        console.warn('[FantasyScreen] failed to load fantasy lock date:', e);
+      }
+    })();
+    return () => { mounted = false; };
+  }, []);
+
+  // Unlocked until an admin configures a lock date in config/tournament.
+  const isLocked = useMemo(() => (lockDate ? new Date() >= lockDate : false), [lockDate]);
 
   /** -------------------------
    *   Loading & Onboarding

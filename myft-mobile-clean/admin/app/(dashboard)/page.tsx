@@ -10,6 +10,7 @@ const LINKS = [
   { href: "/config", label: "Config", desc: "Playoff bracket settings" },
   { href: "/brackets", label: "Brackets", desc: "View + manually correct" },
   { href: "/schedule", label: "Schedule", desc: "Event reminders" },
+  { href: "/board", label: "Board", desc: "Board members shown on the app home tab" },
   { href: "/leagues", label: "Leagues", desc: "Fantasy draft viewer (read-only)" },
 ];
 

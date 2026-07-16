@@ -95,8 +95,7 @@ export default function TeamScreen() {
         keyExtractor={(item) => item.id}
         contentContainerStyle={{ paddingBottom: 24 }}
         renderItem={({ item }) => {
-          const nameForLogo = item.id.split('-')[0];
-          const logoSrc = getTeamLogo(nameForLogo);
+          const logoSrc = getTeamLogo(item.id);
           return (
             <TouchableOpacity style={styles.card} onPress={() => navigateToTeam(item.id)}>
               <View style={styles.cardText}>

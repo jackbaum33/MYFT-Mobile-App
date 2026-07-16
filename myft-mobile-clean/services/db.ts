@@ -95,4 +95,24 @@ import {
       ...(d.data() as ScheduleDoc),
     }));
   }
+
+  /* ========================
+     BOARD MEMBERS
+  ======================== */
+
+  export type BoardMemberDoc = {
+    name: string;
+    title: string;
+    email: string;
+    order?: number;
+  };
+
+  export async function getBoardMembers(): Promise<Array<{ id: string } & BoardMemberDoc>> {
+    const q = query(collection(db, 'boardMembers'), orderBy('order', 'asc'));
+    const snap = await getDocs(q);
+    return snap.docs.map((d) => ({
+      id: d.id,
+      ...(d.data() as BoardMemberDoc),
+    }));
+  }
   

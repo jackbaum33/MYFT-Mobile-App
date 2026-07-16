@@ -131,7 +131,7 @@ export default function PlayerLeaderboardDetail() {
     () => (player ? teamNameById.get(player.teamId) ?? '' : ''),
     [player, teamNameById]
   );
-  const logoSrc = getTeamLogo(teamName);
+  const logoSrc = getTeamLogo(player?.teamId);
   const playerImageUrl = useMemo(() => (player ? getPlayerImageUrl(player.id) : null), [player]);
 
   const counts = useMemo(() => {
@@ -243,7 +243,7 @@ export default function PlayerLeaderboardDetail() {
             </View>
           </View>
           <View style={s.logoContainer}>
-            <Image source={logoSrc} style={s.logo} resizeMode="contain" />
+            {logoSrc ? <Image source={logoSrc} style={s.logo} resizeMode="contain" /> : null}
           </View>
         </View>
 

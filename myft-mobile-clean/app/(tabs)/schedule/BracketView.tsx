@@ -230,7 +230,7 @@ function TeamRow({
   }
 
   const team = teams.find(t => t.id.toLowerCase() === teamId.toLowerCase());
-  const logo = getTeamLogo(teamId.split('-')[0]);
+  const logo = getTeamLogo(teamId);
 
   return (
     <View style={s.teamRow}>

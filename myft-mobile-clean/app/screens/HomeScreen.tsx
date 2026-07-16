@@ -1,7 +1,7 @@
 // app/screens/HomeScreen.tsx
 import React, { useMemo, useState, useCallback, useEffect } from 'react';
 import { Timestamp } from 'firebase/firestore';
-import { getSchedule } from '../../services/db';
+import { getSchedule, getBoardMembers } from '../../services/db';
 import {
   View,
   Text,
@@ -19,7 +19,6 @@ import {
 import { Ionicons, MaterialIcons, FontAwesome5 } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
 import { FONT_FAMILIES } from '../../fonts';
-import { pics } from '../../images/board_pictures';
 
 // Colors
 const CARD = '#00417D';
@@ -51,37 +50,12 @@ export type ScheduleItem = {
 
 
 /* ==== BOARD GRID ==== */
-const boardPics: Record<string, any> = {
-  'Abby Kutin':        pics.abby,
-  'Eli Plotkin':       pics.eli,
-  'Fisher Angrist':    pics.fisher,
-  'Isaac Schiffman':   pics.isaac,
-  'Jack Baum':         pics.jack,
-  'James Forman':      pics.james,
-  'Josh Katz':         pics.josh,
-  'Levi Stein':        pics.levi,
-  'Lila Ellman':       pics.lila,
-  'Matan Silverberg':  pics.matan,
-  'Shayna Foreman':    pics.shayna,
-  'Viv Schlussel':     pics.viv,
-};
+function getBoardImageUrl(memberId: string): string {
+  const filename = memberId.replace(/-/g, '');
+  return `https://firebasestorage.googleapis.com/v0/b/myft-2025.firebasestorage.app/o/board%2F${memberId}%2F${filename}.jpg?alt=media`;
+}
 
-type Member = { name: string; line1: string; email: string };
-
-const MEMBERS: Member[] = [
-  { name: 'Lila Ellman',      line1: 'Co-Chair',                            email: 'ellmanl@umich.edu'  },
-  { name: 'Josh Katz',        line1: 'Co-Chair',                            email: 'joshuaek@umich.edu' },
-  { name: 'Levi Stein',       line1: 'Head of Water',                       email: 'steinlev@umich.edu' },
-  { name: 'Abby Kutin',       line1: 'Website Developer',                   email: 'kutin@umich.edu'    },
-  { name: 'Viv Schlussel',    line1: 'Photography',                         email: 'vschluss@umich.edu' },
-  { name: 'Shayna Foreman',   line1: 'Events',                              email: 'shaynapf@umich.edu' },
-  { name: 'Isaac Schiffman',  line1: 'Recruitment',                         email: 'isaacsch@umich.edu' },
-  { name: 'Fisher Angrist',   line1: 'Finance',                             email: 'fangrist@umich.edu' },
-  { name: 'Eli Plotkin',      line1: 'Housing',                             email: 'eliplot@umich.edu'  },
-  { name: 'James Forman',     line1: 'Gameplay Operations',                 email: 'jameshf@umich.edu'  },
-  { name: 'Matan Silverberg', line1: 'Recruitment',                         email: 'matansil@umich.edu' },
-  { name: 'Jack Baum',        line1: 'Technology',                          email: 'jackbaum@umich.edu' }
-];
+type Member = { id: string; name: string; line1: string; email: string };
 
 /* =========================================
    Memoized Board Card & Grid
@@ -96,7 +70,6 @@ const BoardCard = React.memo(function BoardCard({
   member: Member;
   onPress: (m: Member) => void;
 }) {
-  const src = boardPics[member.name];
   return (
     <TouchableOpacity
       style={s.boardCard}
@@ -104,13 +77,14 @@ const BoardCard = React.memo(function BoardCard({
       activeOpacity={0.9}
     >
       <View style={s.avatarWrap}>
-        <Image source={src} style={s.avatarImg} resizeMode="cover" />
+        <Image source={{ uri: getBoardImageUrl(member.id) }} style={s.avatarImg} resizeMode="cover" />
       </View>
       <Text style={s.memberName} numberOfLines={1}>{member.name}</Text>
       <Text style={s.memberSub} numberOfLines={1}>{member.line1}</Text>
     </TouchableOpacity>
   );
 }, (prev, next) => (
+  prev.member.id === next.member.id &&
   prev.member.name === next.member.name &&
   prev.member.line1 === next.member.line1 &&
   prev.onPress === next.onPress
@@ -133,7 +107,7 @@ const BoardGrid = React.memo(function BoardGrid({
       <Text style={s.boardTitle}>Meet the Board!</Text>
       <FlatList
         data={members}
-        keyExtractor={(m) => m.name}
+        keyExtractor={(m) => m.id}
         numColumns={3}
         columnWrapperStyle={s.boardRow}
         contentContainerStyle={s.boardGridPad}
@@ -161,9 +135,33 @@ const BoardGrid = React.memo(function BoardGrid({
 export default function HomeScreen() {
   const [events, setEvents] = useState<ScheduleItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [members, setMembers] = useState<Member[]>([]);
   const [selectedEvent, setSelectedEvent] = useState<ScheduleItem | null>(null);
   const [selectedMember, setSelectedMember] = useState<Member | null>(null);
   const [copied, setCopied] = useState(false);
+
+  useEffect(() => {
+    let mounted = true;
+
+    (async () => {
+      try {
+        const docs = await getBoardMembers();
+        if (!mounted) return;
+        setMembers(
+          docs.map((d) => ({
+            id: d.id,
+            name: d.name ?? '',
+            line1: d.title ?? '',
+            email: d.email ?? '',
+          }))
+        );
+      } catch (e) {
+        console.warn('[HomeScreen] getBoardMembers failed:', e);
+      }
+    })();
+
+    return () => { mounted = false; };
+  }, []);
 
   useEffect(() => {
     let mounted = true;
@@ -273,7 +271,7 @@ export default function HomeScreen() {
 
   const ListHeader = useCallback(() => (
     <View style={s.headerContainer}>
-      <Text style={s.header}>Welcome to the official MYFT 2025 App!</Text>
+      <Text style={s.header}>Welcome to the official MYFT 2026 App!</Text>
       <Text style={s.sub}>
         Browse teams and players, view schedule of games, set a personalized fantasy football roster, and more!
       </Text>
@@ -302,7 +300,7 @@ export default function HomeScreen() {
         SectionSeparatorComponent={() => <View style={s.sectionSep} />}
         contentContainerStyle={[s.listPad, { paddingBottom: 110 }]}
         ListHeaderComponent={ListHeader}
-        ListFooterComponent={<BoardGrid members={MEMBERS} onPressMember={onPressMember} />}
+        ListFooterComponent={<BoardGrid members={members} onPressMember={onPressMember} />}
         showsVerticalScrollIndicator={false}
       />
 
@@ -378,7 +376,7 @@ export default function HomeScreen() {
               <>
                 <View style={s.modalAvatarWrap}>
                   <Image
-                    source={boardPics[selectedMember.name]}
+                    source={{ uri: getBoardImageUrl(selectedMember.id) }}
                     style={s.modalAvatarImg}
                     resizeMode="cover"
                   />

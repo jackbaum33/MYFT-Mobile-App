@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { db } from "@/lib/firebaseAdmin";
 import type { PlayerDoc, TeamDoc } from "@/lib/types";
-import { parseRecord } from "@/lib/utils";
+import { parseRecord, teamLogoUrl } from "@/lib/utils";
 import {
   updateTeamMeta,
   recomputeTeamRecord,
@@ -58,8 +58,22 @@ export default async function TeamDetailPage({
     <div className="max-w-3xl space-y-6">
       <h1 className={pageTitle}>{team.name}</h1>
 
-      <form action={boundUpdateMeta} className={`${card} space-y-4`}>
+      <form action={boundUpdateMeta} encType="multipart/form-data" className={`${card} space-y-4`}>
         <h2 className={sectionTitle}>Team Info</h2>
+        <div className="flex items-center gap-4">
+          {/* eslint-disable-next-line @next/next/no-img-element -- external Firebase Storage URL */}
+          <img
+            src={teamLogoUrl(id)}
+            alt={team.name ?? id}
+            width={56}
+            height={56}
+            className="h-14 w-14 rounded-lg bg-navy object-contain"
+          />
+          <div className="flex-1">
+            <label className={label}>Logo</label>
+            <input type="file" name="logo" accept="image/*" className={input} />
+          </div>
+        </div>
         <div>
           <label className={label}>Name</label>
           <input type="text" name="name" defaultValue={team.name ?? ""} className={input} />

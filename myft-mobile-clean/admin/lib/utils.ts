@@ -20,6 +20,25 @@ export function playerImageUrl(playerId: string): string {
   return `https://firebasestorage.googleapis.com/v0/b/${bucket}/o/players%2F${playerId}%2F${filename}.jpg?alt=media`;
 }
 
+export function teamLogoPath(teamId: string): string {
+  return `teams/${teamId}/logo.png`;
+}
+
+export function teamLogoUrl(teamId: string): string {
+  const bucket = process.env.FIREBASE_STORAGE_BUCKET || "myft-2025.firebasestorage.app";
+  return `https://firebasestorage.googleapis.com/v0/b/${bucket}/o/teams%2F${teamId}%2Flogo.png?alt=media`;
+}
+
+export function boardImagePath(memberId: string): string {
+  return `board/${memberId}/${memberId.replace(/-/g, "")}.jpg`;
+}
+
+export function boardImageUrl(memberId: string): string {
+  const bucket = process.env.FIREBASE_STORAGE_BUCKET || "myft-2025.firebasestorage.app";
+  const filename = memberId.replace(/-/g, "");
+  return `https://firebasestorage.googleapis.com/v0/b/${bucket}/o/board%2F${memberId}%2F${filename}.jpg?alt=media`;
+}
+
 export function parseRecord(record: { wins?: number; losses?: number } | number[] | undefined): {
   wins: number;
   losses: number;

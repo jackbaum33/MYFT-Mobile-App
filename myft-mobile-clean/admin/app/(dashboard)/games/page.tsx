@@ -2,7 +2,7 @@ import Link from "next/link";
 import { db } from "@/lib/firebaseAdmin";
 import type { GameDoc, TeamDoc } from "@/lib/types";
 import { fmtDateTime } from "@/lib/utils";
-import { pageTitle, btnPrimary, tableWrap, table, th, td } from "@/lib/ui";
+import { pageTitle, btnPrimary, btnSecondary, tableWrap, table, th, td, input, select, label } from "@/lib/ui";
 
 function statusColor(status?: string): string {
   const s = (status ?? "").toLowerCase();
@@ -14,9 +14,9 @@ function statusColor(status?: string): string {
 export default async function GamesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ division?: string; status?: string }>;
+  searchParams: Promise<{ division?: string; status?: string; team?: string; q?: string; date?: string }>;
 }) {
-  const { division, status } = await searchParams;
+  const { division, status, team, q, date } = await searchParams;
 
   const [gamesSnap, teamsSnap] = await Promise.all([
     db.collection("games").get(),
@@ -30,6 +30,11 @@ export default async function GamesPage({
     teamName.set(d.id, data.name ?? d.id);
     teamDivision.set(d.id, (data.division ?? "").toLowerCase());
   });
+  const teams = teamsSnap.docs
+    .map((d) => ({ id: d.id, ...(d.data() as TeamDoc) }))
+    .sort((a, b) => (a.name ?? a.id).localeCompare(b.name ?? b.id));
+  const boysTeams = teams.filter((t) => (t.division ?? "").toLowerCase() === "boys");
+  const girlsTeams = teams.filter((t) => (t.division ?? "").toLowerCase() === "girls");
 
   let games = gamesSnap.docs.map((d) => ({ id: d.id, ...(d.data() as GameDoc) }));
 
@@ -39,17 +44,40 @@ export default async function GamesPage({
   if (status) {
     games = games.filter((g) => (g.status ?? "").toLowerCase() === status.toLowerCase());
   }
+  if (team) {
+    games = games.filter((g) => g.team1ID === team || g.team2ID === team);
+  }
+  if (q?.trim()) {
+    const needle = q.trim().toLowerCase();
+    games = games.filter((g) => {
+      const n1 = (teamName.get(g.team1ID ?? "") ?? g.team1ID ?? "").toLowerCase();
+      const n2 = (teamName.get(g.team2ID ?? "") ?? g.team2ID ?? "").toLowerCase();
+      const round = (g.roundLabel ?? "").toLowerCase();
+      const field = (g.field ?? "").toLowerCase();
+      return n1.includes(needle) || n2.includes(needle) || round.includes(needle) || field.includes(needle);
+    });
+  }
+  if (date) {
+    games = games.filter((g) => {
+      const t = g.startTime?.toDate();
+      if (!t) return false;
+      const key = `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, "0")}-${String(t.getDate()).padStart(2, "0")}`;
+      return key === date;
+    });
+  }
 
   games.sort((a, b) => (a.startTime?.toMillis() ?? 0) - (b.startTime?.toMillis() ?? 0));
 
   const filterLink = (params: Record<string, string | undefined>) => {
-    const merged = { division, status, ...params };
+    const merged = { division, status, team, q, date, ...params };
     const qs = Object.entries(merged)
       .filter(([, v]) => v)
       .map(([k, v]) => `${k}=${v}`)
       .join("&");
     return qs ? `/games?${qs}` : "/games";
   };
+
+  const hasSearchFilters = Boolean(team || q || date);
 
   return (
     <div>
@@ -84,6 +112,45 @@ export default async function GamesPage({
           ))}
         </div>
       </div>
+
+      <form method="get" className="mb-4 flex flex-wrap items-end gap-3">
+        {division && <input type="hidden" name="division" value={division} />}
+        {status && <input type="hidden" name="status" value={status} />}
+        <div>
+          <label className={label}>Team</label>
+          <select name="team" defaultValue={team ?? ""} className={`${select} min-w-[10rem]`}>
+            <option value="">All teams</option>
+            <optgroup label="Boys">
+              {boysTeams.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.name}
+                </option>
+              ))}
+            </optgroup>
+            <optgroup label="Girls">
+              {girlsTeams.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.name}
+                </option>
+              ))}
+            </optgroup>
+          </select>
+        </div>
+        <div>
+          <label className={label}>Search</label>
+          <input type="text" name="q" defaultValue={q ?? ""} placeholder="Team, round, field…" className={`${input} min-w-[12rem]`} />
+        </div>
+        <div>
+          <label className={label}>Date</label>
+          <input type="date" name="date" defaultValue={date ?? ""} className={input} />
+        </div>
+        <button className={btnSecondary}>Apply</button>
+        {hasSearchFilters && (
+          <Link href={filterLink({ team: undefined, q: undefined, date: undefined })} className="text-sm text-text/60 hover:text-yellow">
+            Clear
+          </Link>
+        )}
+      </form>
 
       <div className={tableWrap}>
         <table className={table}>
