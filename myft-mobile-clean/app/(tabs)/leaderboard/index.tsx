@@ -107,7 +107,8 @@ export default function LeaderboardIndex() {
   const playersById = useMemo(() => mapPlayersById(allPlayers), [allPlayers]);
 
   const usersRanked: RankedUser[] = useMemo(() => {
-    return [...users]
+    return users
+      .filter(u => (u.boys_roster?.length ?? 0) > 0 || (u.girls_roster?.length ?? 0) > 0)
       .map(u => ({
         ...u,
         totalPoints: rosterTotalPoints(

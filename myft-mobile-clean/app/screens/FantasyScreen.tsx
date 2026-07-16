@@ -117,7 +117,7 @@ const PlayerAvatar = React.memo(({ name }: { name: string }) => {
 PlayerAvatar.displayName = 'PlayerAvatar';
 
 export default function FantasyScreen() {
-  const { teams, userRoster, updateRoster, calculatePoints } = useTournament();
+  const { teams, userRoster, updateRoster, calculatePoints, loading: teamsLoading } = useTournament();
   const { user: signedIn } = useAuth();
 
   /** -------------------------
@@ -151,10 +151,11 @@ export default function FantasyScreen() {
   const hydratedRef = useRef(false);
   const loadedRef = useRef(false);
 
-  // Check if data is ready
-  const dataIsReady = useMemo(() => {
-    return teams && teams.length > 0 && teams.some(t => t.players && t.players.length > 0);
-  }, [teams]);
+  // Data is "ready" once the initial Firestore fetch has finished — not once
+  // it has non-empty results, since a freshly-reset tournament legitimately
+  // has zero teams/players and should still reach the empty-state UI instead
+  // of spinning forever.
+  const dataIsReady = !teamsLoading;
 
   // Load user profile
   useEffect(() => {
