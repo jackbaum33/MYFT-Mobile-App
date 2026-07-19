@@ -33,7 +33,7 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.sendEventReminders = exports.onGameUpdate = exports.aggregatePlayerStats = exports.notifyDraftTurn = exports.notifyLeagueCreated = exports.advanceBracketOnGameFinal = exports.generateBracketOnPoolComplete = void 0;
+exports.sendEventReminders = exports.onGameUpdate = exports.aggregatePlayerStats = exports.deleteAccount = exports.notifyDraftTurn = exports.notifyLeagueCreated = exports.advanceBracketOnGameFinal = exports.generateBracketOnPoolComplete = void 0;
 const firestore_1 = require("firebase-functions/v2/firestore");
 const scheduler_1 = require("firebase-functions/v2/scheduler");
 const admin = __importStar(require("firebase-admin"));
@@ -45,6 +45,8 @@ Object.defineProperty(exports, "advanceBracketOnGameFinal", { enumerable: true, 
 var leagues_1 = require("./leagues");
 Object.defineProperty(exports, "notifyLeagueCreated", { enumerable: true, get: function () { return leagues_1.notifyLeagueCreated; } });
 Object.defineProperty(exports, "notifyDraftTurn", { enumerable: true, get: function () { return leagues_1.notifyDraftTurn; } });
+var account_1 = require("./account");
+Object.defineProperty(exports, "deleteAccount", { enumerable: true, get: function () { return account_1.deleteAccount; } });
 const push_1 = require("./push");
 // --- helpers ---
 // Convert a team ID like "michigan-boys" → "Michigan", "ohio-state-boys" → "Ohio State"

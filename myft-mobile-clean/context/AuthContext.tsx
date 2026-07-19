@@ -1,7 +1,8 @@
 // context/AuthContext.tsx - Fixed TypeScript errors
 import React, { createContext, useContext, useEffect, useMemo, useState, useCallback } from 'react';
 import { onAuthStateChanged, signInAnonymously, signOut } from 'firebase/auth';
-import { auth } from '../services/firebaseConfig';
+import { httpsCallable } from 'firebase/functions';
+import { auth, functions } from '../services/firebaseConfig';
 import {
   getUser as getUserDoc,
   updateUserProfile,
@@ -17,6 +18,7 @@ type AuthContextType = {
   loading: boolean;
   loginAnonymously: () => Promise<void>;
   logout: () => Promise<void>;
+  deleteAccount: () => Promise<void>;
   refresh: () => Promise<void>;
   updateUser: (partial: UpdateUserInput) => Promise<void>;
   refreshUser: () => Promise<void>;
@@ -134,6 +136,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  // Permanently delete the account: server-side cleanup (Firestore data,
+  // league membership, Storage files, Auth user) via a Cloud Function, then
+  // sign out locally so the root navigator's auth listener redirects to Login.
+  const deleteAccount = async () => {
+    try {
+      console.log('🔥 Deleting account...');
+      const call = httpsCallable(functions, 'deleteAccount');
+      await call();
+      await signOut(auth);
+      setUid(null);
+      setUser(null);
+      console.log('🔥 Account deleted');
+    } catch (error) {
+      console.error('🔥 Account deletion failed:', error);
+      throw error;
+    }
+  };
+
   // Update user with error handling
   const updateUser = async (partial: UpdateUserInput) => {
     if (!uid) throw new Error('Not authenticated');
@@ -170,6 +190,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       loading,
       loginAnonymously,
       logout,
+      deleteAccount,
       refresh,
       refreshUser,
       updateUser,

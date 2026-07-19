@@ -2,7 +2,8 @@
 import { initializeApp, getApps } from 'firebase/app';
 import { initializeFirestore } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
-import { initializeAuth, 
+import { getFunctions } from 'firebase/functions';
+import { initializeAuth,
   //@ts-ignore
   getReactNativePersistence } from 'firebase/auth';
 import ReactNativeAsyncStorage from '@react-native-async-storage/async-storage';
@@ -31,6 +32,9 @@ export const db = initializeFirestore(app, {
 
 // Storage
 export const storage = getStorage(app);
+
+// Cloud Functions (callable)
+export const functions = getFunctions(app);
 
 // (Optional) Debug
 if (__DEV__) {

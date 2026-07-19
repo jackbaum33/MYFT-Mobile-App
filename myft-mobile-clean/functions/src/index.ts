@@ -7,6 +7,7 @@ const db = admin.firestore();
 
 export { generateBracketOnPoolComplete, advanceBracketOnGameFinal } from './bracket';
 export { notifyLeagueCreated, notifyDraftTurn } from './leagues';
+export { deleteAccount } from './account';
 
 import { getAllPushTokens, sendPush } from './push';
 

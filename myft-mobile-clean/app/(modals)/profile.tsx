@@ -77,7 +77,8 @@ interface Team {
 
 export default function ProfileScreen() {
   const navigation = useNavigation();
-  const { user, updateUser, refreshUser } = useAuth();
+  const { user, updateUser, refreshUser, logout, deleteAccount } = useAuth();
+  const [deletingAccount, setDeletingAccount] = useState(false);
 
   const [displayName, setDisplayName] = useState(user?.displayName ?? '');
   const [username, setUsername] = useState(user?.username ?? '');
@@ -346,6 +347,59 @@ export default function ProfileScreen() {
       setCopied(true);
       setTimeout(() => setCopied(false), 1200);
     } catch {}
+  };
+
+  // ---------- Log out / delete account ----------
+  const handleLogout = () => {
+    Alert.alert('Log Out', 'Are you sure you want to log out?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Log Out',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            await logout();
+          } catch (e: any) {
+            Alert.alert('Error', 'Failed to log out. Please try again.');
+          }
+        },
+      },
+    ]);
+  };
+
+  const performDeleteAccount = async () => {
+    try {
+      setDeletingAccount(true);
+      await deleteAccount();
+    } catch (e: any) {
+      Alert.alert('Error', e?.message ?? 'Failed to delete account. Please try again.');
+    } finally {
+      setDeletingAccount(false);
+    }
+  };
+
+  const handleDeleteAccount = () => {
+    Alert.alert(
+      'Delete Account',
+      'This permanently deletes your account, profile, and fantasy rosters. This cannot be undone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: () => {
+            Alert.alert(
+              'Are you absolutely sure?',
+              'Your account and all associated data will be permanently deleted.',
+              [
+                { text: 'Cancel', style: 'cancel' },
+                { text: 'Delete My Account', style: 'destructive', onPress: performDeleteAccount },
+              ]
+            );
+          },
+        },
+      ]
+    );
   };
 
   // ---------- Admin Panel Functions ----------
@@ -704,6 +758,24 @@ export default function ProfileScreen() {
           </TouchableOpacity>
 
           {copied ? <Text style={s.copiedHint}>Copied!</Text> : null}
+        </View>
+
+        <View style={[s.sheet, { marginTop: 10 }]}>
+          <TouchableOpacity style={s.logoutBtn} onPress={handleLogout}>
+            <Ionicons name="log-out-outline" size={18} color={TEXT} />
+            <Text style={s.logoutBtnText}>Log Out</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={s.deleteAccountBtn}
+            onPress={handleDeleteAccount}
+            disabled={deletingAccount}
+          >
+            <Ionicons name="trash-outline" size={18} color="#ff6b6b" />
+            <Text style={s.deleteAccountBtnText}>
+              {deletingAccount ? 'Deleting Account…' : 'Delete Account'}
+            </Text>
+          </TouchableOpacity>
         </View>
       </ScrollView>
 
@@ -1504,6 +1576,40 @@ const s = StyleSheet.create({
     fontFamily: FONT_FAMILIES.archivoBlack,
   },
   copiedHint: { color: YELLOW, fontWeight: '800', marginTop: 8, textAlign: 'center' },
+
+  logoutBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 12,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: LINE,
+  },
+  logoutBtnText: {
+    color: TEXT,
+    fontWeight: '800',
+    fontSize: 15,
+    fontFamily: FONT_FAMILIES.archivoBlack,
+  },
+  deleteAccountBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 12,
+    marginTop: 10,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(255,107,107,0.4)',
+  },
+  deleteAccountBtnText: {
+    color: '#ff6b6b',
+    fontWeight: '800',
+    fontSize: 15,
+    fontFamily: FONT_FAMILIES.archivoBlack,
+  },
 
   backdrop: {
     flex: 1,
