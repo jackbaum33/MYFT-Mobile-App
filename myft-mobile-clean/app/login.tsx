@@ -16,9 +16,15 @@ import {
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { signInAnonymously } from 'firebase/auth';
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { auth } from '../services/firebaseConfig';
 import { createUserProfile, userExists } from '../services/users';
+import { useAuth } from '../context/AuthContext';
 import { FONT_FAMILIES } from '../fonts';
+import type { RootStackParamList } from './_layout';
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 const CARD = '#00417D';
 const NAVY = '#00274C';
@@ -30,8 +36,13 @@ const DEFAULT_AVATAR = require('../images/default-avatar.png');
 const LOGO = require('../images/MYFT_LOGO.png');
 
 export default function Login() {
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList, 'Login'>>();
+  const { linkEmailPassword } = useAuth();
   const [displayName, setDisplayName] = useState('');
   const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [photo, setPhoto] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -92,18 +103,30 @@ export default function Login() {
   };
 
   const handleContinue = async () => {
-    if (!displayName.trim() || !username.trim()) {
-      Alert.alert('Missing info', 'Please enter a display name and username.');
+    if (!displayName.trim() || !username.trim() || !email.trim() || !password || !confirmPassword) {
+      Alert.alert('Missing info', 'Please fill in every field.');
+      return;
+    }
+    if (!EMAIL_RE.test(email.trim())) {
+      Alert.alert('Invalid email', 'Please enter a valid email address.');
+      return;
+    }
+    if (password.length < 6) {
+      Alert.alert('Weak password', 'Password must be at least 6 characters.');
+      return;
+    }
+    if (password !== confirmPassword) {
+      Alert.alert('Passwords don’t match', 'Please make sure both passwords match.');
       return;
     }
 
     setBusy(true);
     try {
       console.log('🚀 Starting login process...');
-      
+
       let uid: string | null = auth.currentUser?.uid ?? null;
       console.log('👤 Current user UID:', uid);
-      
+
       if (!uid) {
         console.log('🔐 Signing in anonymously...');
         const cred = await signInAnonymously(auth);
@@ -113,14 +136,39 @@ export default function Login() {
 
       const exists = await userExists(uid!);
       console.log('📋 User profile exists:', exists);
-      
+
       if (!exists) {
+        console.log('🔗 Linking email/password...');
+        try {
+          await linkEmailPassword(email.trim(), password);
+          console.log('✅ Email/password linked');
+        } catch (linkError: any) {
+          if (linkError?.code === 'auth/email-already-in-use') {
+            Alert.alert(
+              'Account already exists',
+              'That email already has an account. Sign in instead?',
+              [
+                { text: 'Cancel', style: 'cancel' },
+                { text: 'Sign In', onPress: () => navigation.navigate('SignIn') },
+              ]
+            );
+          } else if (linkError?.code === 'auth/weak-password') {
+            Alert.alert('Weak password', 'Password must be at least 6 characters.');
+          } else if (linkError?.code === 'auth/invalid-email') {
+            Alert.alert('Invalid email', 'Please enter a valid email address.');
+          } else {
+            Alert.alert('Sign-in failed', linkError?.message ?? 'Please try again.');
+          }
+          return;
+        }
+
         console.log('🏗️ Creating user profile...');
         await createUserProfile({
           uid: uid!,
           displayName: displayName.trim(),
           username: username.trim(),
           photoUrl: photo || undefined,
+          email: email.trim(),
         });
         console.log('✅ User profile created');
         
@@ -204,6 +252,35 @@ export default function Login() {
             onChangeText={setUsername}
             style={s.input}
           />
+          <TextInput
+            placeholder="Email"
+            placeholderTextColor="#c9d6e2"
+            autoCapitalize="none"
+            autoCorrect={false}
+            keyboardType="email-address"
+            value={email}
+            onChangeText={setEmail}
+            style={s.input}
+          />
+          <TextInput
+            placeholder="Password"
+            placeholderTextColor="#c9d6e2"
+            autoCapitalize="none"
+            secureTextEntry
+            value={password}
+            onChangeText={setPassword}
+            style={s.input}
+          />
+          <TextInput
+            placeholder="Confirm password"
+            placeholderTextColor="#c9d6e2"
+            autoCapitalize="none"
+            secureTextEntry
+            value={confirmPassword}
+            onChangeText={setConfirmPassword}
+            style={s.input}
+          />
+          <Text style={s.hint}>Used to sign back in if you lose this device.</Text>
 
           <TouchableOpacity
             style={[s.btn, busy && { opacity: 0.8 }]}
@@ -212,6 +289,10 @@ export default function Login() {
             activeOpacity={0.9}
           >
             {busy ? <ActivityIndicator color={NAVY} /> : <Text style={s.btnText}>Save & Continue</Text>}
+          </TouchableOpacity>
+
+          <TouchableOpacity onPress={() => navigation.navigate('SignIn')} activeOpacity={0.7}>
+            <Text style={s.linkText}>Already have an account? Sign In</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>
@@ -314,9 +395,27 @@ const s = StyleSheet.create({
     alignItems: 'center',
     marginTop: 6,
   },
-  btnText: { 
-    color: NAVY, 
-    fontWeight: '900', 
-    fontFamily: FONT_FAMILIES.archivoBlack 
+  btnText: {
+    color: NAVY,
+    fontWeight: '900',
+    fontFamily: FONT_FAMILIES.archivoBlack
+  },
+
+  hint: {
+    color: TEXT,
+    opacity: 0.8,
+    fontSize: 12,
+    textAlign: 'center',
+    marginBottom: 10,
+    marginTop: -4,
+    fontFamily: FONT_FAMILIES.archivoNarrow,
+  },
+  linkText: {
+    color: YELLOW,
+    fontSize: 13,
+    textAlign: 'center',
+    marginTop: 14,
+    textDecorationLine: 'underline',
+    fontFamily: FONT_FAMILIES.archivoNarrow,
   },
 });

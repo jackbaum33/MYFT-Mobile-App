@@ -1,6 +1,14 @@
 // context/AuthContext.tsx - Fixed TypeScript errors
 import React, { createContext, useContext, useEffect, useMemo, useState, useCallback } from 'react';
-import { onAuthStateChanged, signInAnonymously, signOut } from 'firebase/auth';
+import {
+  onAuthStateChanged,
+  signInAnonymously,
+  signOut,
+  linkWithCredential,
+  EmailAuthProvider,
+  signInWithEmailAndPassword,
+  sendPasswordResetEmail,
+} from 'firebase/auth';
 import { httpsCallable } from 'firebase/functions';
 import { auth, functions } from '../services/firebaseConfig';
 import {
@@ -23,6 +31,11 @@ type AuthContextType = {
   updateUser: (partial: UpdateUserInput) => Promise<void>;
   refreshUser: () => Promise<void>;
   updateDisplayName: (displayName: string) => Promise<void>;
+  emailLinked: boolean;
+  email: string | null;
+  linkEmailPassword: (email: string, password: string) => Promise<void>;
+  signInWithEmail: (email: string, password: string) => Promise<void>;
+  resetPassword: (email: string) => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -31,6 +44,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [uid, setUid] = useState<string | null>(null);
   const [user, setUser] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [emailLinked, setEmailLinked] = useState(false);
+  const [email, setEmail] = useState<string | null>(null);
 
   // Subscribe to Firebase auth state with comprehensive error handling
   useEffect(() => {
@@ -46,12 +61,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             console.log('🔥 No Firebase user, clearing state...');
             setUid(null);
             setUser(null);
+            setEmailLinked(false);
+            setEmail(null);
             setLoading(false);
             return;
           }
 
           console.log('🔥 Firebase user found, setting UID:', fbUser.uid);
           setUid(fbUser.uid);
+          setEmailLinked(fbUser.providerData.some((p) => p.providerId === 'password'));
+          setEmail(fbUser.email ?? null);
 
           // Try to get user profile with error handling
           try {
@@ -154,6 +173,54 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  // Link the current (anonymous) session to an email/password credential so
+  // the same UID — and all its Firestore data — can be recovered on another
+  // device via signInWithEmail. Doesn't change the UID, so it won't reliably
+  // re-fire onAuthStateChanged; state is synced manually here instead.
+  const linkEmailPassword = async (emailInput: string, password: string) => {
+    if (!auth.currentUser) throw new Error('Not authenticated');
+    try {
+      console.log('🔥 Linking email/password...');
+      const credential = EmailAuthProvider.credential(emailInput, password);
+      await linkWithCredential(auth.currentUser, credential);
+      setEmailLinked(true);
+      setEmail(auth.currentUser.email ?? emailInput);
+      console.log('🔥 Email/password linked');
+    } catch (error: any) {
+      if (error?.code === 'auth/provider-already-linked') {
+        setEmailLinked(true);
+        setEmail(auth.currentUser.email ?? emailInput);
+        return;
+      }
+      console.error('🔥 Linking email/password failed:', error);
+      throw error;
+    }
+  };
+
+  // Sign in on a (possibly new) device with a previously-linked email/password.
+  // Creates a fresh session under the original UID; onAuthStateChanged does the rest.
+  const signInWithEmail = async (emailInput: string, password: string) => {
+    try {
+      console.log('🔥 Signing in with email...');
+      await signInWithEmailAndPassword(auth, emailInput, password);
+      console.log('🔥 Email sign-in successful');
+    } catch (error) {
+      console.error('🔥 Email sign-in failed:', error);
+      throw error;
+    }
+  };
+
+  const resetPassword = async (emailInput: string) => {
+    try {
+      console.log('🔥 Sending password reset email...');
+      await sendPasswordResetEmail(auth, emailInput);
+      console.log('🔥 Password reset email sent');
+    } catch (error) {
+      console.error('🔥 Password reset failed:', error);
+      throw error;
+    }
+  };
+
   // Update user with error handling
   const updateUser = async (partial: UpdateUserInput) => {
     if (!uid) throw new Error('Not authenticated');
@@ -195,8 +262,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       refreshUser,
       updateUser,
       updateDisplayName,
+      emailLinked,
+      email,
+      linkEmailPassword,
+      signInWithEmail,
+      resetPassword,
     }),
-    [user, loading, refreshUser]
+    [user, loading, refreshUser, emailLinked, email]
   );
 
   console.log('🔥 AuthProvider rendering, loading:', loading, 'user:', user?.uid || 'none');

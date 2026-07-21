@@ -15,6 +15,7 @@ export type UserProfile = {
   displayName: string;
   username: string;
   photoUrl?: string;
+  email?: string;
   boys_roster: string[];
   girls_roster: string[];
   hasOnboarded: boolean,
@@ -54,8 +55,9 @@ export async function createUserProfile(input: {
   displayName: string;
   username: string;
   photoUrl?: string; // local uri or remote URL; optional
+  email?: string;
 }): Promise<void> {
-  const { uid, displayName, username, photoUrl } = input;
+  const { uid, displayName, username, photoUrl, email } = input;
 
   let finalPhotoUrl: string | undefined;
   try {
@@ -75,6 +77,7 @@ export async function createUserProfile(input: {
     boys_roster: [],
     girls_roster: [],
     ...(finalPhotoUrl ? { photoUrl: finalPhotoUrl } : {}),
+    ...(email ? { email } : {}),
   };
 
   await setDoc(docRef, profile, { merge: true });

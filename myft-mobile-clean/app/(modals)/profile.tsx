@@ -77,8 +77,12 @@ interface Team {
 
 export default function ProfileScreen() {
   const navigation = useNavigation();
-  const { user, updateUser, refreshUser, logout, deleteAccount } = useAuth();
+  const { user, updateUser, refreshUser, logout, deleteAccount, emailLinked, email: authEmail, linkEmailPassword } = useAuth();
   const [deletingAccount, setDeletingAccount] = useState(false);
+  const [secureEmail, setSecureEmail] = useState('');
+  const [securePassword, setSecurePassword] = useState('');
+  const [secureConfirmPassword, setSecureConfirmPassword] = useState('');
+  const [securingAccount, setSecuringAccount] = useState(false);
 
   const [displayName, setDisplayName] = useState(user?.displayName ?? '');
   const [username, setUsername] = useState(user?.username ?? '');
@@ -347,6 +351,48 @@ export default function ProfileScreen() {
       setCopied(true);
       setTimeout(() => setCopied(false), 1200);
     } catch {}
+  };
+
+  // ---------- Secure account (link email/password) ----------
+  const handleSecureAccount = async () => {
+    if (!secureEmail.trim() || !securePassword || !secureConfirmPassword) {
+      Alert.alert('Missing info', 'Please fill in every field.');
+      return;
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(secureEmail.trim())) {
+      Alert.alert('Invalid email', 'Please enter a valid email address.');
+      return;
+    }
+    if (securePassword.length < 6) {
+      Alert.alert('Weak password', 'Password must be at least 6 characters.');
+      return;
+    }
+    if (securePassword !== secureConfirmPassword) {
+      Alert.alert('Passwords don’t match', 'Please make sure both passwords match.');
+      return;
+    }
+
+    setSecuringAccount(true);
+    try {
+      await linkEmailPassword(secureEmail.trim(), securePassword);
+      await updateUser({ email: secureEmail.trim() });
+      Alert.alert('Account secured', 'You can now sign back in with this email if you switch devices.');
+      setSecureEmail('');
+      setSecurePassword('');
+      setSecureConfirmPassword('');
+    } catch (e: any) {
+      const msg =
+        e?.code === 'auth/email-already-in-use'
+          ? 'That email is already linked to another account.'
+          : e?.code === 'auth/weak-password'
+          ? 'Password must be at least 6 characters.'
+          : e?.code === 'auth/invalid-email'
+          ? 'Please enter a valid email.'
+          : 'Failed to secure account. Please try again.';
+      Alert.alert('Error', msg);
+    } finally {
+      setSecuringAccount(false);
+    }
   };
 
   // ---------- Log out / delete account ----------
@@ -739,6 +785,70 @@ export default function ProfileScreen() {
               </View>
             </View>
           ) : null}
+        </View>
+
+        <View style={[s.sheet, { marginTop: 10 }]}>
+          {emailLinked ? (
+            <>
+              <Text style={[s.title, { marginBottom: 8 }]}>Account Secured</Text>
+              <Text style={s.supportText}>
+                You can sign back in anytime with {authEmail}.
+              </Text>
+            </>
+          ) : (
+            <>
+              <Text style={[s.title, { marginBottom: 8 }]}>Secure Your Account</Text>
+              <Text style={s.supportText}>
+                Add an email and password so you never lose your rosters if you switch devices.
+              </Text>
+
+              <View style={s.field}>
+                <Text style={s.editLabel}>Email</Text>
+                <TextInput
+                  placeholder="Email"
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  keyboardType="email-address"
+                  placeholderTextColor="#94a3b8"
+                  value={secureEmail}
+                  onChangeText={setSecureEmail}
+                  style={s.input}
+                />
+              </View>
+
+              <View style={s.field}>
+                <Text style={s.editLabel}>Password</Text>
+                <TextInput
+                  placeholder="Password"
+                  autoCapitalize="none"
+                  secureTextEntry
+                  placeholderTextColor="#94a3b8"
+                  value={securePassword}
+                  onChangeText={setSecurePassword}
+                  style={s.input}
+                />
+              </View>
+
+              <View style={s.field}>
+                <Text style={s.editLabel}>Confirm Password</Text>
+                <TextInput
+                  placeholder="Confirm password"
+                  autoCapitalize="none"
+                  secureTextEntry
+                  placeholderTextColor="#94a3b8"
+                  value={secureConfirmPassword}
+                  onChangeText={setSecureConfirmPassword}
+                  style={s.input}
+                />
+              </View>
+
+              <View style={s.actionsRow}>
+                <TouchableOpacity style={s.actionBtn} onPress={handleSecureAccount} disabled={securingAccount}>
+                  <Text style={s.actionText}>{securingAccount ? 'Securing…' : 'Secure Account'}</Text>
+                </TouchableOpacity>
+              </View>
+            </>
+          )}
         </View>
 
         <View style={[s.sheet, { marginTop: 10 }]}>

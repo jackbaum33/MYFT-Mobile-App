@@ -11,6 +11,7 @@ import { registerForPushNotifications } from '../services/notifications';
 import TabNavigator from './TabNavigator';
 import ProfileModal from './(modals)/profile';
 import LoginScreen from './login';
+import SignInScreen from './signin';
 import { TournamentProvider } from '../context/TournamentContext';
 import { AuthProvider } from '../context/AuthContext';
 import {
@@ -91,6 +92,7 @@ export type RootStackParamList = {
   Main: undefined;
   Profile: undefined;
   Login: undefined;
+  SignIn: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -390,9 +392,15 @@ function RootNavigator() {
       {authError ? (
         <AuthErrorScreen error={authError} onRetry={handleRetry} />
       ) : authReady ? (
-        <Stack.Navigator screenOptions={{ headerShown: false }}>
+        <Stack.Navigator
+          screenOptions={{ headerShown: false }}
+          initialRouteName={shouldShowLogin ? 'Login' : 'Main'}
+        >
           {shouldShowLogin ? (
-            <Stack.Screen name="Login" component={LoginScreen} />
+            <>
+              <Stack.Screen name="Login" component={LoginScreen} />
+              <Stack.Screen name="SignIn" component={SignInScreen} />
+            </>
           ) : (
             <>
               <Stack.Screen name="Main" component={TabNavigator} />
