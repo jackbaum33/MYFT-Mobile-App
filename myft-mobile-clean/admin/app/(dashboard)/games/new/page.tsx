@@ -1,7 +1,8 @@
 import { db } from "@/lib/firebaseAdmin";
 import type { TeamDoc } from "@/lib/types";
 import { createGame } from "../actions";
-import { card, input, label, btnPrimary, pageTitle, select } from "@/lib/ui";
+import SubmitButton from "@/components/SubmitButton";
+import { card, input, label, pageTitle, select } from "@/lib/ui";
 
 export default async function NewGamePage() {
   const teamsSnap = await db.collection("teams").orderBy("name").get();
@@ -59,7 +60,7 @@ export default async function NewGamePage() {
           <input type="text" name="field" placeholder="e.g. Field 3" className={input} />
         </div>
 
-        <button className={btnPrimary}>Create Game</button>
+        <SubmitButton pendingText="Creating…">Create Game</SubmitButton>
       </form>
     </div>
   );

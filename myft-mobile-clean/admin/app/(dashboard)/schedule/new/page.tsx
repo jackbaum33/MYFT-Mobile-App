@@ -1,5 +1,6 @@
 import { createEvent } from "../actions";
-import { card, input, label, btnPrimary, pageTitle } from "@/lib/ui";
+import SubmitButton from "@/components/SubmitButton";
+import { card, input, label, pageTitle } from "@/lib/ui";
 
 export default function NewEventPage() {
   return (
@@ -22,7 +23,7 @@ export default function NewEventPage() {
           <label className={label}>Start At</label>
           <input type="datetime-local" name="startAt" required className={input} />
         </div>
-        <button className={btnPrimary}>Create Event</button>
+        <SubmitButton pendingText="Creating…">Create Event</SubmitButton>
       </form>
     </div>
   );

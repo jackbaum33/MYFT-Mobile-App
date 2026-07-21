@@ -2,7 +2,9 @@ import { db } from "@/lib/firebaseAdmin";
 import type { TournamentConfig } from "@/lib/types";
 import { toDateTimeLocalValue } from "@/lib/utils";
 import { updateConfig } from "./actions";
-import { card, input, label, btnPrimary, pageTitle } from "@/lib/ui";
+import SubmitButton from "@/components/SubmitButton";
+import SavedToast from "@/components/SavedToast";
+import { card, input, label, pageTitle } from "@/lib/ui";
 
 export default async function ConfigPage() {
   const snap = await db.doc("config/tournament").get();
@@ -74,7 +76,8 @@ export default async function ConfigPage() {
           />
           <p className="mt-1 text-xs text-text/60">Opened when the user taps &ldquo;Update Now&rdquo;.</p>
         </div>
-        <button className={btnPrimary}>Save</button>
+        <SubmitButton pendingText="Saving…">Save</SubmitButton>
+        <SavedToast />
       </form>
     </div>
   );

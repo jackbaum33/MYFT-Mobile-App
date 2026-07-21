@@ -11,12 +11,13 @@ import {
   deleteTeam,
 } from "../actions";
 import ConfirmSubmitButton from "@/components/ConfirmSubmitButton";
+import SubmitButton from "@/components/SubmitButton";
+import SavedToast from "@/components/SavedToast";
 import {
   card,
   input,
   label,
   btnPrimary,
-  btnSecondary,
   btnDanger,
   pageTitle,
   sectionTitle,
@@ -97,15 +98,17 @@ export default async function TeamDetailPage({
           </div>
         </div>
         <div className="flex gap-2">
-          <button className={btnPrimary}>Save</button>
+          <SubmitButton pendingText="Saving…">Save</SubmitButton>
         </div>
+        <SavedToast />
       </form>
 
       <form action={boundRecompute} className={`${card} flex items-center justify-between`}>
         <p className="text-sm text-text/80">
           Recompute wins/losses/point differential from this team&apos;s Final pool games.
         </p>
-        <button className={btnSecondary}>Recompute from Games</button>
+        <SubmitButton variant="secondary" pendingText="Recomputing…">Recompute from Games</SubmitButton>
+        <SavedToast message="Recomputed" />
       </form>
 
       <div className={`${card} space-y-4`}>
@@ -136,7 +139,9 @@ export default async function TeamDetailPage({
                     </td>
                     <td className={td}>
                       <form action={boundRemove}>
-                        <button className={`${btnDanger} px-2 py-1 text-xs`}>Remove</button>
+                        <SubmitButton variant="danger" small pendingText="Removing…">
+                          Remove
+                        </SubmitButton>
                       </form>
                     </td>
                   </tr>
@@ -167,13 +172,14 @@ export default async function TeamDetailPage({
               ))}
             </select>
           </div>
-          <button className={btnSecondary}>Add</button>
+          <SubmitButton variant="secondary" pendingText="Adding…">Add</SubmitButton>
         </form>
       </div>
 
       <form action={boundDeleteTeam}>
         <ConfirmSubmitButton
           confirmText="Delete this team? Players keep their current team_id and will need reassigning."
+          pendingText="Deleting…"
           className={btnDanger}
         >
           Delete Team

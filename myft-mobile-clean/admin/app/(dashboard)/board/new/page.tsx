@@ -1,5 +1,6 @@
 import { createBoardMember } from "../actions";
-import { card, input, label, btnPrimary, pageTitle } from "@/lib/ui";
+import SubmitButton from "@/components/SubmitButton";
+import { card, input, label, pageTitle } from "@/lib/ui";
 
 export default function NewBoardMemberPage() {
   return (
@@ -27,7 +28,7 @@ export default function NewBoardMemberPage() {
           <label className={label}>Photo</label>
           <input type="file" name="photo" accept="image/*" className={input} />
         </div>
-        <button className={btnPrimary}>Create Member</button>
+        <SubmitButton pendingText="Creating…">Create Member</SubmitButton>
       </form>
     </div>
   );

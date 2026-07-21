@@ -5,7 +5,9 @@ import { STAT_FIELDS, statsFromArray } from "@/lib/types";
 import { playerImageUrl } from "@/lib/utils";
 import { updatePlayer, deletePlayer } from "../actions";
 import ConfirmSubmitButton from "@/components/ConfirmSubmitButton";
-import { card, input, label, select, btnPrimary, btnDanger, pageTitle, sectionTitle } from "@/lib/ui";
+import SubmitButton from "@/components/SubmitButton";
+import SavedToast from "@/components/SavedToast";
+import { card, input, label, select, btnDanger, pageTitle, sectionTitle } from "@/lib/ui";
 
 export default async function PlayerDetailPage({
   params,
@@ -74,11 +76,12 @@ export default async function PlayerDetailPage({
           ))}
         </div>
 
-        <button className={btnPrimary}>Save</button>
+        <SubmitButton pendingText="Saving…">Save</SubmitButton>
+        <SavedToast />
       </form>
 
       <form action={boundDelete}>
-        <ConfirmSubmitButton confirmText="Delete this player permanently?" className={btnDanger}>
+        <ConfirmSubmitButton confirmText="Delete this player permanently?" pendingText="Deleting…" className={btnDanger}>
           Delete Player
         </ConfirmSubmitButton>
       </form>

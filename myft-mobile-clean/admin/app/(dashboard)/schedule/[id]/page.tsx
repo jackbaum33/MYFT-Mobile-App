@@ -4,7 +4,8 @@ import type { ScheduleDoc } from "@/lib/types";
 import { toDateTimeLocalValue } from "@/lib/utils";
 import { updateEvent, deleteEvent } from "../actions";
 import ConfirmSubmitButton from "@/components/ConfirmSubmitButton";
-import { card, input, label, btnPrimary, btnDanger, pageTitle } from "@/lib/ui";
+import SubmitButton from "@/components/SubmitButton";
+import { card, input, label, btnDanger, pageTitle } from "@/lib/ui";
 
 export default async function EditEventPage({
   params,
@@ -40,11 +41,11 @@ export default async function EditEventPage({
           <label className={label}>Start At</label>
           <input type="datetime-local" name="startAt" defaultValue={startAtValue} required className={input} />
         </div>
-        <button className={btnPrimary}>Save</button>
+        <SubmitButton pendingText="Saving…">Save</SubmitButton>
       </form>
 
       <form action={boundDelete}>
-        <ConfirmSubmitButton confirmText="Delete this event?" className={btnDanger}>
+        <ConfirmSubmitButton confirmText="Delete this event?" pendingText="Deleting…" className={btnDanger}>
           Delete Event
         </ConfirmSubmitButton>
       </form>

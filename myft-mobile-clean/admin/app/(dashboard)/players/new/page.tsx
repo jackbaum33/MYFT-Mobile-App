@@ -2,7 +2,8 @@ import { db } from "@/lib/firebaseAdmin";
 import type { TeamDoc } from "@/lib/types";
 import { createPlayer } from "../actions";
 import NameIdFields from "@/components/NameIdFields";
-import { card, input, label, select, btnPrimary, btnSecondary, pageTitle } from "@/lib/ui";
+import SubmitButton from "@/components/SubmitButton";
+import { card, input, label, select, pageTitle } from "@/lib/ui";
 
 export default async function NewPlayerPage({
   searchParams,
@@ -56,12 +57,12 @@ export default async function NewPlayerPage({
         </div>
 
         <div className="flex flex-wrap gap-2">
-          <button type="submit" name="intent" value="save" className={btnPrimary}>
+          <SubmitButton name="intent" value="save" pendingText="Saving…">
             Save
-          </button>
-          <button type="submit" name="intent" value="saveAndAddAnother" className={btnSecondary}>
+          </SubmitButton>
+          <SubmitButton name="intent" value="saveAndAddAnother" variant="secondary" pendingText="Saving…">
             Save &amp; Add Another
-          </button>
+          </SubmitButton>
         </div>
       </form>
     </div>

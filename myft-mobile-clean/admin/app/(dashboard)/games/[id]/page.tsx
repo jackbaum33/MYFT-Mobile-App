@@ -5,7 +5,9 @@ import { STAT_FIELDS, statsFromArray } from "@/lib/types";
 import { toDateTimeLocalValue } from "@/lib/utils";
 import { updateGame, updatePlayerStats, markFinal, deleteGame } from "../actions";
 import ConfirmSubmitButton from "@/components/ConfirmSubmitButton";
-import { card, input, label, select, btnPrimary, btnSecondary, btnDanger, pageTitle, sectionTitle } from "@/lib/ui";
+import SubmitButton from "@/components/SubmitButton";
+import SavedToast from "@/components/SavedToast";
+import { card, input, label, select, btnDanger, pageTitle, sectionTitle } from "@/lib/ui";
 
 export default async function GameDetailPage({
   params,
@@ -44,11 +46,12 @@ export default async function GameDetailPage({
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className={pageTitle}>Edit Game</h1>
         <div className="flex gap-2">
-          <form action={boundMarkFinal}>
-            <button className={btnSecondary}>Mark Final</button>
+          <form action={boundMarkFinal} className="flex items-center gap-2">
+            <SubmitButton variant="secondary" pendingText="Marking…">Mark Final</SubmitButton>
+            <SavedToast message="Marked Final" />
           </form>
           <form action={boundDelete}>
-            <ConfirmSubmitButton confirmText="Delete this game permanently?" className={btnDanger}>
+            <ConfirmSubmitButton confirmText="Delete this game permanently?" pendingText="Deleting…" className={btnDanger}>
               Delete
             </ConfirmSubmitButton>
           </form>
@@ -152,7 +155,8 @@ export default async function GameDetailPage({
           Is Bye
         </label>
 
-        <button className={btnPrimary}>Save Game Info</button>
+        <SubmitButton pendingText="Saving…">Save Game Info</SubmitButton>
+        <SavedToast message="Game info saved" />
       </form>
 
       <form action={boundUpdateStats} className={`${card} space-y-4`}>
@@ -201,7 +205,8 @@ export default async function GameDetailPage({
             </table>
           </div>
         )}
-        {players.length > 0 && <button className={btnPrimary}>Save Stats</button>}
+        {players.length > 0 && <SubmitButton pendingText="Saving…">Save Stats</SubmitButton>}
+        <SavedToast message="Stats saved" />
       </form>
     </div>
   );

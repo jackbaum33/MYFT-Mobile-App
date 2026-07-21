@@ -4,7 +4,9 @@ import type { BoardMemberDoc } from "@/lib/types";
 import { boardImageUrl } from "@/lib/utils";
 import { updateBoardMember, deleteBoardMember } from "../actions";
 import ConfirmSubmitButton from "@/components/ConfirmSubmitButton";
-import { card, input, label, btnPrimary, btnDanger, pageTitle } from "@/lib/ui";
+import SubmitButton from "@/components/SubmitButton";
+import SavedToast from "@/components/SavedToast";
+import { card, input, label, btnDanger, pageTitle } from "@/lib/ui";
 
 export default async function BoardMemberDetailPage({
   params,
@@ -57,11 +59,12 @@ export default async function BoardMemberDetailPage({
           <label className={label}>Photo</label>
           <input type="file" name="photo" accept="image/*" className={input} />
         </div>
-        <button className={btnPrimary}>Save</button>
+        <SubmitButton pendingText="Saving…">Save</SubmitButton>
+        <SavedToast />
       </form>
 
       <form action={boundDelete}>
-        <ConfirmSubmitButton confirmText="Remove this board member?" className={btnDanger}>
+        <ConfirmSubmitButton confirmText="Remove this board member?" pendingText="Removing…" className={btnDanger}>
           Delete Member
         </ConfirmSubmitButton>
       </form>

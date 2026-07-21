@@ -1,5 +1,6 @@
 import { createTeam } from "../actions";
-import { card, input, label, select, btnPrimary, pageTitle } from "@/lib/ui";
+import SubmitButton from "@/components/SubmitButton";
+import { card, input, label, select, pageTitle } from "@/lib/ui";
 
 export default function NewTeamPage() {
   return (
@@ -25,7 +26,7 @@ export default function NewTeamPage() {
           <label className={label}>Logo</label>
           <input type="file" name="logo" accept="image/*" className={input} />
         </div>
-        <button className={btnPrimary}>Create Team</button>
+        <SubmitButton pendingText="Creating…">Create Team</SubmitButton>
       </form>
     </div>
   );

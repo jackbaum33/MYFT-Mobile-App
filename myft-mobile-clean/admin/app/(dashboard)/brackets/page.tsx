@@ -2,7 +2,9 @@ import Link from "next/link";
 import { db } from "@/lib/firebaseAdmin";
 import type { BracketDoc, TeamDoc } from "@/lib/types";
 import { overrideSlot } from "./actions";
-import { card, select, btnSecondary, pageTitle, sectionTitle } from "@/lib/ui";
+import SubmitButton from "@/components/SubmitButton";
+import SavedToast from "@/components/SavedToast";
+import { card, select, pageTitle, sectionTitle } from "@/lib/ui";
 
 export default async function BracketsPage({
   searchParams,
@@ -97,7 +99,8 @@ export default async function BracketsPage({
                                 ))}
                               </select>
                             </div>
-                            <button className={btnSecondary}>Override</button>
+                            <SubmitButton variant="secondary" pendingText="Saving…">Override</SubmitButton>
+                            <SavedToast message="Slot updated" />
                           </form>
                         </div>
                       );
