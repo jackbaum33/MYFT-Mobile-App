@@ -35,9 +35,14 @@ export default async function PlayersPage({
     <div>
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <h1 className={pageTitle}>Players</h1>
-        <Link href="/players/new" className={btnPrimary}>
-          + New Player
-        </Link>
+        <div className="flex gap-2">
+          <Link href="/players/import" className={btnSecondary}>
+            Import CSV
+          </Link>
+          <Link href="/players/new" className={btnPrimary}>
+            + New Player
+          </Link>
+        </div>
       </div>
 
       <form className="mb-4 flex gap-2" method="get">
