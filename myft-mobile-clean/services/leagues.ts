@@ -11,6 +11,7 @@ import {
   serverTimestamp,
   setDoc,
   Timestamp,
+  updateDoc,
   where,
   writeBatch,
   arrayUnion,
@@ -113,6 +114,14 @@ export async function createLeague(input: {
   };
   await setDoc(ref, league);
   return ref.id;
+}
+
+/** Owner-only by app convention, and only while the league is still pending. */
+export async function updateLeagueSettings(
+  leagueId: string,
+  updates: Partial<Pick<League, 'name' | 'boysPerTeam' | 'girlsPerTeam' | 'draftStyle' | 'scheduledStart' | 'memberUids'>>
+): Promise<void> {
+  await updateDoc(doc(db, 'leagues', leagueId), updates);
 }
 
 /** Owner-only by app convention (no Firestore rules enforce it yet). */

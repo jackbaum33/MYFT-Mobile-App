@@ -22,6 +22,7 @@ import { FONT_FAMILIES } from '../../fonts';
 import { useTournament } from '../../context/TournamentContext';
 import { useAuth } from '../../context/AuthContext';
 import { getUser, updateUserProfile } from '../../services/users';
+import { getPlayerImageUrl } from '../../utils/fantasy';
 
 const CARD = '#00417D';
 const NAVY = '#00274C';
@@ -30,12 +31,6 @@ const TEXT = '#E9ECEF';
 const LINE = 'rgba(255,255,255,0.12)';
 
 const LOGO = require('../../images/MYFT_LOGO.png');
-
-// Helper to get player image URL
-function getPlayerImageUrl(playerId: string): string {
-  const imageFilename = playerId.replace(/-/g, '');
-  return `https://firebasestorage.googleapis.com/v0/b/myft-2025.firebasestorage.app/o/players%2F${playerId}%2F${imageFilename}.jpg?alt=media`;
-}
 
 type FilterKey = 'division' | 'school' | null;
 

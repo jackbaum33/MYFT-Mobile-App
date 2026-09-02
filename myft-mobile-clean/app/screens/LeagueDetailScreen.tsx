@@ -154,6 +154,13 @@ export default function LeagueDetailScreen() {
               {isOwner ? (
                 <>
                   <TouchableOpacity
+                    style={styles.editBtn}
+                    onPress={() => navigation.navigate('EditLeague', { id: leagueId })}
+                  >
+                    <Ionicons name="settings-outline" size={16} color={YELLOW} />
+                    <Text style={styles.editBtnText}>Edit Settings</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
                     style={[styles.actionBtn, (!canStart || starting) && styles.actionBtnDisabled]}
                     onPress={onStartDraft}
                     disabled={!canStart || starting}
@@ -201,11 +208,16 @@ export default function LeagueDetailScreen() {
         </View>
       }
       renderItem={({ item, index }) => (
-        <View style={styles.standingRow}>
+        <TouchableOpacity
+          style={styles.standingRow}
+          activeOpacity={0.85}
+          onPress={() => navigation.navigate('TeamRoster', { id: leagueId, uid: item.uid })}
+        >
           <Text style={styles.rank}>{index + 1}.</Text>
           <Text style={styles.standingName} numberOfLines={1}>{item.displayName}</Text>
           <Text style={styles.standingPoints}>{item.points} <Text style={styles.standingPointsUnit}>pts</Text></Text>
-        </View>
+          <Ionicons name="chevron-forward" size={16} color={TEXT} style={{ marginLeft: 6 }} />
+        </TouchableOpacity>
       )}
     />
   );
@@ -219,6 +231,19 @@ const styles = StyleSheet.create({
 
   card: { backgroundColor: CARD, borderRadius: 12, padding: 14, borderWidth: 1, borderColor: LINE, marginBottom: 12 },
   metaLine: { color: TEXT, fontSize: 13, marginBottom: 6, fontFamily: FONT_FAMILIES.archivoNarrow },
+
+  editBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    marginBottom: 10,
+    paddingVertical: 10,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(255,203,5,0.4)',
+  },
+  editBtnText: { color: YELLOW, fontWeight: '800', fontFamily: FONT_FAMILIES.archivoBlack },
 
   actionBtn: { backgroundColor: YELLOW, borderRadius: 10, paddingVertical: 12, alignItems: 'center' },
   actionBtnDisabled: { opacity: 0.4 },

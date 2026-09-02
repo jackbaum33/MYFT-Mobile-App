@@ -4,6 +4,11 @@ import type { Player, Team } from '../context/TournamentContext';
 export const allPlayersFromTeams = (teams: Team[]) =>
   teams.flatMap(t => t.players);
 
+export function getPlayerImageUrl(playerId: string): string {
+  const imageFilename = playerId.replace(/-/g, '');
+  return `https://firebasestorage.googleapis.com/v0/b/myft-2025.firebasestorage.app/o/players%2F${playerId}%2F${imageFilename}.jpg?alt=media`;
+}
+
 export const mapPlayersById = (players: Player[]) => {
   const m = new Map<string, Player>();
   for (const p of players) m.set(p.id, p);
