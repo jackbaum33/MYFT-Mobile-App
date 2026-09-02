@@ -11,6 +11,7 @@ import {
   subscribeToLeague,
   subscribeToRosters,
   startDraft,
+  deleteLeague,
   type LeagueWithId,
   type LeagueRoster,
 } from '../../services/leagues';
@@ -38,6 +39,7 @@ export default function LeagueDetailScreen() {
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [rosters, setRosters] = useState<LeagueRoster[]>([]);
   const [starting, setStarting] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [now, setNow] = useState(() => Date.now());
 
   useEffect(() => {
@@ -67,7 +69,8 @@ export default function LeagueDetailScreen() {
   const playersById = useMemo(() => mapPlayersById(teams.flatMap((t) => t.players)), [teams]);
 
   const isOwner = !!user?.uid && league?.ownerUid === user.uid;
-  const canStart = !!league && now >= league.scheduledStart.toMillis();
+  // Owners can jump the scheduled start time; everyone else still waits for it.
+  const canStart = !!league && (isOwner || now >= league.scheduledStart.toMillis());
 
   const onStartDraft = async () => {
     if (!league) return;
@@ -80,6 +83,31 @@ export default function LeagueDetailScreen() {
     } finally {
       setStarting(false);
     }
+  };
+
+  const onDeleteLeague = () => {
+    Alert.alert(
+      'Delete League',
+      `Delete "${league?.name ?? 'this league'}" permanently? This removes all rosters and picks and can't be undone.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              setDeleting(true);
+              await deleteLeague(leagueId);
+              navigation.goBack();
+            } catch (e: any) {
+              console.warn('[LeagueDetail] deleteLeague failed:', e);
+              Alert.alert('Failed to delete league', e?.message ?? 'Please try again.');
+              setDeleting(false);
+            }
+          },
+        },
+      ]
+    );
   };
 
   const standings = useMemo(() => {
@@ -159,6 +187,17 @@ export default function LeagueDetailScreen() {
           )}
 
           {league.status === 'complete' && <Text style={styles.sectionLabel}>Final Standings</Text>}
+
+          {isOwner && (
+            <TouchableOpacity
+              style={[styles.deleteBtn, deleting && styles.actionBtnDisabled]}
+              onPress={onDeleteLeague}
+              disabled={deleting}
+            >
+              <Ionicons name="trash-outline" size={16} color="#ff6b6b" />
+              <Text style={styles.deleteBtnText}>{deleting ? 'Deleting…' : 'Delete League'}</Text>
+            </TouchableOpacity>
+          )}
         </View>
       }
       renderItem={({ item, index }) => (
@@ -185,6 +224,20 @@ const styles = StyleSheet.create({
   actionBtnDisabled: { opacity: 0.4 },
   actionBtnText: { color: NAVY, fontWeight: '900', fontFamily: FONT_FAMILIES.archivoBlack },
   helperText: { color: TEXT, opacity: 0.75, fontSize: 12, marginTop: 8, fontFamily: FONT_FAMILIES.archivoNarrow },
+
+  deleteBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    marginTop: 4,
+    marginBottom: 12,
+    paddingVertical: 10,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(255,107,107,0.4)',
+  },
+  deleteBtnText: { color: '#ff6b6b', fontWeight: '800', fontFamily: FONT_FAMILIES.archivoBlack },
 
   sectionLabel: { color: YELLOW, fontWeight: '700', fontSize: 14, marginBottom: 8, fontFamily: FONT_FAMILIES.archivoBlack },
 

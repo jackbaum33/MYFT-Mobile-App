@@ -214,3 +214,16 @@ export async function getRoster(leagueId: string, uid: string): Promise<LeagueRo
   const snap = await getDoc(doc(db, 'leagues', leagueId, 'rosters', uid));
   return snap.exists() ? (snap.data() as LeagueRoster) : null;
 }
+
+/** Owner-only by app convention (enforced in Firestore rules). Also clears out rosters/picks subcollections. */
+export async function deleteLeague(leagueId: string): Promise<void> {
+  const [rostersSnap, picksSnap] = await Promise.all([
+    getDocs(collection(db, 'leagues', leagueId, 'rosters')),
+    getDocs(collection(db, 'leagues', leagueId, 'picks')),
+  ]);
+  const batch = writeBatch(db);
+  rostersSnap.forEach((d) => batch.delete(d.ref));
+  picksSnap.forEach((d) => batch.delete(d.ref));
+  batch.delete(doc(db, 'leagues', leagueId));
+  await batch.commit();
+}
