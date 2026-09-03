@@ -30,7 +30,7 @@ import {
   type LeagueWithId,
   type DraftPickWithId,
 } from '../../services/leagues';
-import { getPlayerImageUrl } from '../../utils/fantasy';
+import { getPlayerImageUrl, getTeamLogoUrl } from '../../utils/fantasy';
 import { FONT_FAMILIES } from '../../fonts';
 import type { FantasyStackParamList } from '../(tabs)/fantasy/_layout';
 
@@ -47,11 +47,20 @@ const SHEET_PEEK = 76;
 const SHEET_HEIGHT = Math.round(SCREEN_H * 0.72);
 const SHEET_MAX_TRANSLATE = SHEET_HEIGHT - SHEET_PEEK;
 const BOARD_HEIGHT = Math.round(SCREEN_H * 0.4);
-const BOARD_CELL_W = 130;
-const BOARD_CELL_H = 64;
+const BOARD_CELL_W = 150;
+const BOARD_CELL_H = 60;
 
 type RouteProp_ = RouteProp<FantasyStackParamList, 'DraftRoom'>;
-type MappedPlayer = { id: string; name: string; team: string; division: Division; fantasy: number };
+type MappedPlayer = {
+  id: string;
+  name: string;
+  team: string;
+  teamId: string;
+  abbreviation?: string;
+  color?: string;
+  division: Division;
+  fantasy: number;
+};
 type FilterKey = 'division' | 'school' | null;
 
 function capitalize(s: string) {
@@ -60,6 +69,42 @@ function capitalize(s: string) {
 
 function initials(name: string) {
   return name ? name.trim().charAt(0).toUpperCase() : '?';
+}
+
+function cellBackgroundColor(player?: MappedPlayer) {
+  if (!player) return '#062a4e';
+  const base = player.color || (player.division === 'boys' ? BOYS_COLOR : GIRLS_COLOR);
+  return `${base}59`;
+}
+
+/** Draft-board cell avatar: player photo, falling back to the team logo, then a placeholder icon. */
+function PickAvatar({ player }: { player: MappedPlayer }) {
+  const [playerImgError, setPlayerImgError] = useState(false);
+  const [logoError, setLogoError] = useState(false);
+
+  if (!playerImgError) {
+    return (
+      <Image
+        source={{ uri: getPlayerImageUrl(player.id) }}
+        style={styles.boardCellAvatar}
+        onError={() => setPlayerImgError(true)}
+      />
+    );
+  }
+  if (!logoError) {
+    return (
+      <Image
+        source={{ uri: getTeamLogoUrl(player.teamId) }}
+        style={styles.boardCellAvatar}
+        onError={() => setLogoError(true)}
+      />
+    );
+  }
+  return (
+    <View style={styles.boardCellAvatarFallback}>
+      <Ionicons name="person" size={12} color={TEXT} />
+    </View>
+  );
 }
 
 /** Draggable pull-up sheet built on Animated + PanResponder (no extra deps). */
@@ -174,17 +219,22 @@ function DraftBoard({
                     key={uid}
                     style={[
                       styles.boardCell,
-                      { width: BOARD_CELL_W, height: BOARD_CELL_H },
-                      player?.division === 'boys' && styles.boardCellBoys,
-                      player?.division === 'girls' && styles.boardCellGirls,
+                      { width: BOARD_CELL_W, height: BOARD_CELL_H, backgroundColor: cellBackgroundColor(player) },
                       isOnClock && styles.boardCellOnClock,
                     ]}
                   >
-                    {pn != null && <Text style={styles.boardCellPick}>{pn + 1}</Text>}
                     {player ? (
-                      <Text style={styles.boardCellPlayer} numberOfLines={2}>
-                        {player.name}
-                      </Text>
+                      <View style={styles.boardCellContent}>
+                        <PickAvatar player={player} />
+                        <View style={styles.boardCellText}>
+                          <Text style={styles.boardCellName} numberOfLines={1}>
+                            {player.name}
+                          </Text>
+                          <Text style={styles.boardCellSub} numberOfLines={1}>
+                            {player.division === 'boys' ? 'M' : 'F'} • {player.abbreviation || player.team}
+                          </Text>
+                        </View>
+                      </View>
                     ) : isOnClock ? (
                       <Text style={styles.boardCellClockText}>On the clock</Text>
                     ) : null}
@@ -321,6 +371,9 @@ export default function DraftRoomScreen() {
           id: p.id,
           name: p.name,
           team: t.name,
+          teamId: t.id,
+          abbreviation: t.abbreviation,
+          color: t.color,
           division: t.division,
           fantasy: calculatePoints(p),
         }))
@@ -578,12 +631,7 @@ export default function DraftRoomScreen() {
             const hasError = imageErrors.has(item.id);
             const isSubmitting = submittingId === item.id;
             return (
-              <TouchableOpacity
-                style={[styles.playerRow, !isMyTurn && styles.playerRowDisabled]}
-                activeOpacity={0.85}
-                disabled={!isMyTurn || isSubmitting}
-                onPress={() => onPickPlayer(item.id, item.division)}
-              >
+              <View style={[styles.playerRow, !isMyTurn && styles.playerRowDisabled]}>
                 {hasError ? (
                   <View style={styles.avatarFallback}>
                     <Ionicons name="person" size={16} color={TEXT} />
@@ -601,9 +649,19 @@ export default function DraftRoomScreen() {
                     {item.team} • {item.division === 'boys' ? 'Boys' : 'Girls'}
                   </Text>
                 </View>
-                <Text style={styles.playerPoints}>{item.fantasy} pts</Text>
-                {isSubmitting && <ActivityIndicator color={YELLOW} style={{ marginLeft: 8 }} />}
-              </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.draftBtn, (!isMyTurn || isSubmitting) && styles.draftBtnDisabled]}
+                  activeOpacity={0.85}
+                  disabled={!isMyTurn || isSubmitting}
+                  onPress={() => onPickPlayer(item.id, item.division)}
+                >
+                  {isSubmitting ? (
+                    <ActivityIndicator color={NAVY} size="small" />
+                  ) : (
+                    <Text style={styles.draftBtnText}>Draft</Text>
+                  )}
+                </TouchableOpacity>
+              </View>
             );
           }}
         />
@@ -660,13 +718,21 @@ const styles = StyleSheet.create({
     margin: 2,
     padding: 6,
     justifyContent: 'center',
-    backgroundColor: '#062a4e',
   },
-  boardCellBoys: { backgroundColor: `${BOYS_COLOR}59` },
-  boardCellGirls: { backgroundColor: `${GIRLS_COLOR}59` },
   boardCellOnClock: { borderColor: YELLOW, borderWidth: 2 },
-  boardCellPick: { color: TEXT, opacity: 0.6, fontSize: 10, fontFamily: FONT_FAMILIES.archivoNarrow },
-  boardCellPlayer: { color: TEXT, fontWeight: '800', fontSize: 12, marginTop: 2, fontFamily: FONT_FAMILIES.archivoBlack },
+  boardCellContent: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  boardCellAvatar: { width: 26, height: 26, borderRadius: 13, backgroundColor: NAVY },
+  boardCellAvatarFallback: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: NAVY,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  boardCellText: { flex: 1 },
+  boardCellName: { color: TEXT, fontWeight: '800', fontSize: 12, fontFamily: FONT_FAMILIES.archivoBlack },
+  boardCellSub: { color: TEXT, opacity: 0.85, fontSize: 10, marginTop: 2, fontFamily: FONT_FAMILIES.archivoNarrow },
   boardCellClockText: { color: YELLOW, fontWeight: '800', fontSize: 11, marginTop: 2, fontFamily: FONT_FAMILIES.archivoBlack },
 
   teamChipRow: { maxHeight: 48, marginBottom: 8 },
@@ -744,5 +810,8 @@ const styles = StyleSheet.create({
   avatarFallback: { width: 32, height: 32, borderRadius: 16, backgroundColor: NAVY, alignItems: 'center', justifyContent: 'center' },
   playerName: { color: TEXT, fontWeight: '800', fontFamily: FONT_FAMILIES.archivoBlack },
   playerSub: { color: TEXT, opacity: 0.7, fontSize: 12, marginTop: 2, fontFamily: FONT_FAMILIES.archivoNarrow },
-  playerPoints: { color: YELLOW, fontWeight: '900', fontFamily: FONT_FAMILIES.archivoBlack },
+
+  draftBtn: { backgroundColor: YELLOW, borderRadius: 8, paddingHorizontal: 16, paddingVertical: 9, marginLeft: 8 },
+  draftBtnDisabled: { opacity: 0.4 },
+  draftBtnText: { color: NAVY, fontWeight: '900', fontFamily: FONT_FAMILIES.archivoBlack },
 });

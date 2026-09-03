@@ -65,6 +65,7 @@ export default function EditLeagueScreen() {
   const [girlsPerTeam, setGirlsPerTeam] = useState(2);
   const [draftStyle, setDraftStyle] = useState<DraftStyle>('snake');
   const [scheduledStart, setScheduledStart] = useState(() => new Date());
+  const [draftOrder, setDraftOrder] = useState<string[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [hydrated, setHydrated] = useState(false);
 
@@ -85,6 +86,9 @@ export default function EditLeagueScreen() {
     setGirlsPerTeam(league.girlsPerTeam);
     setDraftStyle(league.draftStyle);
     setScheduledStart(league.scheduledStart.toDate());
+    const existingOrder = (league.draftOrder ?? []).filter((uid) => league.memberUids.includes(uid));
+    const missing = league.memberUids.filter((uid) => !existingOrder.includes(uid));
+    setDraftOrder([...existingOrder, ...missing]);
     setHydrated(true);
   }, [league, hydrated]);
 
@@ -100,6 +104,8 @@ export default function EditLeagueScreen() {
       }
     })();
   }, []);
+
+  const usersByUid = useMemo(() => new Map(allUsers.map((u) => [u.uid, u])), [allUsers]);
 
   const filteredUsers = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -120,10 +126,23 @@ export default function EditLeagueScreen() {
 
   const toggleMember = (uid: string) => {
     if (uid === league?.ownerUid) return; // owner is always in
+    const wasSelected = selectedUids.has(uid);
     setSelectedUids((prev) => {
       const next = new Set(prev);
       if (next.has(uid)) next.delete(uid);
       else next.add(uid);
+      return next;
+    });
+    setDraftOrder((prev) => (wasSelected ? prev.filter((u) => u !== uid) : prev.includes(uid) ? prev : [...prev, uid]));
+  };
+
+  const moveInDraftOrder = (uid: string, delta: number) => {
+    setDraftOrder((prev) => {
+      const idx = prev.indexOf(uid);
+      const newIdx = idx + delta;
+      if (idx < 0 || newIdx < 0 || newIdx >= prev.length) return prev;
+      const next = [...prev];
+      [next[idx], next[newIdx]] = [next[newIdx], next[idx]];
       return next;
     });
   };
@@ -180,6 +199,7 @@ export default function EditLeagueScreen() {
         girlsPerTeam,
         draftStyle,
         scheduledStart: Timestamp.fromDate(scheduledStart),
+        draftOrder,
       });
       navigation.goBack();
     } catch (e: any) {
@@ -297,13 +317,50 @@ export default function EditLeagueScreen() {
         );
       }}
       ListFooterComponent={
-        <TouchableOpacity
-          style={[styles.submitBtn, submitting && { opacity: 0.6 }]}
-          onPress={onSubmit}
-          disabled={submitting}
-        >
-          <Text style={styles.submitBtnText}>{submitting ? 'Saving…' : 'Save Changes'}</Text>
-        </TouchableOpacity>
+        <View>
+          <Text style={styles.sectionLabel}>Draft Order ({draftOrder.length})</Text>
+          <View style={styles.card}>
+            {draftOrder.length === 0 && (
+              <Text style={styles.helperText}>Select members above to set the draft order.</Text>
+            )}
+            {draftOrder.map((uid, i) => (
+              <View key={uid} style={styles.orderRow}>
+                <Text style={styles.orderIndex}>{i + 1}.</Text>
+                <Text style={styles.orderName} numberOfLines={1}>
+                  {usersByUid.get(uid)?.displayName ?? uid}
+                  {uid === league.ownerUid ? ' (owner)' : ''}
+                </Text>
+                <TouchableOpacity
+                  onPress={() => moveInDraftOrder(uid, -1)}
+                  disabled={i === 0}
+                  style={[styles.orderBtn, i === 0 && styles.orderBtnDisabled]}
+                >
+                  <Ionicons name="chevron-up" size={16} color={NAVY} />
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => moveInDraftOrder(uid, 1)}
+                  disabled={i === draftOrder.length - 1}
+                  style={[styles.orderBtn, i === draftOrder.length - 1 && styles.orderBtnDisabled]}
+                >
+                  <Ionicons name="chevron-down" size={16} color={NAVY} />
+                </TouchableOpacity>
+              </View>
+            ))}
+            {draftOrder.length > 0 && (
+              <Text style={styles.helperText}>
+                This is the round 1 pick order{draftStyle === 'snake' ? ' (later rounds reverse automatically)' : ''}.
+              </Text>
+            )}
+          </View>
+
+          <TouchableOpacity
+            style={[styles.submitBtn, submitting && { opacity: 0.6 }]}
+            onPress={onSubmit}
+            disabled={submitting}
+          >
+            <Text style={styles.submitBtnText}>{submitting ? 'Saving…' : 'Save Changes'}</Text>
+          </TouchableOpacity>
+        </View>
       }
     />
   );
@@ -357,6 +414,19 @@ const styles = StyleSheet.create({
   },
   userName: { color: TEXT, fontWeight: '700', fontFamily: FONT_FAMILIES.archivoBlack },
   userSub: { color: TEXT, opacity: 0.7, fontSize: 12, marginTop: 2, fontFamily: FONT_FAMILIES.archivoNarrow },
+
+  orderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: LINE,
+    gap: 8,
+  },
+  orderIndex: { color: TEXT, opacity: 0.7, width: 20, fontFamily: FONT_FAMILIES.archivoBlack },
+  orderName: { flex: 1, color: TEXT, fontWeight: '700', fontFamily: FONT_FAMILIES.archivoNarrow },
+  orderBtn: { backgroundColor: YELLOW, width: 26, height: 26, borderRadius: 13, alignItems: 'center', justifyContent: 'center' },
+  orderBtnDisabled: { opacity: 0.3 },
 
   submitBtn: { backgroundColor: YELLOW, borderRadius: 10, paddingVertical: 14, alignItems: 'center', marginTop: 20 },
   submitBtnText: { color: NAVY, fontWeight: '900', fontSize: 16, fontFamily: FONT_FAMILIES.archivoBlack },

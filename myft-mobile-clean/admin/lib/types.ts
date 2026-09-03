@@ -45,6 +45,8 @@ export type TeamDoc = {
   captain?: string;
   record?: { wins?: number; losses?: number } | number[];
   pointDifferential?: number;
+  abbreviation?: string;
+  color?: string;
 };
 
 export type PlayerDoc = {

@@ -1,5 +1,6 @@
 import { createTeam } from "../actions";
 import SubmitButton from "@/components/SubmitButton";
+import ColorInput from "@/components/ColorInput";
 import { card, input, label, select, pageTitle } from "@/lib/ui";
 
 export default function NewTeamPage() {
@@ -21,6 +22,16 @@ export default function NewTeamPage() {
         <div>
           <label className={label}>Captain</label>
           <input type="text" name="captain" className={input} />
+        </div>
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className={label}>Abbreviation</label>
+            <input type="text" name="abbreviation" maxLength={5} placeholder="e.g. OSU" className={input} />
+          </div>
+          <div>
+            <label className={label}>Team Color</label>
+            <ColorInput name="color" defaultValue="#00274C" />
+          </div>
         </div>
         <div>
           <label className={label}>Logo</label>

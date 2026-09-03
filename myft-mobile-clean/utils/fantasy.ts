@@ -9,6 +9,10 @@ export function getPlayerImageUrl(playerId: string): string {
   return `https://firebasestorage.googleapis.com/v0/b/myft-2025.firebasestorage.app/o/players%2F${playerId}%2F${imageFilename}.jpg?alt=media`;
 }
 
+export function getTeamLogoUrl(teamId: string): string {
+  return `https://firebasestorage.googleapis.com/v0/b/myft-2025.firebasestorage.app/o/teams%2F${teamId}%2Flogo.png?alt=media`;
+}
+
 export const mapPlayersById = (players: Player[]) => {
   const m = new Map<string, Player>();
   for (const p of players) m.set(p.id, p);

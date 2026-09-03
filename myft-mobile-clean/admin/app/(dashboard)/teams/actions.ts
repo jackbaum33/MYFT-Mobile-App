@@ -26,6 +26,8 @@ export async function createTeam(formData: FormData): Promise<void> {
   const name = String(formData.get("name") ?? "").trim();
   const division = String(formData.get("division") ?? "boys");
   const captain = String(formData.get("captain") ?? "").trim();
+  const abbreviation = String(formData.get("abbreviation") ?? "").trim().toUpperCase();
+  const color = String(formData.get("color") ?? "").trim();
   const logo = formData.get("logo");
   if (!name) throw new Error("Name is required");
 
@@ -43,6 +45,8 @@ export async function createTeam(formData: FormData): Promise<void> {
     captain_name: captain,
     record: { wins: 0, losses: 0 },
     pointDifferential: 0,
+    abbreviation,
+    color: color || "#00274C",
   });
 
   if (logo instanceof File && logo.size > 0) {
@@ -66,6 +70,8 @@ export async function updateTeamMeta(teamId: string, formData: FormData): Promis
       losses: Number(formData.get("losses") ?? 0),
     },
     pointDifferential: Number(formData.get("pointDifferential") ?? 0),
+    abbreviation: String(formData.get("abbreviation") ?? "").trim().toUpperCase(),
+    color: String(formData.get("color") ?? "").trim() || "#00274C",
   });
 
   if (logo instanceof File && logo.size > 0) {

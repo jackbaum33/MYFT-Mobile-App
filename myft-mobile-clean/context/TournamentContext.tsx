@@ -36,6 +36,8 @@ export interface Team {
   record: { wins: number; losses: number };
   players: Player[];
   pointDifferential?: number;
+  abbreviation?: string;
+  color?: string;
 }
 
 export interface FantasyRoster {
@@ -112,19 +114,21 @@ const loadTeamsAndPlayers = async (): Promise<Team[]> => {
   const teamsSnap = await getDocs(collection(db, 'teams'));
   const teamMeta = new Map<
     string,
-    { 
-      name: string; 
-      division: Division; 
-      captain: string; 
+    {
+      name: string;
+      division: Division;
+      captain: string;
       record: { wins: number; losses: number };
       pointDifferential?: number;
+      abbreviation?: string;
+      color?: string;
     }
   >();
 
   teamsSnap.forEach((d) => {
     const data = d.data() as any;
     const division: Division = data?.division ? normDiv(data.division) : normDiv(d.id);
-    
+
     let record = { wins: 0, losses: 0 };
     if (Array.isArray(data?.record)) {
       record = {
@@ -144,6 +148,8 @@ const loadTeamsAndPlayers = async (): Promise<Team[]> => {
       captain: data?.captain_name ?? data?.captain ?? '',
       record,
       pointDifferential: data?.pointDifferential,
+      abbreviation: data?.abbreviation || undefined,
+      color: data?.color || undefined,
     });
   });
 
@@ -184,6 +190,8 @@ const loadTeamsAndPlayers = async (): Promise<Team[]> => {
       record: meta?.record ?? { wins: 0, losses: 0 },
       players,
       pointDifferential: meta?.pointDifferential,
+      abbreviation: meta?.abbreviation,
+      color: meta?.color,
     };
   });
 

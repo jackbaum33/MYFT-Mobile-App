@@ -13,6 +13,7 @@ import {
 import ConfirmSubmitButton from "@/components/ConfirmSubmitButton";
 import SubmitButton from "@/components/SubmitButton";
 import SavedToast from "@/components/SavedToast";
+import ColorInput from "@/components/ColorInput";
 import {
   card,
   input,
@@ -83,6 +84,27 @@ export default async function TeamDetailPage({
           <label className={label}>Captain</label>
           <input type="text" name="captain" defaultValue={team.captain_name ?? team.captain ?? ""} className={input} />
         </div>
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className={label}>Abbreviation</label>
+            <input
+              type="text"
+              name="abbreviation"
+              maxLength={5}
+              defaultValue={team.abbreviation ?? ""}
+              placeholder="e.g. OSU"
+              className={input}
+            />
+          </div>
+          <div>
+            <label className={label}>Team Color</label>
+            <ColorInput name="color" defaultValue={team.color ?? "#00274C"} />
+          </div>
+        </div>
+        <p className="text-xs text-text/60">
+          Abbreviation and color are used to brand this team&apos;s draft board cells in the mobile app&apos;s
+          fantasy draft.
+        </p>
         <div className="grid grid-cols-3 gap-4">
           <div>
             <label className={label}>Wins</label>

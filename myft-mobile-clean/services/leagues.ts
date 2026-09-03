@@ -119,14 +119,21 @@ export async function createLeague(input: {
 /** Owner-only by app convention, and only while the league is still pending. */
 export async function updateLeagueSettings(
   leagueId: string,
-  updates: Partial<Pick<League, 'name' | 'boysPerTeam' | 'girlsPerTeam' | 'draftStyle' | 'scheduledStart' | 'memberUids'>>
+  updates: Partial<
+    Pick<League, 'name' | 'boysPerTeam' | 'girlsPerTeam' | 'draftStyle' | 'scheduledStart' | 'memberUids' | 'draftOrder'>
+  >
 ): Promise<void> {
   await updateDoc(doc(db, 'leagues', leagueId), updates);
 }
 
 /** Owner-only by app convention (no Firestore rules enforce it yet). */
 export async function startDraft(leagueId: string, league: League): Promise<void> {
-  const draftOrder = shuffle(league.memberUids);
+  // Honor an owner-customized draft order (set via updateLeagueSettings) if it's still valid
+  // for the current member list; otherwise fall back to a random shuffle.
+  const draftOrder =
+    league.draftOrder && league.draftOrder.length === league.memberUids.length
+      ? league.draftOrder
+      : shuffle(league.memberUids);
   const rounds = league.boysPerTeam + league.girlsPerTeam;
   const totalPicks = rounds * league.memberUids.length;
 
