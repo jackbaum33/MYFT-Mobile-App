@@ -7,7 +7,7 @@ import {
 import { NavigationProp, useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTournament } from '../../../context/TournamentContext';
-import { mapPlayersById, rosterTotalPoints } from '../../../utils/fantasy';
+import { mapPlayersById, rosterTotalPoints, getPlayerImageUrl } from '../../../utils/fantasy';
 import { useAuth } from '../../../context/AuthContext';
 import { listUsers, type UserProfile } from '../../../services/users';
 import { FONT_FAMILIES } from '../../../fonts';
@@ -42,11 +42,6 @@ const STAT_OPTIONS: { key: string; label: string; short: string }[] = [
 function getStatValue(player: any, key: string): number {
   if (key === 'fantasy') return player.fantasy ?? 0;
   return (player.stats as any)?.[key] ?? 0;
-}
-
-function getPlayerImageUrl(playerId: string): string {
-  const imageFilename = playerId.replace(/-/g, '');
-  return `https://firebasestorage.googleapis.com/v0/b/myft-2025.firebasestorage.app/o/players%2F${playerId}%2F${imageFilename}.jpg?alt=media`;
 }
 
 export default function LeaderboardIndex() {
@@ -187,7 +182,7 @@ export default function LeaderboardIndex() {
   const renderPlayer = ({ item, index }: any) => {
     const school = playerIdToTeamName.get(item.id) ?? '';
     const rankStyle = index <= 2 ? [styles.rank, { color: TEXT }] : styles.rank;
-    const imageUrl = getPlayerImageUrl(item.id);
+    const imageUrl = getPlayerImageUrl(item.id, item.photoVersion);
     const hasError = playerImageErrors.has(item.id);
     const val = getStatValue(item, statSelected);
     const unit = selectedStatOption.short;

@@ -5,6 +5,7 @@ import { RouteProp, useRoute, useNavigation, NavigationProp } from '@react-navig
 import { Ionicons } from '@expo/vector-icons';
 import { useTournament } from '../../../context/TournamentContext';
 import { getTeamLogo } from '../../../team_logos';
+import { getPlayerImageUrl } from '../../../utils/fantasy';
 import { FONT_FAMILIES } from '../../../fonts';
 
 // Import the navigation types from your layout
@@ -17,14 +18,6 @@ const CARD = '#00417D';
 const NAVY = '#00274C';
 const YELLOW = '#FFCB05';
 const TEXT = '#E9ECEF';
-
-// Helper to get player image URL
-function getPlayerImageUrl(playerId: string): string {
-  // Convert firstname-lastname to firstnamelastname for the image filename
-  const imageFilename = playerId.replace(/-/g, '');
-  // Construct the direct Firebase Storage URL
-  return `https://firebasestorage.googleapis.com/v0/b/myft-2025.firebasestorage.app/o/players%2F${playerId}%2F${imageFilename}.jpg?alt=media`;
-}
 
 export default function TeamDetailScreen() {
   const route = useRoute<TeamDetailRouteProp>();
@@ -102,7 +95,7 @@ export default function TeamDetailScreen() {
         ItemSeparatorComponent={() => <View style={{ height: 8 }} />}
         renderItem={({ item }) => {
           const pts = calculatePoints(item);
-          const imageUrl = getPlayerImageUrl(item.id);
+          const imageUrl = getPlayerImageUrl(item.id, item.photoVersion);
           const hasError = imageErrors.has(item.id);
           
           return (

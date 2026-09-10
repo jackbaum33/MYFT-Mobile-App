@@ -59,6 +59,7 @@ type MappedPlayer = {
   abbreviation?: string;
   color?: string;
   logoVersion?: number;
+  photoVersion?: number;
   division: Division;
   fantasy: number;
 };
@@ -86,7 +87,7 @@ function PickAvatar({ player }: { player: MappedPlayer }) {
   if (!playerImgError) {
     return (
       <Image
-        source={{ uri: getPlayerImageUrl(player.id) }}
+        source={{ uri: getPlayerImageUrl(player.id, player.photoVersion) }}
         style={styles.boardCellAvatar}
         onError={() => setPlayerImgError(true)}
       />
@@ -376,6 +377,7 @@ export default function DraftRoomScreen() {
           abbreviation: t.abbreviation,
           color: t.color,
           logoVersion: t.logoVersion,
+          photoVersion: p.photoVersion,
           division: t.division,
           fantasy: calculatePoints(p),
         }))
@@ -640,7 +642,7 @@ export default function DraftRoomScreen() {
                   </View>
                 ) : (
                   <Image
-                    source={{ uri: getPlayerImageUrl(item.id) }}
+                    source={{ uri: getPlayerImageUrl(item.id, item.photoVersion) }}
                     style={styles.avatar}
                     onError={() => setImageErrors((prev) => new Set(prev).add(item.id))}
                   />

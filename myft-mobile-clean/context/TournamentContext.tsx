@@ -26,6 +26,7 @@ export interface Player {
   division: Division;
   teamId: string;
   stats: PlayerStats;
+  photoVersion?: number;
 }
 
 export interface Team {
@@ -174,6 +175,7 @@ const loadTeamsAndPlayers = async (): Promise<Team[]> => {
       division: teamDiv,
       teamId,
       stats,
+      photoVersion: data?.photoVersion || undefined,
     };
 
     const list = playersByTeam.get(teamId) ?? [];

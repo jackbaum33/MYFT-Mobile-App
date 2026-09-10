@@ -35,7 +35,7 @@ export default async function PlayerDetailPage({
       <div className={`${card} flex items-center gap-4`}>
         {/* eslint-disable-next-line @next/next/no-img-element -- external Firebase Storage URL, not worth Next/Image config */}
         <img
-          src={playerImageUrl(id)}
+          src={playerImageUrl(id, player.photoVersion)}
           alt={player.display_name ?? id}
           width={64}
           height={64}

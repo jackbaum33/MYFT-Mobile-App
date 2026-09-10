@@ -54,6 +54,7 @@ export type PlayerDoc = {
   display_name?: string;
   team_id?: string;
   seasonTotals?: number[];
+  photoVersion?: number;
 };
 
 export type GameDoc = {

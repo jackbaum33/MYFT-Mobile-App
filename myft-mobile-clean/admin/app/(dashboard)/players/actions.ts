@@ -3,21 +3,10 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { FieldValue } from "firebase-admin/firestore";
-import { db, bucket } from "@/lib/firebaseAdmin";
+import { db } from "@/lib/firebaseAdmin";
 import { requireSession } from "@/lib/session";
-import { slugify, playerImagePath } from "@/lib/utils";
-
-async function uploadPlayerPhoto(playerId: string, file: File): Promise<void> {
-  const buffer = Buffer.from(await file.arrayBuffer());
-  const gcsFile = bucket.file(playerImagePath(playerId));
-  await gcsFile.save(buffer, {
-    contentType: file.type || "image/jpeg",
-    metadata: { cacheControl: "public, max-age=31536000" },
-  });
-  // getPlayerImageUrl() in the app builds a tokenless `...?alt=media` URL, so the
-  // object must be genuinely public (not just a signed getDownloadURL() token).
-  await gcsFile.makePublic();
-}
+import { slugify } from "@/lib/utils";
+import { uploadPlayerPhoto } from "@/lib/photo";
 
 export async function createPlayer(formData: FormData): Promise<void> {
   await requireSession();

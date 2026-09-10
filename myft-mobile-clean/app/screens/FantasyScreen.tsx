@@ -39,18 +39,20 @@ function capitalize(s: string) {
 }
 
 // ===== OPTIMIZED PLAYER IMAGE COMPONENT =====
-const PlayerImage = React.memo(({ 
-  playerId, 
+const PlayerImage = React.memo(({
+  playerId,
+  version,
   size = 32,
-  onError 
-}: { 
-  playerId: string; 
+  onError
+}: {
+  playerId: string;
+  version?: number;
   size?: number;
   onError?: (id: string) => void;
 }) => {
   const [error, setError] = useState(false);
   const [loading, setLoading] = useState(true);
-  const imageUrl = getPlayerImageUrl(playerId);
+  const imageUrl = getPlayerImageUrl(playerId, version);
 
   const handleError = useCallback(() => {
     setError(true);
@@ -248,7 +250,8 @@ export default function FantasyScreen() {
           fantasy: calculatePoints(p),
           stats: p.stats,
           teamId: p.teamId,
-          division: p.division
+          division: p.division,
+          photoVersion: p.photoVersion
         }))
       );
   }, [teams, calculatePoints]);
@@ -459,12 +462,13 @@ export default function FantasyScreen() {
         onPress={() => handlePlayerPress(item)}
         disabled={isLocked}
       >
-        <PlayerImage 
-          playerId={item.id} 
+        <PlayerImage
+          playerId={item.id}
+          version={item.photoVersion}
           size={32}
           onError={handleImageError}
         />
-        
+
         <View style={styles.playerInfo}>
           <Text style={styles.primary} numberOfLines={1}>
             {item.name || 'Unknown Player'}
@@ -674,8 +678,9 @@ export default function FantasyScreen() {
           <Pressable style={styles.modalCard} onPress={(e) => e.stopPropagation()}>
             {detail && (
               <>
-                <PlayerImage 
-                  playerId={detail.id} 
+                <PlayerImage
+                  playerId={detail.id}
+                  version={detail.photoVersion}
                   size={80}
                   onError={handleImageError}
                 />

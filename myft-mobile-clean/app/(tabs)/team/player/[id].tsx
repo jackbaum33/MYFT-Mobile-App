@@ -9,6 +9,7 @@ import { collection, getDocs } from 'firebase/firestore';
 import { db } from '../../../../services/firebaseConfig';
 import { useTournament, SCORING } from '../../../../context/TournamentContext';
 import { getTeamLogo } from '../../../../team_logos';
+import { getPlayerImageUrl } from '../../../../utils/fantasy';
 import { FONT_FAMILIES } from '../../../../fonts';
 
 export type LeaderboardStackParamList = {
@@ -34,11 +35,6 @@ type GameHistoryEntry = {
   stats: number[];
   fantasyPts: number;
 };
-
-function getPlayerImageUrl(playerId: string): string {
-  const imageFilename = playerId.replace(/-/g, '');
-  return `https://firebasestorage.googleapis.com/v0/b/myft-2025.firebasestorage.app/o/players%2F${playerId}%2F${imageFilename}.jpg?alt=media`;
-}
 
 function humanizeTeamId(teamId: string): string {
   return teamId
@@ -132,7 +128,7 @@ export default function PlayerLeaderboardDetail() {
     [player, teamNameById]
   );
   const logoSrc = getTeamLogo(player?.teamId);
-  const playerImageUrl = useMemo(() => (player ? getPlayerImageUrl(player.id) : null), [player]);
+  const playerImageUrl = useMemo(() => (player ? getPlayerImageUrl(player.id, player.photoVersion) : null), [player]);
 
   const counts = useMemo(() => {
     const s = player?.stats;

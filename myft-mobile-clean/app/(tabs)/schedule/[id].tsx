@@ -7,6 +7,7 @@ import { db } from '../../../services/firebaseConfig';
 import { FONT_FAMILIES } from '../../../fonts';
 import { useTournament, SCORING } from '../../../context/TournamentContext';
 import { getTeamLogo } from '../../../team_logos';
+import { getPlayerImageUrl } from '../../../utils/fantasy';
 import { Ionicons } from '@expo/vector-icons';
 
 // Import the navigation types from your layout
@@ -32,15 +33,6 @@ const NAVY = '#00274C';
 const TEXT = '#E9ECEF';
 const YELLOW = '#FFCB05';
 const LINE = 'rgba(255,255,255,0.18)';
-
-// Helper to get player image URL
-function getPlayerImageUrl(playerId: string): string {
-  // Convert firstname-lastname to firstnamelastname for the image filename
-  const imageFilename = playerId.replace(/-/g, '');
-  // Construct the direct Firebase Storage URL
-  // Note: %2F is the URL-encoded version of /
-  return `https://firebasestorage.googleapis.com/v0/b/myft-2025.firebasestorage.app/o/players%2F${playerId}%2F${imageFilename}.jpg?alt=media`;
-}
 
 export default function GameDetail() {
   const route = useRoute<ScheduleDetailRouteProp>();
@@ -135,6 +127,7 @@ export default function GameDetail() {
         return {
           playerId: p.id,
           name: p.name,
+          photoVersion: p.photoVersion,
           line: {
             touchdowns:           arr[0]  ?? 0,
             passingTDs:           arr[1]  ?? 0,
@@ -254,7 +247,7 @@ export default function GameDetail() {
             </Text>
           }
           renderItem={({ item }) => {
-            const imageUrl = getPlayerImageUrl(item.playerId);
+            const imageUrl = getPlayerImageUrl(item.playerId, item.photoVersion);
             const hasError = imageErrors.has(item.playerId);
             return (
               <View style={styles.row}>

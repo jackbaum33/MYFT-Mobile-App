@@ -106,7 +106,7 @@ export default function TeamRosterScreen() {
               </View>
             ) : (
               <Image
-                source={{ uri: getPlayerImageUrl(player.id) }}
+                source={{ uri: getPlayerImageUrl(player.id, player.photoVersion) }}
                 style={styles.avatar}
                 onError={() => setImageErrors((prev) => new Set(prev).add(player.id))}
               />

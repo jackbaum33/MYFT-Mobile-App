@@ -4,9 +4,14 @@ import type { Player, Team } from '../context/TournamentContext';
 export const allPlayersFromTeams = (teams: Team[]) =>
   teams.flatMap(t => t.players);
 
-export function getPlayerImageUrl(playerId: string): string {
+/**
+ * `version` busts the browser cache after a re-upload in the admin panel — the underlying
+ * storage object is served with a 1-year Cache-Control at an otherwise-fixed URL.
+ */
+export function getPlayerImageUrl(playerId: string, version?: number): string {
   const imageFilename = playerId.replace(/-/g, '');
-  return `https://firebasestorage.googleapis.com/v0/b/myft-2025.firebasestorage.app/o/players%2F${playerId}%2F${imageFilename}.jpg?alt=media`;
+  const base = `https://firebasestorage.googleapis.com/v0/b/myft-2025.firebasestorage.app/o/players%2F${playerId}%2F${imageFilename}.jpg?alt=media`;
+  return version ? `${base}&v=${version}` : base;
 }
 
 /**

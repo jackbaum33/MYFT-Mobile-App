@@ -74,7 +74,7 @@ export default function PlayerScreen() {
           </View>
         ) : (
           <Image
-            source={{ uri: getPlayerImageUrl(player.id) }}
+            source={{ uri: getPlayerImageUrl(player.id, player.photoVersion) }}
             style={styles.avatar}
             onError={() => setImageError(true)}
           />
