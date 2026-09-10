@@ -58,6 +58,7 @@ type MappedPlayer = {
   teamId: string;
   abbreviation?: string;
   color?: string;
+  logoVersion?: number;
   division: Division;
   fantasy: number;
 };
@@ -94,7 +95,7 @@ function PickAvatar({ player }: { player: MappedPlayer }) {
   if (!logoError) {
     return (
       <Image
-        source={{ uri: getTeamLogoUrl(player.teamId) }}
+        source={{ uri: getTeamLogoUrl(player.teamId, player.logoVersion) }}
         style={styles.boardCellAvatar}
         onError={() => setLogoError(true)}
       />
@@ -374,6 +375,7 @@ export default function DraftRoomScreen() {
           teamId: t.id,
           abbreviation: t.abbreviation,
           color: t.color,
+          logoVersion: t.logoVersion,
           division: t.division,
           fantasy: calculatePoints(p),
         }))

@@ -38,6 +38,7 @@ export interface Team {
   pointDifferential?: number;
   abbreviation?: string;
   color?: string;
+  logoVersion?: number;
 }
 
 export interface FantasyRoster {
@@ -122,6 +123,7 @@ const loadTeamsAndPlayers = async (): Promise<Team[]> => {
       pointDifferential?: number;
       abbreviation?: string;
       color?: string;
+      logoVersion?: number;
     }
   >();
 
@@ -150,6 +152,7 @@ const loadTeamsAndPlayers = async (): Promise<Team[]> => {
       pointDifferential: data?.pointDifferential,
       abbreviation: data?.abbreviation || undefined,
       color: data?.color || undefined,
+      logoVersion: data?.logoVersion || undefined,
     });
   });
 
@@ -192,6 +195,7 @@ const loadTeamsAndPlayers = async (): Promise<Team[]> => {
       pointDifferential: meta?.pointDifferential,
       abbreviation: meta?.abbreviation,
       color: meta?.color,
+      logoVersion: meta?.logoVersion,
     };
   });
 

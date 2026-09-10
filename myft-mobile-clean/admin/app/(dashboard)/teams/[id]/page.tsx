@@ -65,7 +65,7 @@ export default async function TeamDetailPage({
         <div className="flex items-center gap-4">
           {/* eslint-disable-next-line @next/next/no-img-element -- external Firebase Storage URL */}
           <img
-            src={teamLogoUrl(id)}
+            src={teamLogoUrl(id, team.logoVersion)}
             alt={team.name ?? id}
             width={56}
             height={56}

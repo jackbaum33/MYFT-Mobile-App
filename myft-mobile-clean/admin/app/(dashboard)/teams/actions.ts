@@ -18,6 +18,9 @@ async function uploadTeamLogo(teamId: string, file: File): Promise<void> {
   // The app builds a tokenless `...?alt=media` URL directly, so the object
   // must be genuinely public (mirrors players/actions.ts).
   await gcsFile.makePublic();
+  // Object is cached for a year at a fixed URL; bump the version so cache-busted
+  // URLs (teamLogoUrl) pick up the new image immediately instead of the stale one.
+  await db.doc(`teams/${teamId}`).set({ logoVersion: FieldValue.increment(1) }, { merge: true });
 }
 
 export async function createTeam(formData: FormData): Promise<void> {

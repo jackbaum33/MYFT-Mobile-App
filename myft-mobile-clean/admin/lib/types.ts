@@ -47,6 +47,7 @@ export type TeamDoc = {
   pointDifferential?: number;
   abbreviation?: string;
   color?: string;
+  logoVersion?: number;
 };
 
 export type PlayerDoc = {

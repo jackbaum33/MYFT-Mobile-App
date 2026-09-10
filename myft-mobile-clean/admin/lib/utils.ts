@@ -24,9 +24,14 @@ export function teamLogoPath(teamId: string): string {
   return `teams/${teamId}/logo.png`;
 }
 
-export function teamLogoUrl(teamId: string): string {
+/**
+ * `version` busts the browser/CDN cache after a re-upload — the underlying GCS object is
+ * served with a 1-year Cache-Control, and the URL is otherwise identical across uploads.
+ */
+export function teamLogoUrl(teamId: string, version?: number): string {
   const bucket = process.env.FIREBASE_STORAGE_BUCKET || "myft-2025.firebasestorage.app";
-  return `https://firebasestorage.googleapis.com/v0/b/${bucket}/o/teams%2F${teamId}%2Flogo.png?alt=media`;
+  const base = `https://firebasestorage.googleapis.com/v0/b/${bucket}/o/teams%2F${teamId}%2Flogo.png?alt=media`;
+  return version ? `${base}&v=${version}` : base;
 }
 
 export function boardImagePath(memberId: string): string {

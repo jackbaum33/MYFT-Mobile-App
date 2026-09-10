@@ -31,7 +31,7 @@ export default async function TeamsPage() {
                 <td className={td}>
                   {/* eslint-disable-next-line @next/next/no-img-element -- external Firebase Storage URL */}
                   <img
-                    src={teamLogoUrl(t.id)}
+                    src={teamLogoUrl(t.id, t.logoVersion)}
                     alt={t.name ?? t.id}
                     width={28}
                     height={28}

@@ -9,8 +9,13 @@ export function getPlayerImageUrl(playerId: string): string {
   return `https://firebasestorage.googleapis.com/v0/b/myft-2025.firebasestorage.app/o/players%2F${playerId}%2F${imageFilename}.jpg?alt=media`;
 }
 
-export function getTeamLogoUrl(teamId: string): string {
-  return `https://firebasestorage.googleapis.com/v0/b/myft-2025.firebasestorage.app/o/teams%2F${teamId}%2Flogo.png?alt=media`;
+/**
+ * `version` busts the browser cache after a re-upload in the admin panel — the underlying
+ * storage object is served with a 1-year Cache-Control at an otherwise-fixed URL.
+ */
+export function getTeamLogoUrl(teamId: string, version?: number): string {
+  const base = `https://firebasestorage.googleapis.com/v0/b/myft-2025.firebasestorage.app/o/teams%2F${teamId}%2Flogo.png?alt=media`;
+  return version ? `${base}&v=${version}` : base;
 }
 
 export const mapPlayersById = (players: Player[]) => {
