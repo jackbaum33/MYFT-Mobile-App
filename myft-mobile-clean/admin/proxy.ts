@@ -5,7 +5,8 @@ import { SESSION_COOKIE_NAME } from "./lib/constants";
 // Next.js 16 renamed Middleware to Proxy; same runtime, same purpose.
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
-  if (pathname === "/login") {
+  // Public, unauthenticated by design — see app/upload-photo/actions.ts.
+  if (pathname === "/login" || pathname === "/upload-photo") {
     return NextResponse.next();
   }
 
