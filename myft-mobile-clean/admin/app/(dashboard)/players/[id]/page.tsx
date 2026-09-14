@@ -54,11 +54,15 @@ export default async function PlayerDetailPage({
           <label className={label}>Team</label>
           <select name="teamId" defaultValue={player.team_id ?? ""} className={select}>
             <option value="">— Unassigned —</option>
-            {teams.map((t) => (
-              <option key={t.id} value={t.id}>
-                {t.name} ({t.division})
-              </option>
-            ))}
+            {teams.map((t) => {
+              const captain = t.captain_name || t.captain;
+              return (
+                <option key={t.id} value={t.id}>
+                  {t.name} ({t.division})
+                  {captain ? ` — Capt. ${captain}` : ""}
+                </option>
+              );
+            })}
           </select>
         </div>
         <div>

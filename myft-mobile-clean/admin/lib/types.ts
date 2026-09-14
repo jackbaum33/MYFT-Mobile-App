@@ -55,6 +55,7 @@ export type PlayerDoc = {
   team_id?: string;
   seasonTotals?: number[];
   photoVersion?: number;
+  selfUploadedPhotoAt?: Timestamp;
 };
 
 export type GameDoc = {

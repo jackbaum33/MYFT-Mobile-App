@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { db } from "@/lib/firebaseAdmin";
-import type { GameDoc, LeagueDoc } from "@/lib/types";
+import type { GameDoc, LeagueDoc, PlayerDoc } from "@/lib/types";
 import { card, pageTitle, sectionTitle } from "@/lib/ui";
 
 const LINKS = [
@@ -15,13 +15,15 @@ const LINKS = [
 ];
 
 export default async function HomePage() {
-  const [gamesSnap, leaguesSnap] = await Promise.all([
+  const [gamesSnap, leaguesSnap, playersSnap] = await Promise.all([
     db.collection("games").get(),
     db.collection("leagues").get(),
+    db.collection("players").get(),
   ]);
 
   const games = gamesSnap.docs.map((d) => d.data() as GameDoc);
   const leagues = leaguesSnap.docs.map((d) => d.data() as LeagueDoc);
+  const players = playersSnap.docs.map((d) => d.data() as PlayerDoc);
 
   const startOfToday = new Date();
   startOfToday.setHours(0, 0, 0, 0);
@@ -34,12 +36,13 @@ export default async function HomePage() {
   }).length;
   const liveNow = games.filter((g) => (g.status ?? "").toLowerCase() === "live").length;
   const draftsInProgress = leagues.filter((l) => l.status === "drafting").length;
+  const selfUploadedPhotos = players.filter((p) => !!p.selfUploadedPhotoAt).length;
 
   return (
     <div>
       <h1 className={pageTitle}>Dashboard</h1>
 
-      <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-3">
+      <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-4">
         <div className={card}>
           <p className="text-3xl font-black text-yellow">{gamesToday}</p>
           <p className="text-sm text-text/70">Games today</p>
@@ -51,6 +54,13 @@ export default async function HomePage() {
         <div className={card}>
           <p className="text-3xl font-black text-yellow">{draftsInProgress}</p>
           <p className="text-sm text-text/70">Drafts in progress</p>
+        </div>
+        <div className={card}>
+          <p className="text-3xl font-black text-yellow">
+            {selfUploadedPhotos}
+            <span className="text-lg font-bold text-text/50">/{players.length}</span>
+          </p>
+          <p className="text-sm text-text/70">Players self-uploaded a photo</p>
         </div>
       </div>
 

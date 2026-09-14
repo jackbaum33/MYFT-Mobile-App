@@ -22,9 +22,10 @@ export async function submitPlayerPhoto(formData: FormData): Promise<void> {
   const playerSnap = await db.doc(`players/${playerId}`).get();
   if (!playerSnap.exists) throw new Error("Unknown player — please pick a name from the list.");
 
-  await uploadPlayerPhoto(playerId, photo);
+  await uploadPlayerPhoto(playerId, photo, { source: "self" });
 
   revalidatePath("/upload-photo");
   revalidatePath(`/players/${playerId}`);
   revalidatePath("/players");
+  revalidatePath("/");
 }

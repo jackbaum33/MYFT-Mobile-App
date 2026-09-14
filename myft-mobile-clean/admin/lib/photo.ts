@@ -9,7 +9,11 @@ import { playerImagePath } from "@/lib/utils";
  * the object path keeps its historical `.jpg` suffix (not worth a storage migration),
  * but the actual bytes and Content-Type are genuinely PNG.
  */
-export async function uploadPlayerPhoto(playerId: string, file: File): Promise<void> {
+export async function uploadPlayerPhoto(
+  playerId: string,
+  file: File,
+  opts?: { source?: "self" | "admin" }
+): Promise<void> {
   const input = Buffer.from(await file.arrayBuffer());
   const png = await sharp(input).png().toBuffer();
 
@@ -24,5 +28,13 @@ export async function uploadPlayerPhoto(playerId: string, file: File): Promise<v
 
   // Object is cached for a year at a fixed URL; bump the version so cache-busted
   // URLs (playerImageUrl / getPlayerImageUrl) pick up the new image immediately.
-  await db.doc(`players/${playerId}`).set({ photoVersion: FieldValue.increment(1) }, { merge: true });
+  // `selfUploadedPhotoAt` is only ever set here (never cleared) — it's how the
+  // dashboard counts how many players have used the public /upload-photo form.
+  await db.doc(`players/${playerId}`).set(
+    {
+      photoVersion: FieldValue.increment(1),
+      ...(opts?.source === "self" ? { selfUploadedPhotoAt: FieldValue.serverTimestamp() } : {}),
+    },
+    { merge: true }
+  );
 }

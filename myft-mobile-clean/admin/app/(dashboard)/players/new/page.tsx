@@ -35,18 +35,26 @@ export default async function NewPlayerPage({
           <select name="teamId" className={select} defaultValue={teamId ?? ""}>
             <option value="">— Unassigned —</option>
             <optgroup label="Boys">
-              {boys.map((t) => (
-                <option key={t.id} value={t.id}>
-                  {t.name}
-                </option>
-              ))}
+              {boys.map((t) => {
+                const captain = t.captain_name || t.captain;
+                return (
+                  <option key={t.id} value={t.id}>
+                    {t.name}
+                    {captain ? ` — Capt. ${captain}` : ""}
+                  </option>
+                );
+              })}
             </optgroup>
             <optgroup label="Girls">
-              {girls.map((t) => (
-                <option key={t.id} value={t.id}>
-                  {t.name}
-                </option>
-              ))}
+              {girls.map((t) => {
+                const captain = t.captain_name || t.captain;
+                return (
+                  <option key={t.id} value={t.id}>
+                    {t.name}
+                    {captain ? ` — Capt. ${captain}` : ""}
+                  </option>
+                );
+              })}
             </optgroup>
           </select>
         </div>
