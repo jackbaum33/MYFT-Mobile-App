@@ -53,7 +53,7 @@ export default async function PlayerDetailPage({
         <div>
           <label className={label}>Team</label>
           <select name="teamId" defaultValue={player.team_id ?? ""} className={select}>
-            <option value="">— Unassigned —</option>
+            <option value="">— Free Agent —</option>
             {teams.map((t) => (
               <option key={t.id} value={t.id}>
                 {teamOptionLabel(t, { showDivision: true })}

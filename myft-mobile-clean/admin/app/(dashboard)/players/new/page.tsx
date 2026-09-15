@@ -34,7 +34,7 @@ export default async function NewPlayerPage({
         <div>
           <label className={label}>Team</label>
           <select name="teamId" className={select} defaultValue={teamId ?? ""}>
-            <option value="">— Unassigned —</option>
+            <option value="">— Free Agent —</option>
             <optgroup label="Boys">
               {boys.map((t) => (
                 <option key={t.id} value={t.id}>

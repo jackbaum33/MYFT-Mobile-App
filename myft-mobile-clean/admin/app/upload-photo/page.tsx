@@ -19,7 +19,7 @@ export default async function UploadPhotoPage() {
       return {
         id: d.id,
         name: data.display_name ?? d.id,
-        team: data.team_id ? teamNameById.get(data.team_id) ?? data.team_id : "Unassigned",
+        team: data.team_id ? teamNameById.get(data.team_id) ?? data.team_id : "Free Agent",
       };
     })
     .sort((a, b) => a.name.localeCompare(b.name));
