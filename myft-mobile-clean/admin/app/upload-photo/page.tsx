@@ -1,10 +1,7 @@
 import { db } from "@/lib/firebaseAdmin";
 import type { PlayerDoc, TeamDoc } from "@/lib/types";
-import { card, input, label } from "@/lib/ui";
-import PlayerPicker, { type PlayerOption } from "./PlayerPicker";
-import { submitPlayerPhoto } from "./actions";
-import SubmitButton from "@/components/SubmitButton";
-import SavedToast from "@/components/SavedToast";
+import type { PlayerOption } from "./PlayerPicker";
+import UploadForm from "./UploadForm";
 
 // Reads live Firestore state via the Admin SDK — never statically prerender.
 export const dynamic = "force-dynamic";
@@ -35,18 +32,7 @@ export default async function UploadPhotoPage() {
           Find your name below and upload a photo to use in the MYFT app.
         </p>
 
-        <form action={submitPlayerPhoto} encType="multipart/form-data" className={`${card} space-y-4`}>
-          <div>
-            <label className={label}>Your Name</label>
-            <PlayerPicker players={players} />
-          </div>
-          <div>
-            <label className={label}>Photo</label>
-            <input type="file" name="photo" accept="image/*" required className={input} />
-          </div>
-          <SubmitButton pendingText="Uploading…">Upload Photo</SubmitButton>
-          <SavedToast message="Photo uploaded!" />
-        </form>
+        <UploadForm players={players} />
       </div>
     </div>
   );

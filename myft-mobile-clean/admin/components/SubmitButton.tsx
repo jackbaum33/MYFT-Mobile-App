@@ -19,6 +19,7 @@ export default function SubmitButton({
   className,
   name,
   value,
+  disabled,
 }: {
   children: React.ReactNode;
   pendingText?: string;
@@ -27,6 +28,8 @@ export default function SubmitButton({
   className?: string;
   name?: string;
   value?: string;
+  /** External busy condition (e.g. client-side work before the form can submit) that should also block submission. */
+  disabled?: boolean;
 }) {
   const { pending, data } = useFormStatus();
   const isThisButton = name ? data?.get(name) === value : true;
@@ -37,7 +40,7 @@ export default function SubmitButton({
       type="submit"
       name={name}
       value={value}
-      disabled={pending}
+      disabled={pending || disabled}
       className={[VARIANTS[variant], small ? btnSmall : "", "inline-flex items-center gap-2", className]
         .filter(Boolean)
         .join(" ")}
