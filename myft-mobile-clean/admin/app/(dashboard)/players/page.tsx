@@ -66,7 +66,7 @@ export default async function PlayersPage({
                     {p.display_name ?? p.id}
                   </Link>
                 </td>
-                <td className={td}>{p.team_id ? teamName.get(p.team_id) ?? p.team_id : "— unassigned —"}</td>
+                <td className={td}>{p.team_id ? teamName.get(p.team_id) ?? p.team_id : "— Free Agent —"}</td>
               </tr>
             ))}
             {players.length === 0 && (
