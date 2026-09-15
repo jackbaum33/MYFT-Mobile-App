@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import { db } from "@/lib/firebaseAdmin";
 import type { PlayerDoc, TeamDoc } from "@/lib/types";
 import { STAT_FIELDS, statsFromArray } from "@/lib/types";
-import { playerImageUrl } from "@/lib/utils";
+import { playerImageUrl, teamOptionLabel } from "@/lib/utils";
 import { updatePlayer, deletePlayer } from "../actions";
 import ConfirmSubmitButton from "@/components/ConfirmSubmitButton";
 import SubmitButton from "@/components/SubmitButton";
@@ -54,15 +54,11 @@ export default async function PlayerDetailPage({
           <label className={label}>Team</label>
           <select name="teamId" defaultValue={player.team_id ?? ""} className={select}>
             <option value="">— Unassigned —</option>
-            {teams.map((t) => {
-              const captain = t.captain_name || t.captain;
-              return (
-                <option key={t.id} value={t.id}>
-                  {t.name} ({t.division})
-                  {captain ? ` — Capt. ${captain}` : ""}
-                </option>
-              );
-            })}
+            {teams.map((t) => (
+              <option key={t.id} value={t.id}>
+                {teamOptionLabel(t, { showDivision: true })}
+              </option>
+            ))}
           </select>
         </div>
         <div>

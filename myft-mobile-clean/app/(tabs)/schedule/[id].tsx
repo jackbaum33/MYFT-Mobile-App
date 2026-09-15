@@ -2,7 +2,7 @@
 import React, { useEffect, useMemo, useState, useLayoutEffect } from 'react';
 import { View, Text, StyleSheet, FlatList, Image, TouchableOpacity, Modal, Pressable } from 'react-native';
 import { RouteProp, useRoute, useNavigation, NavigationProp } from '@react-navigation/native';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, collection, getDocs, query, orderBy } from 'firebase/firestore';
 import { db } from '../../../services/firebaseConfig';
 import { FONT_FAMILIES } from '../../../fonts';
 import { useTournament, SCORING } from '../../../context/TournamentContext';
@@ -28,6 +28,29 @@ type FSGame = {
   playerStats?: Record<string, number[]>;
 };
 
+type PlayLogEntry = {
+  id: string;
+  playerId: string;
+  playerName: string;
+  statKey: string;
+  delta: number;
+  createdAt?: { toDate: () => Date };
+};
+
+const STAT_LABELS: Record<string, string> = {
+  touchdowns: 'Touchdown',
+  passingTDs: 'Passing TD',
+  minimalReceptions: 'Minimal Reception',
+  shortReceptions: 'Short Reception',
+  mediumReceptions: 'Medium Reception',
+  longReceptions: 'Long Reception',
+  catches: 'Catch',
+  flagsPulled: 'Flag Pulled',
+  sacks: 'Sack',
+  interceptions: 'Interception',
+  passingInterceptions: 'Passing Interception',
+};
+
 const CARD = '#00417D';
 const NAVY = '#00274C';
 const TEXT = '#E9ECEF';
@@ -44,8 +67,9 @@ export default function GameDetail() {
   const [game, setGame] = useState<FSGame | null>(null);
   const [loading, setLoading] = useState(true);
   const [imageErrors, setImageErrors] = useState<Set<string>>(new Set());
+  const [playLog, setPlayLog] = useState<PlayLogEntry[]>([]);
 
-  const [side, setSide] = useState<'team1' | 'team2'>('team1');
+  const [side, setSide] = useState<'team1' | 'team2' | 'log'>('team1');
   const [detail, setDetail] = useState<{
     name: string;
     line: {
@@ -86,6 +110,23 @@ export default function GameDetail() {
         if (active) setGame(null);
       } finally {
         if (active) setLoading(false);
+      }
+    })();
+    return () => { active = false; };
+  }, [id]);
+
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      if (!id) return;
+      try {
+        const q = query(collection(db, 'games', String(id), 'playLog'), orderBy('createdAt', 'desc'));
+        const snap = await getDocs(q);
+        if (active) {
+          setPlayLog(snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<PlayLogEntry, 'id'>) })));
+        }
+      } catch (e) {
+        console.warn('[game detail] play log load failed:', e);
       }
     })();
     return () => { active = false; };
@@ -233,10 +274,43 @@ export default function GameDetail() {
             {name2}
           </Text>
         </TouchableOpacity>
+        <TouchableOpacity
+          onPress={() => setSide('log')}
+          style={[styles.toggleBtn, side === 'log' && styles.toggleActive]}
+        >
+          <Text style={[styles.toggleText, side === 'log' && styles.toggleTextActive]} numberOfLines={1}>
+            Play Log
+          </Text>
+        </TouchableOpacity>
       </View>
 
-      {/* Per-game player stats */}
+      {/* Per-game player stats, or the play-by-play log */}
       <View style={styles.tableCard}>
+        {side === 'log' ? (
+          <FlatList
+            data={playLog}
+            keyExtractor={(e) => e.id}
+            ItemSeparatorComponent={() => <View style={styles.rowSep} />}
+            ListEmptyComponent={
+              <Text style={[styles.empty, { padding: 16 }]}>
+                No plays logged yet.
+              </Text>
+            }
+            renderItem={({ item }) => (
+              <View style={styles.logRow}>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.logPlayer} numberOfLines={1}>{item.playerName}</Text>
+                  <Text style={styles.logStat}>
+                    {STAT_LABELS[item.statKey] ?? item.statKey} (+{item.delta})
+                  </Text>
+                </View>
+                <Text style={styles.logTime}>
+                  {item.createdAt?.toDate ? item.createdAt.toDate().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) : ''}
+                </Text>
+              </View>
+            )}
+          />
+        ) : (
         <FlatList
           data={rows}
           keyExtractor={(r) => r.playerId}
@@ -276,6 +350,7 @@ export default function GameDetail() {
             );
           }}
         />
+        )}
       </View>
 
       {/* Modal: per-player game stat breakdown */}
@@ -399,6 +474,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   detailBtnText: { color: NAVY, fontWeight: '900', fontFamily: FONT_FAMILIES.archivoBlack, fontSize: 12 },
+
+  logRow: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#0a3a68', borderRadius: 8, paddingVertical: 8, paddingHorizontal: 12 },
+  logPlayer: { color: TEXT, fontWeight: '800', fontSize: 13, fontFamily: FONT_FAMILIES.archivoBlack },
+  logStat: { color: YELLOW, fontSize: 12, marginTop: 2, fontFamily: FONT_FAMILIES.archivoNarrow },
+  logTime: { color: TEXT, opacity: 0.6, fontSize: 11, marginLeft: 8, fontFamily: FONT_FAMILIES.archivoNarrow },
 
   backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'center', alignItems: 'center' },
   modalCard: { width: '90%', maxHeight: '80%', backgroundColor: NAVY, borderRadius: 16, padding: 16, borderWidth: 1, borderColor: LINE },

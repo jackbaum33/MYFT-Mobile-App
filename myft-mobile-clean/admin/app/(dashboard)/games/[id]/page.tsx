@@ -1,9 +1,10 @@
 import { notFound } from "next/navigation";
 import { db } from "@/lib/firebaseAdmin";
-import type { GameDoc, PlayerDoc, TeamDoc } from "@/lib/types";
+import type { GameDoc, PlayerDoc, TeamDoc, PlayLogEntryDoc } from "@/lib/types";
 import { STAT_FIELDS, statsFromArray } from "@/lib/types";
-import { toDateTimeLocalValue } from "@/lib/utils";
-import { updateGame, updatePlayerStats, markFinal, deleteGame } from "../actions";
+import { toDateTimeLocalValue, teamOptionLabel, fmtDateTime } from "@/lib/utils";
+import { updateGame, deletePlayLogEntry, markFinal, deleteGame } from "../actions";
+import PlayLogForm from "./PlayLogForm";
 import ConfirmSubmitButton from "@/components/ConfirmSubmitButton";
 import SubmitButton from "@/components/SubmitButton";
 import SavedToast from "@/components/SavedToast";
@@ -16,14 +17,16 @@ export default async function GameDetailPage({
 }) {
   const { id } = await params;
 
-  const [gameSnap, teamsSnap] = await Promise.all([
+  const [gameSnap, teamsSnap, playLogSnap] = await Promise.all([
     db.doc(`games/${id}`).get(),
     db.collection("teams").orderBy("name").get(),
+    db.collection(`games/${id}/playLog`).orderBy("createdAt", "desc").get(),
   ]);
 
   if (!gameSnap.exists) notFound();
   const game = gameSnap.data() as GameDoc;
   const teams = teamsSnap.docs.map((d) => ({ id: d.id, ...(d.data() as TeamDoc) }));
+  const playLog = playLogSnap.docs.map((d) => ({ id: d.id, ...(d.data() as PlayLogEntryDoc) }));
 
   const rosterTeamIds = [game.team1ID, game.team2ID].filter((v): v is string => !!v);
   let players: { id: string; data: PlayerDoc }[] = [];
@@ -33,9 +36,16 @@ export default async function GameDetailPage({
       .map((d) => ({ id: d.id, data: d.data() as PlayerDoc }))
       .sort((a, b) => (a.data.display_name ?? a.id).localeCompare(b.data.display_name ?? b.id));
   }
+  const team1Name = teams.find((t) => t.id === game.team1ID)?.name ?? game.team1ID ?? "Team 1";
+  const team2Name = teams.find((t) => t.id === game.team2ID)?.name ?? game.team2ID ?? "Team 2";
+  const team1Roster = players
+    .filter((p) => p.data.team_id === game.team1ID)
+    .map((p) => ({ id: p.id, name: p.data.display_name ?? p.id, team: team1Name }));
+  const team2Roster = players
+    .filter((p) => p.data.team_id === game.team2ID)
+    .map((p) => ({ id: p.id, name: p.data.display_name ?? p.id, team: team2Name }));
 
   const boundUpdateGame = updateGame.bind(null, id);
-  const boundUpdateStats = updatePlayerStats.bind(null, id);
   const boundMarkFinal = markFinal.bind(null, id);
   const boundDelete = deleteGame.bind(null, id);
 
@@ -68,7 +78,7 @@ export default async function GameDetailPage({
               <option value="">— TBD —</option>
               {teams.map((t) => (
                 <option key={t.id} value={t.id}>
-                  {t.name} ({t.division})
+                  {teamOptionLabel(t, { showDivision: true })}
                 </option>
               ))}
             </select>
@@ -79,7 +89,7 @@ export default async function GameDetailPage({
               <option value="">— TBD —</option>
               {teams.map((t) => (
                 <option key={t.id} value={t.id}>
-                  {t.name} ({t.division})
+                  {teamOptionLabel(t, { showDivision: true })}
                 </option>
               ))}
             </select>
@@ -159,13 +169,56 @@ export default async function GameDetailPage({
         <SavedToast message="Game info saved" />
       </form>
 
-      <form action={boundUpdateStats} className={`${card} space-y-4`}>
-        <h2 className={sectionTitle}>Player Stats</h2>
+      <div className={`${card} space-y-4`}>
+        <h2 className={sectionTitle}>Log a Play</h2>
         {players.length === 0 ? (
           <p className="text-sm text-text/70">
             No players found for either team yet — add them under Teams first.
           </p>
         ) : (
+          <PlayLogForm
+            gameId={id}
+            team1={{ name: team1Name, roster: team1Roster }}
+            team2={{ name: team2Name, roster: team2Roster }}
+          />
+        )}
+      </div>
+
+      <div className={`${card} space-y-3`}>
+        <h2 className={sectionTitle}>Play Log ({playLog.length})</h2>
+        {playLog.length === 0 ? (
+          <p className="text-sm text-text/70">No plays logged yet.</p>
+        ) : (
+          <ul className="divide-y divide-line">
+            {playLog.map((entry) => {
+              const statLabel = STAT_FIELDS.find((f) => f.key === entry.statKey)?.label ?? entry.statKey;
+              const boundDeleteEntry = deletePlayLogEntry.bind(null, id, entry.id, entry.playerId, entry.statKey, entry.delta);
+              return (
+                <li key={entry.id} className="flex flex-wrap items-center justify-between gap-2 py-2 text-sm">
+                  <span>
+                    <span className="font-semibold text-text">{entry.playerName}</span>{" "}
+                    <span className="text-text/70">
+                      — {statLabel} (+{entry.delta})
+                    </span>
+                  </span>
+                  <div className="flex items-center gap-3">
+                    <span className="text-xs text-text/50">{fmtDateTime(entry.createdAt)}</span>
+                    <form action={boundDeleteEntry}>
+                      <SubmitButton variant="danger" small pendingText="Removing…">
+                        Undo
+                      </SubmitButton>
+                    </form>
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </div>
+
+      {players.length > 0 && (
+        <div className={`${card} space-y-4`}>
+          <h2 className={sectionTitle}>Current Totals</h2>
           <div className="overflow-x-auto">
             <table className="w-full border-collapse text-sm">
               <thead>
@@ -189,13 +242,8 @@ export default async function GameDetailPage({
                         {p.data.display_name ?? p.id}
                       </td>
                       {STAT_FIELDS.map((f, idx) => (
-                        <td key={f.key} className="border-b border-line px-2 py-2">
-                          <input
-                            type="number"
-                            name={`stat_${p.id}_${idx}`}
-                            defaultValue={current[idx]}
-                            className="w-14 rounded border border-line bg-navy px-1 py-1 text-center text-text"
-                          />
+                        <td key={f.key} className="border-b border-line px-2 py-2 text-center text-text/90">
+                          {current[idx]}
                         </td>
                       ))}
                     </tr>
@@ -204,10 +252,8 @@ export default async function GameDetailPage({
               </tbody>
             </table>
           </div>
-        )}
-        {players.length > 0 && <SubmitButton pendingText="Saving…">Save Stats</SubmitButton>}
-        <SavedToast message="Stats saved" />
-      </form>
+        </div>
+      )}
     </div>
   );
 }

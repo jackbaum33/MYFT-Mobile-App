@@ -58,6 +58,15 @@ export type PlayerDoc = {
   selfUploadedPhotoAt?: Timestamp;
 };
 
+/** One row in a game's live play-by-play ledger — see games/[id]/PlayLogForm.tsx. */
+export type PlayLogEntryDoc = {
+  playerId: string;
+  playerName: string;
+  statKey: keyof PlayerStats;
+  delta: number;
+  createdAt?: Timestamp;
+};
+
 export type GameDoc = {
   team1ID?: string;
   team2ID?: string;

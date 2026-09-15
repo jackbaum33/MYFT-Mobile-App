@@ -5,6 +5,9 @@ import { redirect } from "next/navigation";
 import { Timestamp, FieldValue } from "firebase-admin/firestore";
 import { db } from "@/lib/firebaseAdmin";
 import { requireSession } from "@/lib/session";
+import { STAT_FIELDS, type GameDoc, type PlayerDoc } from "@/lib/types";
+
+const STAT_INDEX: Record<string, number> = Object.fromEntries(STAT_FIELDS.map((f, i) => [f.key, i]));
 
 function numOrDelete(formData: FormData, key: string): number | FieldValue {
   const raw = String(formData.get(key) ?? "").trim();
@@ -79,27 +82,80 @@ export async function markFinal(gameId: string): Promise<void> {
   revalidatePath("/games");
 }
 
-export async function updatePlayerStats(gameId: string, formData: FormData): Promise<void> {
+/**
+ * Logs one or more simultaneous plays (e.g. a sack paired with an interception on the
+ * same snap): applies each as a +1 to the relevant player's cumulative game stat and
+ * records a row in games/{gameId}/playLog for the live ledger view. Rows are indexed
+ * playerId_0/statKey_0, playerId_1/statKey_1, ... per the `rowCount` field, submitted
+ * by the client component (PlayLogForm.tsx).
+ */
+export async function addPlayLogEntries(gameId: string, formData: FormData): Promise<void> {
   await requireSession();
 
-  const perPlayer: Record<string, number[]> = {};
-  for (const [key, value] of formData.entries()) {
-    if (!key.startsWith("stat_")) continue;
-    const rest = key.slice("stat_".length);
-    const lastUnderscore = rest.lastIndexOf("_");
-    const playerId = rest.slice(0, lastUnderscore);
-    const idx = Number(rest.slice(lastUnderscore + 1));
-    if (!perPlayer[playerId]) perPlayer[playerId] = Array(11).fill(0);
-    perPlayer[playerId][idx] = Number(value) || 0;
+  const rowCount = Number(formData.get("rowCount") ?? 0);
+  const rows: { playerId: string; statKey: string }[] = [];
+  for (let i = 0; i < rowCount; i++) {
+    const playerId = String(formData.get(`playerId_${i}`) ?? "").trim();
+    const statKey = String(formData.get(`statKey_${i}`) ?? "").trim();
+    if (playerId && statKey && STAT_INDEX[statKey] !== undefined) {
+      rows.push({ playerId, statKey });
+    }
+  }
+  if (rows.length === 0) return;
+
+  const uniquePlayerIds = [...new Set(rows.map((r) => r.playerId))];
+  const playerDocs = await Promise.all(uniquePlayerIds.map((pid) => db.doc(`players/${pid}`).get()));
+  const nameById = new Map(
+    playerDocs.map((d) => [d.id, (d.data() as PlayerDoc | undefined)?.display_name ?? d.id])
+  );
+
+  for (const row of rows) {
+    const statIndex = STAT_INDEX[row.statKey];
+    await db.runTransaction(async (tx) => {
+      const gameRef = db.doc(`games/${gameId}`);
+      const gameSnap = await tx.get(gameRef);
+      const game = gameSnap.data() as GameDoc | undefined;
+      const current = [...(game?.playerStats?.[row.playerId] ?? Array(11).fill(0))];
+      current[statIndex] = (current[statIndex] ?? 0) + 1;
+
+      tx.update(gameRef, { [`playerStats.${row.playerId}`]: current });
+      tx.set(db.collection(`games/${gameId}/playLog`).doc(), {
+        playerId: row.playerId,
+        playerName: nameById.get(row.playerId) ?? row.playerId,
+        statKey: row.statKey,
+        delta: 1,
+        createdAt: FieldValue.serverTimestamp(),
+      });
+    });
   }
 
-  const update: Record<string, unknown> = {};
-  for (const [playerId, arr] of Object.entries(perPlayer)) {
-    update[`playerStats.${playerId}`] = arr;
-  }
-  if (Object.keys(update).length > 0) {
-    await db.doc(`games/${gameId}`).update(update);
-  }
+  revalidatePath(`/games/${gameId}`);
+}
+
+/** Reverses a logged play: decrements the stat it added and removes the ledger row. */
+export async function deletePlayLogEntry(
+  gameId: string,
+  entryId: string,
+  playerId: string,
+  statKey: string,
+  delta: number
+): Promise<void> {
+  await requireSession();
+
+  const statIndex = STAT_INDEX[statKey];
+  if (statIndex === undefined) return;
+
+  await db.runTransaction(async (tx) => {
+    const gameRef = db.doc(`games/${gameId}`);
+    const gameSnap = await tx.get(gameRef);
+    const game = gameSnap.data() as GameDoc | undefined;
+    const current = [...(game?.playerStats?.[playerId] ?? Array(11).fill(0))];
+    current[statIndex] = Math.max(0, (current[statIndex] ?? 0) - delta);
+
+    tx.update(gameRef, { [`playerStats.${playerId}`]: current });
+    tx.delete(db.doc(`games/${gameId}/playLog/${entryId}`));
+  });
+
   revalidatePath(`/games/${gameId}`);
 }
 

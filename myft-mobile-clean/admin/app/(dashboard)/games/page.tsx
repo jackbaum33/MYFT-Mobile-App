@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { db } from "@/lib/firebaseAdmin";
 import type { GameDoc, TeamDoc } from "@/lib/types";
-import { fmtDateTime } from "@/lib/utils";
+import { fmtDateTime, teamOptionLabel } from "@/lib/utils";
 import { pageTitle, btnPrimary, btnSecondary, tableWrap, table, th, td, input, select, label } from "@/lib/ui";
 
 function statusColor(status?: string): string {
@@ -123,14 +123,14 @@ export default async function GamesPage({
             <optgroup label="Boys">
               {boysTeams.map((t) => (
                 <option key={t.id} value={t.id}>
-                  {t.name}
+                  {teamOptionLabel(t)}
                 </option>
               ))}
             </optgroup>
             <optgroup label="Girls">
               {girlsTeams.map((t) => (
                 <option key={t.id} value={t.id}>
-                  {t.name}
+                  {teamOptionLabel(t)}
                 </option>
               ))}
             </optgroup>

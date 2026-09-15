@@ -1,5 +1,6 @@
 import { db } from "@/lib/firebaseAdmin";
 import type { TeamDoc } from "@/lib/types";
+import { teamOptionLabel } from "@/lib/utils";
 import { createGame } from "../actions";
 import SubmitButton from "@/components/SubmitButton";
 import { card, input, label, pageTitle, select } from "@/lib/ui";
@@ -20,7 +21,7 @@ export default async function NewGamePage() {
             </option>
             {teams.map((t) => (
               <option key={t.id} value={t.id}>
-                {t.name} ({t.division})
+                {teamOptionLabel(t, { showDivision: true })}
               </option>
             ))}
           </select>
@@ -34,7 +35,7 @@ export default async function NewGamePage() {
             </option>
             {teams.map((t) => (
               <option key={t.id} value={t.id}>
-                {t.name} ({t.division})
+                {teamOptionLabel(t, { showDivision: true })}
               </option>
             ))}
           </select>

@@ -49,6 +49,16 @@ export function boardImageUrl(memberId: string): string {
   return `https://firebasestorage.googleapis.com/v0/b/${bucket}/o/board%2F${memberId}%2F${filename}.jpg?alt=media`;
 }
 
+/** Team `<option>` label used by every team dropdown in the admin panel. */
+export function teamOptionLabel(
+  t: { name?: string; division?: string; captain_name?: string; captain?: string },
+  opts?: { showDivision?: boolean }
+): string {
+  const base = opts?.showDivision && t.division ? `${t.name ?? ""} (${t.division})` : t.name ?? "";
+  const captain = t.captain_name || t.captain;
+  return captain ? `${base} — Capt. ${captain}` : base;
+}
+
 export function parseRecord(record: { wins?: number; losses?: number } | number[] | undefined): {
   wins: number;
   losses: number;

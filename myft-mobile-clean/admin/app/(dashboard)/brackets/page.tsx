@@ -2,6 +2,7 @@ import Link from "next/link";
 import { db } from "@/lib/firebaseAdmin";
 import type { BracketDoc, TeamDoc } from "@/lib/types";
 import { overrideSlot } from "./actions";
+import { teamOptionLabel } from "@/lib/utils";
 import SubmitButton from "@/components/SubmitButton";
 import SavedToast from "@/components/SavedToast";
 import { card, select, pageTitle, sectionTitle } from "@/lib/ui";
@@ -81,7 +82,7 @@ export default async function BracketsPage({
                                 <option value="">— TBD —</option>
                                 {teams.map((t) => (
                                   <option key={t.id} value={t.id}>
-                                    {t.name}
+                                    {teamOptionLabel(t)}
                                   </option>
                                 ))}
                               </select>
@@ -94,7 +95,7 @@ export default async function BracketsPage({
                                 <option value="">— TBD —</option>
                                 {teams.map((t) => (
                                   <option key={t.id} value={t.id}>
-                                    {t.name}
+                                    {teamOptionLabel(t)}
                                   </option>
                                 ))}
                               </select>

@@ -1,5 +1,6 @@
 import { db } from "@/lib/firebaseAdmin";
 import type { TeamDoc } from "@/lib/types";
+import { teamOptionLabel } from "@/lib/utils";
 import { createPlayer } from "../actions";
 import NameIdFields from "@/components/NameIdFields";
 import SubmitButton from "@/components/SubmitButton";
@@ -35,26 +36,18 @@ export default async function NewPlayerPage({
           <select name="teamId" className={select} defaultValue={teamId ?? ""}>
             <option value="">— Unassigned —</option>
             <optgroup label="Boys">
-              {boys.map((t) => {
-                const captain = t.captain_name || t.captain;
-                return (
-                  <option key={t.id} value={t.id}>
-                    {t.name}
-                    {captain ? ` — Capt. ${captain}` : ""}
-                  </option>
-                );
-              })}
+              {boys.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {teamOptionLabel(t)}
+                </option>
+              ))}
             </optgroup>
             <optgroup label="Girls">
-              {girls.map((t) => {
-                const captain = t.captain_name || t.captain;
-                return (
-                  <option key={t.id} value={t.id}>
-                    {t.name}
-                    {captain ? ` — Capt. ${captain}` : ""}
-                  </option>
-                );
-              })}
+              {girls.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {teamOptionLabel(t)}
+                </option>
+              ))}
             </optgroup>
           </select>
         </div>

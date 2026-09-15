@@ -154,6 +154,16 @@ export default function FantasyScreen() {
   // of spinning forever.
   const dataIsReady = !teamsLoading;
 
+  // TabNavigator's AutoRefreshManager silently reloads tournament data every 10s,
+  // which flips `teamsLoading` true/false again. Without this, that would re-trigger
+  // the full-screen spinner below on every background refresh, unmounting (and
+  // scroll-resetting) the player list. Once we've loaded once, stop treating later
+  // loading blips as a reason to tear down the screen.
+  const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
+  useEffect(() => {
+    if (dataIsReady) setHasLoadedOnce(true);
+  }, [dataIsReady]);
+
   // Load user profile
   useEffect(() => {
     if (loadedRef.current) return;
@@ -490,7 +500,7 @@ export default function FantasyScreen() {
   /** -------------------------
    *   Screens
    *  ------------------------- */
-  if (isDataLoading || !dataIsReady) {
+  if (isDataLoading || (!dataIsReady && !hasLoadedOnce)) {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color={YELLOW} />
