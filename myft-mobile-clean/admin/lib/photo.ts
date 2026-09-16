@@ -15,7 +15,9 @@ export async function uploadPlayerPhoto(
   opts?: { source?: "self" | "admin" }
 ): Promise<void> {
   const input = Buffer.from(await file.arrayBuffer());
-  const png = await sharp(input).png().toBuffer();
+  // Phone cameras store rotation as EXIF metadata rather than rotating the pixels;
+  // PNG has no such tag, so bake the rotation in now or it renders sideways forever.
+  const png = await sharp(input).rotate().png().toBuffer();
 
   const gcsFile = bucket.file(playerImagePath(playerId));
   await gcsFile.save(png, {
@@ -37,4 +39,18 @@ export async function uploadPlayerPhoto(
     },
     { merge: true }
   );
+}
+
+/** Rotates the currently-stored photo in place — a manual fix for anything the EXIF auto-rotate missed. */
+export async function rotatePlayerPhoto(playerId: string, degrees: 90 | -90): Promise<void> {
+  const gcsFile = bucket.file(playerImagePath(playerId));
+  const [buffer] = await gcsFile.download();
+  const rotated = await sharp(buffer).rotate(degrees).png().toBuffer();
+
+  await gcsFile.save(rotated, {
+    contentType: "image/png",
+    metadata: { cacheControl: "public, max-age=31536000" },
+  });
+  await gcsFile.makePublic();
+  await db.doc(`players/${playerId}`).set({ photoVersion: FieldValue.increment(1) }, { merge: true });
 }

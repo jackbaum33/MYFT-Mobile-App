@@ -19,7 +19,9 @@ const JPEG_QUALITY = 0.85;
 async function compressImage(file: File): Promise<File> {
   if (!file.type.startsWith("image/")) return file;
   try {
-    const bitmap = await createImageBitmap(file);
+    // Without this, some browsers decode the raw sensor pixels and ignore the EXIF
+    // rotation tag entirely, baking a sideways photo into the compressed JPEG we send.
+    const bitmap = await createImageBitmap(file, { imageOrientation: "from-image" });
     const scale = Math.min(1, MAX_DIMENSION / Math.max(bitmap.width, bitmap.height));
     const w = Math.round(bitmap.width * scale);
     const h = Math.round(bitmap.height * scale);

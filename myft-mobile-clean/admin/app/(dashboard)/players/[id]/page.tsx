@@ -4,6 +4,7 @@ import type { PlayerDoc, TeamDoc } from "@/lib/types";
 import { STAT_FIELDS, statsFromArray } from "@/lib/types";
 import { playerImageUrl, teamOptionLabel } from "@/lib/utils";
 import { updatePlayer, deletePlayer } from "../actions";
+import RotatePhotoButtons from "./RotatePhotoButtons";
 import ConfirmSubmitButton from "@/components/ConfirmSubmitButton";
 import SubmitButton from "@/components/SubmitButton";
 import SavedToast from "@/components/SavedToast";
@@ -41,7 +42,10 @@ export default async function PlayerDetailPage({
           height={64}
           className="h-16 w-16 rounded-full bg-navy object-cover"
         />
-        <p className="text-xs text-text/60">Upload a new photo below to replace this.</p>
+        <div className="space-y-2">
+          <p className="text-xs text-text/60">Upload a new photo below to replace this.</p>
+          <RotatePhotoButtons playerId={id} />
+        </div>
       </div>
 
       <form action={boundUpdate} encType="multipart/form-data" className={`${card} space-y-4`}>

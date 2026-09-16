@@ -6,7 +6,7 @@ import { FieldValue } from "firebase-admin/firestore";
 import { db } from "@/lib/firebaseAdmin";
 import { requireSession } from "@/lib/session";
 import { slugify } from "@/lib/utils";
-import { uploadPlayerPhoto } from "@/lib/photo";
+import { uploadPlayerPhoto, rotatePlayerPhoto } from "@/lib/photo";
 
 export async function createPlayer(formData: FormData): Promise<void> {
   await requireSession();
@@ -75,6 +75,13 @@ export async function updatePlayer(playerId: string, formData: FormData): Promis
   revalidatePath(`/players/${playerId}`);
   revalidatePath("/players");
   if (teamId) revalidatePath(`/teams/${teamId}`);
+}
+
+export async function rotatePlayerPhotoAction(playerId: string, degrees: 90 | -90): Promise<void> {
+  await requireSession();
+  await rotatePlayerPhoto(playerId, degrees);
+  revalidatePath(`/players/${playerId}`);
+  revalidatePath("/players");
 }
 
 export async function deletePlayer(playerId: string): Promise<void> {

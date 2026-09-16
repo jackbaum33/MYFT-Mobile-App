@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { db } from "@/lib/firebaseAdmin";
 import type { PlayerDoc, TeamDoc } from "@/lib/types";
+import { playerImageUrl } from "@/lib/utils";
 import { pageTitle, btnPrimary, btnSecondary, tableWrap, table, th, td, input } from "@/lib/ui";
 
 export default async function PlayersPage({
@@ -54,6 +55,7 @@ export default async function PlayersPage({
         <table className={table}>
           <thead>
             <tr>
+              <th className={th}></th>
               <th className={th}>Player</th>
               <th className={th}>Team</th>
             </tr>
@@ -61,6 +63,18 @@ export default async function PlayersPage({
           <tbody>
             {players.map((p) => (
               <tr key={p.id}>
+                <td className={td}>
+                  <Link href={`/players/${p.id}`}>
+                    {/* eslint-disable-next-line @next/next/no-img-element -- external Firebase Storage URL */}
+                    <img
+                      src={playerImageUrl(p.id, p.photoVersion)}
+                      alt={p.display_name ?? p.id}
+                      width={32}
+                      height={32}
+                      className="h-8 w-8 rounded-full bg-navy object-cover"
+                    />
+                  </Link>
+                </td>
                 <td className={td}>
                   <Link href={`/players/${p.id}`} className="font-semibold hover:text-yellow">
                     {p.display_name ?? p.id}
@@ -71,7 +85,7 @@ export default async function PlayersPage({
             ))}
             {players.length === 0 && (
               <tr>
-                <td className={td} colSpan={2}>
+                <td className={td} colSpan={3}>
                   No players found.
                 </td>
               </tr>
