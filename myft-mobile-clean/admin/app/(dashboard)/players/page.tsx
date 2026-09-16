@@ -2,6 +2,7 @@ import Link from "next/link";
 import { db } from "@/lib/firebaseAdmin";
 import type { PlayerDoc, TeamDoc } from "@/lib/types";
 import { playerImageUrl } from "@/lib/utils";
+import PlayerAvatar from "@/components/PlayerAvatar";
 import { pageTitle, btnPrimary, btnSecondary, tableWrap, table, th, td, input } from "@/lib/ui";
 
 export default async function PlayersPage({
@@ -65,13 +66,10 @@ export default async function PlayersPage({
               <tr key={p.id}>
                 <td className={td}>
                   <Link href={`/players/${p.id}`}>
-                    {/* eslint-disable-next-line @next/next/no-img-element -- external Firebase Storage URL */}
-                    <img
+                    <PlayerAvatar
                       src={playerImageUrl(p.id, p.photoVersion)}
-                      alt={p.display_name ?? p.id}
-                      width={32}
-                      height={32}
-                      className="h-8 w-8 rounded-full bg-navy object-cover"
+                      name={p.display_name ?? p.id}
+                      size={32}
                     />
                   </Link>
                 </td>

@@ -5,6 +5,7 @@ import { STAT_FIELDS, statsFromArray } from "@/lib/types";
 import { playerImageUrl, teamOptionLabel } from "@/lib/utils";
 import { updatePlayer, deletePlayer } from "../actions";
 import RotatePhotoButtons from "./RotatePhotoButtons";
+import PlayerAvatar from "@/components/PlayerAvatar";
 import ConfirmSubmitButton from "@/components/ConfirmSubmitButton";
 import SubmitButton from "@/components/SubmitButton";
 import SavedToast from "@/components/SavedToast";
@@ -34,14 +35,7 @@ export default async function PlayerDetailPage({
       <h1 className={pageTitle}>{player.display_name ?? id}</h1>
 
       <div className={`${card} flex items-center gap-4`}>
-        {/* eslint-disable-next-line @next/next/no-img-element -- external Firebase Storage URL, not worth Next/Image config */}
-        <img
-          src={playerImageUrl(id, player.photoVersion)}
-          alt={player.display_name ?? id}
-          width={64}
-          height={64}
-          className="h-16 w-16 rounded-full bg-navy object-cover"
-        />
+        <PlayerAvatar src={playerImageUrl(id, player.photoVersion)} name={player.display_name ?? id} size={64} />
         <div className="space-y-2">
           <p className="text-xs text-text/60">Upload a new photo below to replace this.</p>
           <RotatePhotoButtons playerId={id} />
