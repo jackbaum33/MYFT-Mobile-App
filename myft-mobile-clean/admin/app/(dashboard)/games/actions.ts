@@ -6,6 +6,7 @@ import { Timestamp, FieldValue } from "firebase-admin/firestore";
 import { db } from "@/lib/firebaseAdmin";
 import { requireSession } from "@/lib/session";
 import { STAT_FIELDS, type GameDoc, type PlayerDoc } from "@/lib/types";
+import { parseDateTimeLocal } from "@/lib/utils";
 
 const STAT_INDEX: Record<string, number> = Object.fromEntries(STAT_FIELDS.map((f, i) => [f.key, i]));
 
@@ -39,7 +40,7 @@ export async function createGame(formData: FormData): Promise<void> {
     playerStats: {},
   };
   if (field) data.field = field;
-  if (startTimeRaw) data.startTime = Timestamp.fromDate(new Date(startTimeRaw));
+  if (startTimeRaw) data.startTime = Timestamp.fromDate(parseDateTimeLocal(startTimeRaw));
 
   const ref = await db.collection("games").add(data);
   revalidatePath("/games");
@@ -59,7 +60,7 @@ export async function updateGame(gameId: string, formData: FormData): Promise<vo
     team1score: Number(formData.get("team1score") ?? 0),
     team2score: Number(formData.get("team2score") ?? 0),
     field: strOrDelete(formData, "field"),
-    startTime: startTimeRaw ? Timestamp.fromDate(new Date(startTimeRaw)) : FieldValue.delete(),
+    startTime: startTimeRaw ? Timestamp.fromDate(parseDateTimeLocal(startTimeRaw)) : FieldValue.delete(),
     // Bracket / playoff fields — manual correction surface.
     round: numOrDelete(formData, "round"),
     roundLabel: strOrDelete(formData, "roundLabel"),

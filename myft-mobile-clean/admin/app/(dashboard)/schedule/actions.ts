@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { Timestamp } from "firebase-admin/firestore";
 import { db } from "@/lib/firebaseAdmin";
 import { requireSession } from "@/lib/session";
+import { parseDateTimeLocal } from "@/lib/utils";
 
 function fieldsFromForm(formData: FormData): Record<string, unknown> {
   const startAtRaw = String(formData.get("startAt") ?? "");
@@ -12,7 +13,7 @@ function fieldsFromForm(formData: FormData): Record<string, unknown> {
     title: String(formData.get("title") ?? "").trim(),
     location: String(formData.get("location") ?? "").trim(),
     address: String(formData.get("address") ?? "").trim(),
-    ...(startAtRaw ? { startAt: Timestamp.fromDate(new Date(startAtRaw)) } : {}),
+    ...(startAtRaw ? { startAt: Timestamp.fromDate(parseDateTimeLocal(startAtRaw)) } : {}),
   };
 }
 

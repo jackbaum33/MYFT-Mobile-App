@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { FieldValue, Timestamp } from "firebase-admin/firestore";
 import { db } from "@/lib/firebaseAdmin";
 import { requireSession } from "@/lib/session";
+import { parseDateTimeLocal } from "@/lib/utils";
 
 export async function updateConfig(formData: FormData): Promise<void> {
   await requireSession();
@@ -20,7 +21,7 @@ export async function updateConfig(formData: FormData): Promise<void> {
       boysPlayoffTeams: boysPlayoffTeams > 0 ? boysPlayoffTeams : FieldValue.delete(),
       girlsPlayoffTeams: girlsPlayoffTeams > 0 ? girlsPlayoffTeams : FieldValue.delete(),
       saturdayDate: saturdayDate || FieldValue.delete(),
-      fantasyLockAt: fantasyLockAtRaw ? Timestamp.fromDate(new Date(fantasyLockAtRaw)) : FieldValue.delete(),
+      fantasyLockAt: fantasyLockAtRaw ? Timestamp.fromDate(parseDateTimeLocal(fantasyLockAtRaw)) : FieldValue.delete(),
       minAppVersion: minAppVersion || FieldValue.delete(),
       updateUrl: updateUrl || FieldValue.delete(),
     },

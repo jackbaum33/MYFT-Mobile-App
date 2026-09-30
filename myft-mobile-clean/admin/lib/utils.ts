@@ -68,15 +68,66 @@ export function parseRecord(record: { wins?: number; losses?: number } | number[
   return { wins: 0, losses: 0 };
 }
 
+/**
+ * The tournament's own local timezone — used to interpret/display every
+ * <input type="datetime-local"> value in the admin panel. Deliberately NOT the
+ * server's ambient timezone: Vercel Functions run in UTC, so without pinning
+ * this explicitly, a time typed as "7:30 AM" gets stored (or displayed) as
+ * 7:30 AM UTC, which renders 4-5 hours early once read back in Eastern time.
+ */
+export const APP_TIME_ZONE = "America/New_York";
+
 export function fmtDateTime(ts?: { toDate: () => Date }): string {
   if (!ts) return "—";
-  return ts.toDate().toLocaleString([], { dateStyle: "medium", timeStyle: "short" });
+  return ts.toDate().toLocaleString([], { dateStyle: "medium", timeStyle: "short", timeZone: APP_TIME_ZONE });
 }
 
-/** For <input type="datetime-local"> value attributes (local time, no timezone suffix). */
+/** For <input type="datetime-local"> value attributes — formats `d` as wall-clock time in APP_TIME_ZONE. */
 export function toDateTimeLocalValue(d: Date): string {
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: APP_TIME_ZONE,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  }).formatToParts(d);
+  const get = (type: string) => parts.find((p) => p.type === type)?.value ?? "00";
+  return `${get("year")}-${get("month")}-${get("day")}T${get("hour")}:${get("minute")}`;
+}
+
+/**
+ * Converts a wall-clock datetime string from an <input type="datetime-local">
+ * (e.g. "2026-09-29T07:30", with NO timezone info) into the UTC instant that
+ * represents in APP_TIME_ZONE — e.g. 7:30 AM becomes 11:30 UTC during EDT,
+ * 12:30 UTC during EST. Handles the DST switch automatically.
+ *
+ * Works without a timezone library: `asUTC` is a first guess treating the typed
+ * fields as if they were already UTC, then we ask Intl what wall-clock time that
+ * instant shows in APP_TIME_ZONE — the gap between the guess and that answer is
+ * the zone's real UTC offset at this moment, which we subtract to correct it.
+ */
+export function parseDateTimeLocal(raw: string): Date {
+  const m = raw.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2}))?/);
+  if (!m) return new Date(raw);
+  const [, yy, mo, dd, hh, mi, ss] = m;
+  const asUTC = Date.UTC(Number(yy), Number(mo) - 1, Number(dd), Number(hh), Number(mi), Number(ss ?? "0"));
+
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: APP_TIME_ZONE,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hourCycle: "h23",
+  }).formatToParts(new Date(asUTC));
+  const get = (type: string) => Number(parts.find((p) => p.type === type)?.value ?? "0");
+  const shown = Date.UTC(get("year"), get("month") - 1, get("day"), get("hour"), get("minute"), get("second"));
+
+  return new Date(asUTC - (shown - asUTC));
 }
 
 /** Duplicated from services/leagues.ts / functions/src/leagues.ts (read-only viewer here). */
