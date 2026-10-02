@@ -38,6 +38,10 @@ export default async function GameDetailPage({
   }
   const team1Name = teams.find((t) => t.id === game.team1ID)?.name ?? game.team1ID ?? "Team 1";
   const team2Name = teams.find((t) => t.id === game.team2ID)?.name ?? game.team2ID ?? "Team 2";
+  // A team1ID/team2ID that doesn't match a real team is a placeholder label (e.g. "Boys 1
+  // Seed") typed into the override field below rather than picked from the dropdown.
+  const team1Placeholder = game.team1ID && !teams.some((t) => t.id === game.team1ID) ? game.team1ID : "";
+  const team2Placeholder = game.team2ID && !teams.some((t) => t.id === game.team2ID) ? game.team2ID : "";
   const team1Roster = players
     .filter((p) => p.data.team_id === game.team1ID)
     .map((p) => ({ id: p.id, name: p.data.display_name ?? p.id, team: team1Name }));
@@ -74,7 +78,7 @@ export default async function GameDetailPage({
         <div className="grid grid-cols-2 gap-4">
           <div>
             <label className={label}>Team 1</label>
-            <select name="team1ID" defaultValue={game.team1ID ?? ""} className={select}>
+            <select name="team1ID" defaultValue={team1Placeholder ? "" : game.team1ID ?? ""} className={select}>
               <option value="">— TBD —</option>
               {teams.map((t) => (
                 <option key={t.id} value={t.id}>
@@ -82,10 +86,17 @@ export default async function GameDetailPage({
                 </option>
               ))}
             </select>
+            <input
+              type="text"
+              name="team1Placeholder"
+              defaultValue={team1Placeholder}
+              placeholder="…or a placeholder, e.g. &quot;Boys 1 Seed&quot; (overrides the dropdown)"
+              className={`${input} mt-2`}
+            />
           </div>
           <div>
             <label className={label}>Team 2</label>
-            <select name="team2ID" defaultValue={game.team2ID ?? ""} className={select}>
+            <select name="team2ID" defaultValue={team2Placeholder ? "" : game.team2ID ?? ""} className={select}>
               <option value="">— TBD —</option>
               {teams.map((t) => (
                 <option key={t.id} value={t.id}>
@@ -93,8 +104,20 @@ export default async function GameDetailPage({
                 </option>
               ))}
             </select>
+            <input
+              type="text"
+              name="team2Placeholder"
+              defaultValue={team2Placeholder}
+              placeholder="…or a placeholder, e.g. &quot;Boys 16 Seed&quot; (overrides the dropdown)"
+              className={`${input} mt-2`}
+            />
           </div>
         </div>
+        <p className="text-xs text-text/60">
+          For playoff slots where the teams aren&apos;t set yet, type a placeholder instead of picking a team —
+          it shows up in the app as plain text with no score. Clear the placeholder field and pick the real team
+          here once it&apos;s known.
+        </p>
 
         <div className="grid grid-cols-2 gap-4">
           <div>

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { db } from "@/lib/firebaseAdmin";
 import type { GameDoc, LeagueDoc, PlayerDoc } from "@/lib/types";
 import { card, pageTitle, sectionTitle } from "@/lib/ui";
+import StandingsModal from "@/components/StandingsModal";
 
 const LINKS = [
   { href: "/games", label: "Games", desc: "Scores, status, stats, bracket fields" },
@@ -40,7 +41,10 @@ export default async function HomePage() {
 
   return (
     <div>
-      <h1 className={pageTitle}>Dashboard</h1>
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <h1 className={pageTitle}>Dashboard</h1>
+        <StandingsModal />
+      </div>
 
       <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-4">
         <div className={card}>

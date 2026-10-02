@@ -15,31 +15,44 @@ export default async function NewGamePage() {
       <form action={createGame} className={`${card} space-y-4`}>
         <div>
           <label className={label}>Team 1</label>
-          <select name="team1ID" required className={select} defaultValue="">
-            <option value="" disabled>
-              Select a team…
-            </option>
+          <select name="team1ID" className={select} defaultValue="">
+            <option value="">— Select a team… —</option>
             {teams.map((t) => (
               <option key={t.id} value={t.id}>
                 {teamOptionLabel(t, { showDivision: true })}
               </option>
             ))}
           </select>
+          <input
+            type="text"
+            name="team1Placeholder"
+            placeholder="…or type a placeholder, e.g. &quot;Boys 1 Seed&quot; (overrides the dropdown)"
+            className={`${input} mt-2`}
+          />
         </div>
 
         <div>
           <label className={label}>Team 2</label>
-          <select name="team2ID" required className={select} defaultValue="">
-            <option value="" disabled>
-              Select a team…
-            </option>
+          <select name="team2ID" className={select} defaultValue="">
+            <option value="">— Select a team… —</option>
             {teams.map((t) => (
               <option key={t.id} value={t.id}>
                 {teamOptionLabel(t, { showDivision: true })}
               </option>
             ))}
           </select>
+          <input
+            type="text"
+            name="team2Placeholder"
+            placeholder="…or type a placeholder, e.g. &quot;Boys 16 Seed&quot; (overrides the dropdown)"
+            className={`${input} mt-2`}
+          />
         </div>
+        <p className="text-xs text-text/60">
+          For playoff slots where the teams aren&apos;t set yet, type a placeholder like &quot;Boys 1 Seed&quot;
+          instead of picking a team — it&apos;ll show up in the app as plain text with no score, and you can swap
+          in the real team here once it&apos;s known.
+        </p>
 
         <div>
           <label className={label}>Status</label>

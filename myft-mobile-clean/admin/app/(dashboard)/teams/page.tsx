@@ -3,6 +3,7 @@ import { db } from "@/lib/firebaseAdmin";
 import type { TeamDoc } from "@/lib/types";
 import { parseRecord, teamLogoUrl } from "@/lib/utils";
 import { pageTitle, btnPrimary, tableWrap, table, th, td, sectionTitle } from "@/lib/ui";
+import StandingsModal from "@/components/StandingsModal";
 
 export default async function TeamsPage() {
   const snap = await db.collection("teams").orderBy("name").get();
@@ -67,9 +68,12 @@ export default async function TeamsPage() {
     <div>
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <h1 className={pageTitle}>Teams</h1>
-        <Link href="/teams/new" className={btnPrimary}>
-          + New Team
-        </Link>
+        <div className="flex gap-2">
+          <StandingsModal />
+          <Link href="/teams/new" className={btnPrimary}>
+            + New Team
+          </Link>
+        </div>
       </div>
 
       <h2 className={sectionTitle}>Boys</h2>

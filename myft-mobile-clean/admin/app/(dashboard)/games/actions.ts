@@ -20,11 +20,23 @@ function strOrDelete(formData: FormData, key: string): string | FieldValue {
   return raw === "" ? FieldValue.delete() : raw;
 }
 
+/**
+ * team1ID/team2ID are plain strings, not foreign keys the app validates — every screen
+ * that resolves a team name already falls back to showing the raw ID verbatim when it
+ * doesn't match a real team. So a free-typed placeholder (e.g. "Boys 1 Seed") renders
+ * fine with zero app changes; this just lets admins type one instead of picking a team,
+ * for playoff slots where the real team isn't decided yet.
+ */
+function teamIdFromForm(formData: FormData, selectKey: string, placeholderKey: string): string {
+  const placeholder = String(formData.get(placeholderKey) ?? "").trim();
+  return placeholder || String(formData.get(selectKey) ?? "").trim();
+}
+
 export async function createGame(formData: FormData): Promise<void> {
   await requireSession();
 
-  const team1ID = String(formData.get("team1ID") ?? "");
-  const team2ID = String(formData.get("team2ID") ?? "");
+  const team1ID = teamIdFromForm(formData, "team1ID", "team1Placeholder");
+  const team2ID = teamIdFromForm(formData, "team2ID", "team2Placeholder");
   const status = String(formData.get("status") ?? "Scheduled");
   const field = String(formData.get("field") ?? "").trim();
   const startTimeRaw = String(formData.get("startTime") ?? "");
@@ -54,8 +66,8 @@ export async function updateGame(gameId: string, formData: FormData): Promise<vo
   const isBye = formData.get("isBye") === "on";
 
   const update: Record<string, unknown> = {
-    team1ID: String(formData.get("team1ID") ?? ""),
-    team2ID: String(formData.get("team2ID") ?? ""),
+    team1ID: teamIdFromForm(formData, "team1ID", "team1Placeholder"),
+    team2ID: teamIdFromForm(formData, "team2ID", "team2Placeholder"),
     status: String(formData.get("status") ?? "Scheduled"),
     team1score: Number(formData.get("team1score") ?? 0),
     team2score: Number(formData.get("team2score") ?? 0),
