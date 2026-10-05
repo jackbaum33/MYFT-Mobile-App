@@ -5,7 +5,7 @@ import * as admin from 'firebase-admin';
 admin.initializeApp();
 const db = admin.firestore();
 
-export { generateBracketOnPoolComplete, advanceBracketOnGameFinal } from './bracket';
+export { advanceBracketOnGameFinal } from './bracket';
 export { notifyLeagueCreated, notifyDraftTurn } from './leagues';
 export { deleteAccount } from './account';
 

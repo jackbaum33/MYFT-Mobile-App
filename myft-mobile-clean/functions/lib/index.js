@@ -33,14 +33,13 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.sendEventReminders = exports.onGameUpdate = exports.aggregatePlayerStats = exports.deleteAccount = exports.notifyDraftTurn = exports.notifyLeagueCreated = exports.advanceBracketOnGameFinal = exports.generateBracketOnPoolComplete = void 0;
+exports.sendEventReminders = exports.onGameUpdate = exports.aggregatePlayerStats = exports.deleteAccount = exports.notifyDraftTurn = exports.notifyLeagueCreated = exports.advanceBracketOnGameFinal = void 0;
 const firestore_1 = require("firebase-functions/v2/firestore");
 const scheduler_1 = require("firebase-functions/v2/scheduler");
 const admin = __importStar(require("firebase-admin"));
 admin.initializeApp();
 const db = admin.firestore();
 var bracket_1 = require("./bracket");
-Object.defineProperty(exports, "generateBracketOnPoolComplete", { enumerable: true, get: function () { return bracket_1.generateBracketOnPoolComplete; } });
 Object.defineProperty(exports, "advanceBracketOnGameFinal", { enumerable: true, get: function () { return bracket_1.advanceBracketOnGameFinal; } });
 var leagues_1 = require("./leagues");
 Object.defineProperty(exports, "notifyLeagueCreated", { enumerable: true, get: function () { return leagues_1.notifyLeagueCreated; } });
