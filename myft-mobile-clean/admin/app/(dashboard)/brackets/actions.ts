@@ -94,8 +94,14 @@ export async function deleteBracket(division: Division): Promise<void> {
   revalidatePath("/games");
 }
 
-/** Manual correction: overrides a bracket slot's teams and mirrors it onto the matching games doc. */
-export async function overrideSlot(
+/**
+ * The Brackets page's single control surface for a playoff game: teams, time, field,
+ * status, and score all save together from one form. "Mark Final" (intent=final) forces
+ * status to Final after checking the score isn't tied; the existing advanceBracketOnGameFinal
+ * Cloud Function is what actually detects that Final transition and writes the winner into
+ * the next round's slot — this action doesn't duplicate that logic, just sets the status.
+ */
+export async function updateBracketGame(
   division: string,
   roundIndex: number,
   slotIndex: number,
@@ -105,6 +111,16 @@ export async function overrideSlot(
 
   const team1ID = String(formData.get("team1ID") ?? "").trim();
   const team2ID = String(formData.get("team2ID") ?? "").trim();
+  const field = String(formData.get("field") ?? "").trim();
+  const timeRaw = String(formData.get("time") ?? "").trim();
+  const team1score = Number(formData.get("team1score") ?? 0) || 0;
+  const team2score = Number(formData.get("team2score") ?? 0) || 0;
+  const selectedStatus = String(formData.get("status") ?? "Scheduled");
+  const markFinal = String(formData.get("intent") ?? "") === "final";
+
+  if (markFinal && team1score === team2score) {
+    throw new Error("Scores are tied — fix the score before marking this game Final.");
+  }
 
   const ref = db.doc(`brackets/${division}`);
   const snap = await ref.get();
@@ -125,15 +141,27 @@ export async function overrideSlot(
   });
 
   await ref.update({ rounds: newRounds });
+  if (!gameId) return;
 
-  if (gameId) {
-    const bothKnown = !!team1ID && !!team2ID;
-    await db.doc(`games/${gameId}`).update({
-      team1ID: team1ID || FieldValue.delete(),
-      team2ID: team2ID || FieldValue.delete(),
-      status: bothKnown ? "Scheduled" : "TBD",
-    });
+  const update: Record<string, unknown> = {
+    team1ID: team1ID || FieldValue.delete(),
+    team2ID: team2ID || FieldValue.delete(),
+    team1score,
+    team2score,
+    status: markFinal ? "Final" : selectedStatus,
+    field: field || FieldValue.delete(),
+  };
+
+  if (timeRaw) {
+    const configSnap = await db.doc("config/tournament").get();
+    const saturdayDate = (configSnap.data() as TournamentConfig | undefined)?.saturdayDate;
+    if (!saturdayDate) {
+      throw new Error("Set a Saturday Date on Config first — bracket game times are relative to that day.");
+    }
+    update.startTime = Timestamp.fromDate(parseDateTimeLocal(`${saturdayDate}T${timeRaw}`));
   }
+
+  await db.doc(`games/${gameId}`).update(update);
 
   revalidatePath("/brackets");
   revalidatePath("/games");

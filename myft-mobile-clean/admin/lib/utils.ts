@@ -130,6 +130,18 @@ export function parseDateTimeLocal(raw: string): Date {
   return new Date(asUTC - (shown - asUTC));
 }
 
+/** For <input type="time"> defaultValue — just the wall-clock time-of-day portion, in APP_TIME_ZONE. */
+export function formatTimeOnly(d: Date): string {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: APP_TIME_ZONE,
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  }).formatToParts(d);
+  const get = (type: string) => parts.find((p) => p.type === type)?.value ?? "00";
+  return `${get("hour")}:${get("minute")}`;
+}
+
 /** Duplicated from services/leagues.ts / functions/src/leagues.ts (read-only viewer here). */
 export function pickerForNumber(
   league: { draftOrder?: string[]; draftStyle?: "snake" | "linear" },
