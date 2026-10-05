@@ -8,6 +8,7 @@ import { parseRecord } from "@/lib/utils";
 export type StandingsTeam = {
   id: string;
   name: string;
+  captain: string;
   division: string;
   wins: number;
   losses: number;
@@ -24,6 +25,7 @@ export async function getStandings(): Promise<StandingsTeam[]> {
     return {
       id: d.id,
       name: data.name ?? d.id,
+      captain: data.captain_name || data.captain || "",
       division: (data.division ?? "boys").toLowerCase(),
       wins,
       losses,

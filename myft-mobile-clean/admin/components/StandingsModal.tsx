@@ -107,7 +107,10 @@ export default function StandingsModal() {
                     {ranked.map((t, i) => (
                       <tr key={t.id}>
                         <td className="border-b border-line py-2 font-black text-yellow">{i + 1}</td>
-                        <td className="border-b border-line py-2 font-semibold text-text">{t.name}</td>
+                        <td className="border-b border-line py-2 font-semibold text-text">
+                          {t.name}
+                          {t.captain ? ` (${t.captain})` : ""}
+                        </td>
                         <td className="border-b border-line py-2 text-right text-text">
                           {t.wins}-{t.losses}
                         </td>
