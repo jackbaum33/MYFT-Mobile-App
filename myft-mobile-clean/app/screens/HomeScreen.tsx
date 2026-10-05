@@ -29,9 +29,9 @@ const MUTED = '#A5B4C3';
 const LINE = 'rgba(255,255,255,0.08)';
 
 // Links
-const WEBSITE_URL = 'https://www.themyft.com';
+const WEBSITE_URL = 'https://myft.framer.website/';
 const INSTAGRAM_URL = 'https://www.instagram.com/myft.25/';
-const PHOTOS_URL = 'https://drive.google.com/drive/u/1/folders/1oKW8z7r-OTg8ANJswUAz7qVBn-gIfl3v';
+const PHOTOS_URL = 'https://drive.google.com/drive/u/0/folders/1HfGmq4iCszlY8lVv7byTaSZvwY6D-y2U';
 
 type ScheduleDoc = {
   title: string;

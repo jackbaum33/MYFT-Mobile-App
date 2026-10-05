@@ -113,6 +113,8 @@ export default function ScheduleIndex() {
   const [dayIndex, setDayIndex] = useState(0);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('All');
   const [showDropdown, setShowDropdown] = useState(false);
+  const [teamFilter, setTeamFilter] = useState<string | null>(null);
+  const [showTeamDropdown, setShowTeamDropdown] = useState(false);
 
   // Load games from Firestore and group by day
   // UPDATED: Now responds to refreshTrigger from context
@@ -180,16 +182,24 @@ export default function ScheduleIndex() {
 
   const day = days[dayIndex];
   
-  // Filter games by status
+  // Filter games by status and/or team
   const games = useMemo(() => {
-    const allGames = day?.games ?? [];
-    if (statusFilter === 'All') {
-      return allGames;
+    let allGames = day?.games ?? [];
+    if (statusFilter !== 'All') {
+      allGames = allGames.filter(game => game.status.toLowerCase() === statusFilter.toLowerCase());
     }
-    return allGames.filter(game => 
-      game.status.toLowerCase() === statusFilter.toLowerCase()
-    );
-  }, [day, statusFilter]);
+    if (teamFilter) {
+      allGames = allGames.filter(
+        game => game.team1.toLowerCase() === teamFilter.toLowerCase() || game.team2.toLowerCase() === teamFilter.toLowerCase()
+      );
+    }
+    return allGames;
+  }, [day, statusFilter, teamFilter]);
+
+  const teamOptions = useMemo(
+    () => [...teams].sort((a, b) => (a.name || '').localeCompare(b.name || '')),
+    [teams]
+  );
 
   const teamById = (id?: string) =>
     teams.find(t => t.id.toLowerCase() === (id ?? '').toLowerCase());
@@ -199,6 +209,20 @@ export default function ScheduleIndex() {
     const parts = full.trim().split(/\s+/);
     return parts[parts.length - 1] || full;
   };
+
+  const teamFilterTeam = teamFilter ? teamById(teamFilter) : undefined;
+  const teamFilterName = teamFilter
+    ? teamFilterTeam
+      ? teamFilterTeam.name + (teamFilterTeam.captain ? ` (${captainLast(teamFilterTeam.captain)})` : '')
+      : teamFilter
+    : null;
+
+  const emptyMessage = loading
+    ? 'Loading…'
+    : (() => {
+        const parts = [statusFilter !== 'All' ? statusFilter : null, teamFilterTeam?.name ?? teamFilter].filter(Boolean);
+        return parts.length ? `No ${parts.join(' ')} games.` : 'No games found.';
+      })();
 
   // Navigation handler
   const navigateToGame = (gameId: string) => {
@@ -275,33 +299,58 @@ export default function ScheduleIndex() {
         )}
       </View>
 
-      {/* Status Filter Dropdown — hidden for bracket days, which organize by round instead */}
+      {/* Status + Team filters — hidden for bracket days, which organize by round instead */}
       {!day?.isBracket && (
         <>
           <View style={s.filterContainer}>
-            <TouchableOpacity
-              style={s.dropdownButton}
-              onPress={() => setShowDropdown(true)}
-              activeOpacity={0.7}
-            >
-              <Text style={s.dropdownButtonText}>
-                {statusFilter === 'All' ? 'Filter by Status' : statusFilter}
-              </Text>
-              <Ionicons name="chevron-down" size={18} color={TEXT} />
-            </TouchableOpacity>
-
-            {statusFilter !== 'All' && (
+            <View style={s.filterRow}>
               <TouchableOpacity
-                style={s.clearButton}
-                onPress={() => setStatusFilter('All')}
+                style={s.dropdownButton}
+                onPress={() => setShowDropdown(true)}
                 activeOpacity={0.7}
               >
-                <Ionicons name="close-circle" size={20} color={TEXT} />
+                <Text style={s.dropdownButtonText}>
+                  {statusFilter === 'All' ? 'Filter by Status' : statusFilter}
+                </Text>
+                <Ionicons name="chevron-down" size={18} color={TEXT} />
               </TouchableOpacity>
-            )}
+
+              {statusFilter !== 'All' && (
+                <TouchableOpacity
+                  style={s.clearButton}
+                  onPress={() => setStatusFilter('All')}
+                  activeOpacity={0.7}
+                >
+                  <Ionicons name="close-circle" size={20} color={TEXT} />
+                </TouchableOpacity>
+              )}
+            </View>
+
+            <View style={s.filterRow}>
+              <TouchableOpacity
+                style={s.dropdownButton}
+                onPress={() => setShowTeamDropdown(true)}
+                activeOpacity={0.7}
+              >
+                <Text style={s.dropdownButtonText} numberOfLines={1}>
+                  {teamFilterName ?? 'Filter by Team'}
+                </Text>
+                <Ionicons name="chevron-down" size={18} color={TEXT} />
+              </TouchableOpacity>
+
+              {teamFilter && (
+                <TouchableOpacity
+                  style={s.clearButton}
+                  onPress={() => setTeamFilter(null)}
+                  activeOpacity={0.7}
+                >
+                  <Ionicons name="close-circle" size={20} color={TEXT} />
+                </TouchableOpacity>
+              )}
+            </View>
           </View>
 
-          {/* Dropdown Modal */}
+          {/* Status dropdown */}
           <Modal
             visible={showDropdown}
             transparent
@@ -332,6 +381,47 @@ export default function ScheduleIndex() {
               </View>
             </Pressable>
           </Modal>
+
+          {/* Team dropdown */}
+          <Modal
+            visible={showTeamDropdown}
+            transparent
+            animationType="fade"
+            onRequestClose={() => setShowTeamDropdown(false)}
+          >
+            <Pressable
+              style={s.dropdownBackdrop}
+              onPress={() => setShowTeamDropdown(false)}
+            >
+              <View style={[s.dropdownMenu, s.teamDropdownMenu]}>
+                <FlatList
+                  data={teamOptions}
+                  keyExtractor={(t) => t.id}
+                  renderItem={({ item: t }) => (
+                    <TouchableOpacity
+                      style={s.dropdownItem}
+                      onPress={() => {
+                        setTeamFilter(t.id);
+                        setShowTeamDropdown(false);
+                      }}
+                      activeOpacity={0.7}
+                    >
+                      <Text style={s.dropdownItemText} numberOfLines={1}>
+                        {t.name}
+                        {!!t.captain && <Text style={s.dropdownItemCaptain}> ({captainLast(t.captain)})</Text>}
+                      </Text>
+                      {teamFilter === t.id && (
+                        <Ionicons name="checkmark" size={20} color={YELLOW} />
+                      )}
+                    </TouchableOpacity>
+                  )}
+                  ListEmptyComponent={
+                    <Text style={[s.dropdownItemText, { padding: 20 }]}>No teams yet.</Text>
+                  }
+                />
+              </View>
+            </Pressable>
+          </Modal>
         </>
       )}
 
@@ -349,9 +439,7 @@ export default function ScheduleIndex() {
         showsVerticalScrollIndicator={false}
         ListEmptyComponent={
           <View style={{ padding: 24 }}>
-            <Text style={{ color: TEXT, textAlign: 'center' }}>
-              {loading ? 'Loading…' : statusFilter === 'All' ? 'No games found.' : `No ${statusFilter} games.`}
-            </Text>
+            <Text style={{ color: TEXT, textAlign: 'center' }}>{emptyMessage}</Text>
           </View>
         }
       />
@@ -369,13 +457,16 @@ const s = StyleSheet.create({
   tabTextActive: { color: '#FFFFFF', fontFamily: FONT_FAMILIES.archivoBlack },
   underline: { height: 3, backgroundColor: YELLOW, borderRadius: 2, marginTop: 6 },
 
-  // Status Filter Styles
+  // Status / Team Filter Styles
   filterContainer: {
-    flexDirection: 'row',
     paddingHorizontal: 10,
     paddingVertical: 8,
     gap: 8,
     marginBottom: 8,
+  },
+  filterRow: {
+    flexDirection: 'row',
+    gap: 8,
     alignItems: 'center',
   },
   dropdownButton: {
@@ -419,6 +510,9 @@ const s = StyleSheet.create({
     maxWidth: 300,
     overflow: 'hidden',
   },
+  teamDropdownMenu: {
+    maxHeight: '70%',
+  },
   dropdownItem: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -433,6 +527,13 @@ const s = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
     fontFamily: FONT_FAMILIES.archivoBlack,
+  },
+  dropdownItemCaptain: {
+    color: TEXT,
+    opacity: 0.6,
+    fontSize: 13,
+    fontWeight: '400',
+    fontFamily: FONT_FAMILIES.archivoNarrow,
   },
 
   card: {
