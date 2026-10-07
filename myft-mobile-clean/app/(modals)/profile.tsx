@@ -71,7 +71,7 @@ interface Game {
 interface Team {
   id: string;
   name?: string;
-  record?: number[]; // [wins, losses]
+  record?: number[]; // [wins, losses, ties]
   pointDifferential?: number; // Point differential (can be negative)
 }
 
@@ -625,17 +625,17 @@ export default function ProfileScreen() {
   };
 
   // Helper to update team record
-  const updateTeamRecord = async (teamId: string, wins: number, losses: number) => {
+  const updateTeamRecord = async (teamId: string, wins: number, losses: number, ties: number) => {
     try {
       const teamRef = doc(db, 'teams', teamId);
       await updateDoc(teamRef, {
-        record: [wins, losses]
+        record: [wins, losses, ties]
       });
-      
+
       // Update local teams state
       setTeams((prev) =>
         prev.map((t) =>
-          t.id === teamId ? { ...t, record: [wins, losses] } : t
+          t.id === teamId ? { ...t, record: [wins, losses, ties] } : t
         )
       );
     } catch (e) {
@@ -647,7 +647,7 @@ export default function ProfileScreen() {
   // Get team record by ID
   const getTeamRecord = (teamId: string): number[] => {
     const team = teams.find(t => t.id === teamId);
-    return team?.record || [0, 0];
+    return team?.record || [0, 0, 0];
   };
 
   // Helper to get team point differential
@@ -1209,10 +1209,10 @@ export default function ProfileScreen() {
                             onPress={async () => {
                               const teamId = editingGame?.team1ID;
                               if (!teamId) return;
-                              const [wins, losses] = getTeamRecord(teamId);
+                              const [wins, losses, ties] = getTeamRecord(teamId);
                               const newWins = Math.max(0, wins - 1);
                               try {
-                                await updateTeamRecord(teamId, newWins, losses);
+                                await updateTeamRecord(teamId, newWins, losses, ties);
                               } catch (e) {
                                 Alert.alert('Error', 'Failed to update team record');
                               }
@@ -1228,10 +1228,10 @@ export default function ProfileScreen() {
                             onPress={async () => {
                               const teamId = editingGame?.team1ID;
                               if (!teamId) return;
-                              const [wins, losses] = getTeamRecord(teamId);
+                              const [wins, losses, ties] = getTeamRecord(teamId);
                               const newWins = wins + 1;
                               try {
-                                await updateTeamRecord(teamId, newWins, losses);
+                                await updateTeamRecord(teamId, newWins, losses, ties);
                               } catch (e) {
                                 Alert.alert('Error', 'Failed to update team record');
                               }
@@ -1250,10 +1250,10 @@ export default function ProfileScreen() {
                             onPress={async () => {
                               const teamId = editingGame?.team1ID;
                               if (!teamId) return;
-                              const [wins, losses] = getTeamRecord(teamId);
+                              const [wins, losses, ties] = getTeamRecord(teamId);
                               const newLosses = Math.max(0, losses - 1);
                               try {
-                                await updateTeamRecord(teamId, wins, newLosses);
+                                await updateTeamRecord(teamId, wins, newLosses, ties);
                               } catch (e) {
                                 Alert.alert('Error', 'Failed to update team record');
                               }
@@ -1269,10 +1269,51 @@ export default function ProfileScreen() {
                             onPress={async () => {
                               const teamId = editingGame?.team1ID;
                               if (!teamId) return;
-                              const [wins, losses] = getTeamRecord(teamId);
+                              const [wins, losses, ties] = getTeamRecord(teamId);
                               const newLosses = losses + 1;
                               try {
-                                await updateTeamRecord(teamId, wins, newLosses);
+                                await updateTeamRecord(teamId, wins, newLosses, ties);
+                              } catch (e) {
+                                Alert.alert('Error', 'Failed to update team record');
+                              }
+                            }}
+                          >
+                            <Ionicons name="add" size={20} color={NAVY} />
+                          </TouchableOpacity>
+                        </View>
+                      </View>
+
+                      <View style={s.recordColumn}>
+                        <Text style={s.recordColumnLabel}>Ties</Text>
+                        <View style={s.statEditControls}>
+                          <TouchableOpacity
+                            style={s.statEditBtn}
+                            onPress={async () => {
+                              const teamId = editingGame?.team1ID;
+                              if (!teamId) return;
+                              const [wins, losses, ties] = getTeamRecord(teamId);
+                              const newTies = Math.max(0, ties - 1);
+                              try {
+                                await updateTeamRecord(teamId, wins, losses, newTies);
+                              } catch (e) {
+                                Alert.alert('Error', 'Failed to update team record');
+                              }
+                            }}
+                          >
+                            <Ionicons name="remove" size={20} color={NAVY} />
+                          </TouchableOpacity>
+                          <Text style={s.statEditValue}>
+                            {getTeamRecord(editingGame?.team1ID || '')[2] ?? 0}
+                          </Text>
+                          <TouchableOpacity
+                            style={s.statEditBtn}
+                            onPress={async () => {
+                              const teamId = editingGame?.team1ID;
+                              if (!teamId) return;
+                              const [wins, losses, ties] = getTeamRecord(teamId);
+                              const newTies = ties + 1;
+                              try {
+                                await updateTeamRecord(teamId, wins, losses, newTies);
                               } catch (e) {
                                 Alert.alert('Error', 'Failed to update team record');
                               }
@@ -1298,10 +1339,10 @@ export default function ProfileScreen() {
                             onPress={async () => {
                               const teamId = editingGame?.team2ID;
                               if (!teamId) return;
-                              const [wins, losses] = getTeamRecord(teamId);
+                              const [wins, losses, ties] = getTeamRecord(teamId);
                               const newWins = Math.max(0, wins - 1);
                               try {
-                                await updateTeamRecord(teamId, newWins, losses);
+                                await updateTeamRecord(teamId, newWins, losses, ties);
                               } catch (e) {
                                 Alert.alert('Error', 'Failed to update team record');
                               }
@@ -1317,10 +1358,10 @@ export default function ProfileScreen() {
                             onPress={async () => {
                               const teamId = editingGame?.team2ID;
                               if (!teamId) return;
-                              const [wins, losses] = getTeamRecord(teamId);
+                              const [wins, losses, ties] = getTeamRecord(teamId);
                               const newWins = wins + 1;
                               try {
-                                await updateTeamRecord(teamId, newWins, losses);
+                                await updateTeamRecord(teamId, newWins, losses, ties);
                               } catch (e) {
                                 Alert.alert('Error', 'Failed to update team record');
                               }
@@ -1339,10 +1380,10 @@ export default function ProfileScreen() {
                             onPress={async () => {
                               const teamId = editingGame?.team2ID;
                               if (!teamId) return;
-                              const [wins, losses] = getTeamRecord(teamId);
+                              const [wins, losses, ties] = getTeamRecord(teamId);
                               const newLosses = Math.max(0, losses - 1);
                               try {
-                                await updateTeamRecord(teamId, wins, newLosses);
+                                await updateTeamRecord(teamId, wins, newLosses, ties);
                               } catch (e) {
                                 Alert.alert('Error', 'Failed to update team record');
                               }
@@ -1358,10 +1399,51 @@ export default function ProfileScreen() {
                             onPress={async () => {
                               const teamId = editingGame?.team2ID;
                               if (!teamId) return;
-                              const [wins, losses] = getTeamRecord(teamId);
+                              const [wins, losses, ties] = getTeamRecord(teamId);
                               const newLosses = losses + 1;
                               try {
-                                await updateTeamRecord(teamId, wins, newLosses);
+                                await updateTeamRecord(teamId, wins, newLosses, ties);
+                              } catch (e) {
+                                Alert.alert('Error', 'Failed to update team record');
+                              }
+                            }}
+                          >
+                            <Ionicons name="add" size={20} color={NAVY} />
+                          </TouchableOpacity>
+                        </View>
+                      </View>
+
+                      <View style={s.recordColumn}>
+                        <Text style={s.recordColumnLabel}>Ties</Text>
+                        <View style={s.statEditControls}>
+                          <TouchableOpacity
+                            style={s.statEditBtn}
+                            onPress={async () => {
+                              const teamId = editingGame?.team2ID;
+                              if (!teamId) return;
+                              const [wins, losses, ties] = getTeamRecord(teamId);
+                              const newTies = Math.max(0, ties - 1);
+                              try {
+                                await updateTeamRecord(teamId, wins, losses, newTies);
+                              } catch (e) {
+                                Alert.alert('Error', 'Failed to update team record');
+                              }
+                            }}
+                          >
+                            <Ionicons name="remove" size={20} color={NAVY} />
+                          </TouchableOpacity>
+                          <Text style={s.statEditValue}>
+                            {getTeamRecord(editingGame?.team2ID || '')[2] ?? 0}
+                          </Text>
+                          <TouchableOpacity
+                            style={s.statEditBtn}
+                            onPress={async () => {
+                              const teamId = editingGame?.team2ID;
+                              if (!teamId) return;
+                              const [wins, losses, ties] = getTeamRecord(teamId);
+                              const newTies = ties + 1;
+                              try {
+                                await updateTeamRecord(teamId, wins, losses, newTies);
                               } catch (e) {
                                 Alert.alert('Error', 'Failed to update team record');
                               }

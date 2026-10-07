@@ -46,7 +46,7 @@ export async function createTeam(formData: FormData): Promise<void> {
     name,
     division,
     captain_name: captain,
-    record: { wins: 0, losses: 0 },
+    record: { wins: 0, losses: 0, ties: 0 },
     pointDifferential: 0,
     abbreviation,
     color: color || "#00274C",
@@ -71,6 +71,7 @@ export async function updateTeamMeta(teamId: string, formData: FormData): Promis
     record: {
       wins: Number(formData.get("wins") ?? 0),
       losses: Number(formData.get("losses") ?? 0),
+      ties: Number(formData.get("ties") ?? 0),
     },
     pointDifferential: Number(formData.get("pointDifferential") ?? 0),
     abbreviation: String(formData.get("abbreviation") ?? "").trim().toUpperCase(),
@@ -85,13 +86,14 @@ export async function updateTeamMeta(teamId: string, formData: FormData): Promis
   revalidatePath("/teams");
 }
 
-/** Recomputes wins/losses/pointDifferential from Final pool-play games. */
+/** Recomputes wins/losses/ties/pointDifferential from Final pool-play games. */
 export async function recomputeTeamRecord(teamId: string): Promise<void> {
   await requireSession();
 
   const gamesSnap = await db.collection("games").get();
   let wins = 0;
   let losses = 0;
+  let ties = 0;
   let pointDifferential = 0;
 
   gamesSnap.forEach((doc) => {
@@ -107,9 +109,10 @@ export async function recomputeTeamRecord(teamId: string): Promise<void> {
     pointDifferential += own - opp;
     if (own > opp) wins++;
     else if (own < opp) losses++;
+    else ties++;
   });
 
-  await db.doc(`teams/${teamId}`).update({ record: { wins, losses }, pointDifferential });
+  await db.doc(`teams/${teamId}`).update({ record: { wins, losses, ties }, pointDifferential });
   revalidatePath(`/teams/${teamId}`);
 }
 

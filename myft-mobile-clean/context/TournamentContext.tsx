@@ -34,7 +34,7 @@ export interface Team {
   name: string;
   division: Division;
   captain: string;
-  record: { wins: number; losses: number };
+  record: { wins: number; losses: number; ties: number };
   players: Player[];
   pointDifferential?: number;
   abbreviation?: string;
@@ -120,7 +120,7 @@ const loadTeamsAndPlayers = async (): Promise<Team[]> => {
       name: string;
       division: Division;
       captain: string;
-      record: { wins: number; losses: number };
+      record: { wins: number; losses: number; ties: number };
       pointDifferential?: number;
       abbreviation?: string;
       color?: string;
@@ -132,16 +132,18 @@ const loadTeamsAndPlayers = async (): Promise<Team[]> => {
     const data = d.data() as any;
     const division: Division = data?.division ? normDiv(data.division) : normDiv(d.id);
 
-    let record = { wins: 0, losses: 0 };
+    let record = { wins: 0, losses: 0, ties: 0 };
     if (Array.isArray(data?.record)) {
       record = {
         wins: data.record[0] ?? 0,
         losses: data.record[1] ?? 0,
+        ties: data.record[2] ?? 0,
       };
     } else if (data?.record && typeof data.record === 'object') {
       record = {
         wins: data.record.wins ?? 0,
         losses: data.record.losses ?? 0,
+        ties: data.record.ties ?? 0,
       };
     }
 
@@ -192,7 +194,7 @@ const loadTeamsAndPlayers = async (): Promise<Team[]> => {
       name: meta?.name ?? schoolFromTeamId(tid),
       division: meta?.division ?? normDiv(tid),
       captain: meta?.captain ?? '',
-      record: meta?.record ?? { wins: 0, losses: 0 },
+      record: meta?.record ?? { wins: 0, losses: 0, ties: 0 },
       players,
       pointDifferential: meta?.pointDifferential,
       abbreviation: meta?.abbreviation,

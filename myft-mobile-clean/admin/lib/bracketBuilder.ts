@@ -9,7 +9,14 @@ import type { Division, BracketDoc, BracketSlot, BracketRound } from "@/lib/type
  * with the Cloud Function's seeding math or a mock bracket won't look like the real thing.
  */
 
-export type TeamStanding = { teamID: string; name: string; wins: number; losses: number; pointDifferential: number };
+export type TeamStanding = {
+  teamID: string;
+  name: string;
+  wins: number;
+  losses: number;
+  ties: number;
+  pointDifferential: number;
+};
 
 export type GeneratedGameDoc = {
   docId: string;
@@ -53,10 +60,17 @@ export function roundLabel(roundIndex: number, numRounds: number, size: number):
   return `Round of ${slotsInRound * 2}`;
 }
 
+/** A tie counts as half a win for ranking purposes — standard round-robin convention. */
+export function rankPoints(t: Pick<TeamStanding, "wins" | "ties">): number {
+  return t.wins + 0.5 * t.ties;
+}
+
 export function rankStandings(teams: TeamStanding[]): TeamStanding[] {
   return [...teams].sort((a, b) => {
-    if (b.wins !== a.wins) return b.wins - a.wins;
+    const pointsDiff = rankPoints(b) - rankPoints(a);
+    if (pointsDiff !== 0) return pointsDiff;
     if (b.pointDifferential !== a.pointDifferential) return b.pointDifferential - a.pointDifferential;
+    if (a.losses !== b.losses) return a.losses - b.losses;
     return a.name.localeCompare(b.name);
   });
 }

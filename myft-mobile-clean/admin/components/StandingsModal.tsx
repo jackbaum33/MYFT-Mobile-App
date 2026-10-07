@@ -2,15 +2,19 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { getStandings, type StandingsTeam } from "@/lib/standingsActions";
+import { rankPoints } from "@/lib/bracketBuilder";
 import { btnPrimary } from "@/lib/ui";
 
 const POLL_MS = 15_000;
 
+// Same ranking math as bracket seeding (rankPoints: a tie = half a win), so a
+// team's spot here always matches where it'd seed if you generated a bracket now.
 function rank(teams: StandingsTeam[], division: "boys" | "girls"): StandingsTeam[] {
   return teams
     .filter((t) => t.division === division)
     .sort((a, b) => {
-      if (a.wins !== b.wins) return b.wins - a.wins;
+      const pointsDiff = rankPoints(b) - rankPoints(a);
+      if (pointsDiff !== 0) return pointsDiff;
       if (a.pointDifferential !== b.pointDifferential) return b.pointDifferential - a.pointDifferential;
       if (a.losses !== b.losses) return a.losses - b.losses;
       return a.name.localeCompare(b.name);
@@ -96,7 +100,7 @@ export default function StandingsModal() {
                         Team
                       </th>
                       <th className="border-b border-line py-2 text-right text-xs font-bold uppercase text-text/50">
-                        W-L
+                        W-L-T
                       </th>
                       <th className="border-b border-line py-2 text-right text-xs font-bold uppercase text-text/50">
                         PD
@@ -112,7 +116,7 @@ export default function StandingsModal() {
                           {t.captain ? ` (${t.captain})` : ""}
                         </td>
                         <td className="border-b border-line py-2 text-right text-text">
-                          {t.wins}-{t.losses}
+                          {t.wins}-{t.losses}-{t.ties}
                         </td>
                         <td
                           className={`border-b border-line py-2 text-right font-bold ${

@@ -59,13 +59,18 @@ export function teamOptionLabel(
   return captain ? `${base} — Capt. ${captain}` : base;
 }
 
-export function parseRecord(record: { wins?: number; losses?: number } | number[] | undefined): {
+export function parseRecord(
+  record: { wins?: number; losses?: number; ties?: number } | number[] | undefined
+): {
   wins: number;
   losses: number;
+  ties: number;
 } {
-  if (Array.isArray(record)) return { wins: record[0] ?? 0, losses: record[1] ?? 0 };
-  if (record && typeof record === "object") return { wins: record.wins ?? 0, losses: record.losses ?? 0 };
-  return { wins: 0, losses: 0 };
+  if (Array.isArray(record)) return { wins: record[0] ?? 0, losses: record[1] ?? 0, ties: record[2] ?? 0 };
+  if (record && typeof record === "object") {
+    return { wins: record.wins ?? 0, losses: record.losses ?? 0, ties: record.ties ?? 0 };
+  }
+  return { wins: 0, losses: 0, ties: 0 };
 }
 
 /**

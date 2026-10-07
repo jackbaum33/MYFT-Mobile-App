@@ -43,7 +43,7 @@ export type TeamDoc = {
   division?: string;
   captain_name?: string;
   captain?: string;
-  record?: { wins?: number; losses?: number } | number[];
+  record?: { wins?: number; losses?: number; ties?: number } | number[];
   pointDifferential?: number;
   abbreviation?: string;
   color?: string;
@@ -117,6 +117,7 @@ export type BracketDoc = {
     teamID: string;
     wins: number;
     losses: number;
+    ties: number;
     pointDifferential: number;
     seed: number;
   }[];

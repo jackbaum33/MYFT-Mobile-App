@@ -49,7 +49,7 @@ export default async function TeamDetailPage({
     .filter((p) => p.team_id !== id)
     .sort((a, b) => (a.display_name ?? a.id).localeCompare(b.display_name ?? b.id));
 
-  const { wins, losses } = parseRecord(team.record);
+  const { wins, losses, ties } = parseRecord(team.record);
 
   const boundUpdateMeta = updateTeamMeta.bind(null, id);
   const boundRecompute = recomputeTeamRecord.bind(null, id);
@@ -105,7 +105,7 @@ export default async function TeamDetailPage({
           Abbreviation and color are used to brand this team&apos;s draft board cells in the mobile app&apos;s
           fantasy draft.
         </p>
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-4 gap-4">
           <div>
             <label className={label}>Wins</label>
             <input type="number" name="wins" defaultValue={wins} className={input} />
@@ -113,6 +113,10 @@ export default async function TeamDetailPage({
           <div>
             <label className={label}>Losses</label>
             <input type="number" name="losses" defaultValue={losses} className={input} />
+          </div>
+          <div>
+            <label className={label}>Ties</label>
+            <input type="number" name="ties" defaultValue={ties} className={input} />
           </div>
           <div>
             <label className={label}>Point Diff</label>
@@ -127,7 +131,7 @@ export default async function TeamDetailPage({
 
       <form action={boundRecompute} className={`${card} flex items-center justify-between`}>
         <p className="text-sm text-text/80">
-          Recompute wins/losses/point differential from this team&apos;s Final pool games.
+          Recompute wins/losses/ties/point differential from this team&apos;s Final pool games.
         </p>
         <SubmitButton variant="secondary" pendingText="Recomputing…">Recompute from Games</SubmitButton>
         <SavedToast message="Recomputed" />

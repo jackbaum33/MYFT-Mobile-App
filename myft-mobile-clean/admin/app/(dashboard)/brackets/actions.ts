@@ -27,8 +27,8 @@ export async function generateBracket(division: Division, formData: FormData): P
   const teamsSnap = await db.collection("teams").where("division", "==", division).get();
   const standings: TeamStanding[] = teamsSnap.docs.map((d) => {
     const data = d.data() as TeamDoc;
-    const { wins, losses } = parseRecord(data.record);
-    return { teamID: d.id, name: data.name ?? d.id, wins, losses, pointDifferential: data.pointDifferential ?? 0 };
+    const { wins, losses, ties } = parseRecord(data.record);
+    return { teamID: d.id, name: data.name ?? d.id, wins, losses, ties, pointDifferential: data.pointDifferential ?? 0 };
   });
   if (standings.length === 0) throw new Error(`No ${division} teams found.`);
 
@@ -57,6 +57,7 @@ export async function generateBracket(division: Division, formData: FormData): P
         teamID: t.teamID,
         wins: t.wins,
         losses: t.losses,
+        ties: t.ties,
         pointDifferential: t.pointDifferential,
         seed: i + 1,
       })),

@@ -14,25 +14,33 @@ const NAVY = '#00274C';
 const YELLOW = '#FFCB05';
 const TEXT = '#E9ECEF';
 
-function getWinsLosses(record: any) {
-  // supports {wins, losses} OR [wins, losses] OR "3-2"
-  if (!record) return { wins: 0, losses: 0 };
+function getRecord(record: any) {
+  // supports {wins, losses, ties} OR [wins, losses, ties] OR "3-2" / "3-2-1"
+  if (!record) return { wins: 0, losses: 0, ties: 0 };
 
   if (Array.isArray(record)) {
     const wins = Number(record[0] ?? 0);
     const losses = Number(record[1] ?? 0);
-    return { wins: isNaN(wins) ? 0 : wins, losses: isNaN(losses) ? 0 : losses };
+    const ties = Number(record[2] ?? 0);
+    return { wins: isNaN(wins) ? 0 : wins, losses: isNaN(losses) ? 0 : losses, ties: isNaN(ties) ? 0 : ties };
   }
 
   if (typeof record === 'string') {
-    const m = record.match(/^\s*(\d+)\s*-\s*(\d+)\s*$/);
-    if (m) return { wins: Number(m[1]), losses: Number(m[2]) };
-    return { wins: 0, losses: 0 };
+    const m = record.match(/^\s*(\d+)\s*-\s*(\d+)\s*(?:-\s*(\d+)\s*)?$/);
+    if (m) return { wins: Number(m[1]), losses: Number(m[2]), ties: Number(m[3] ?? 0) };
+    return { wins: 0, losses: 0, ties: 0 };
   }
 
   const wins = Number(record?.wins ?? 0);
   const losses = Number(record?.losses ?? 0);
-  return { wins: isNaN(wins) ? 0 : wins, losses: isNaN(losses) ? 0 : losses };
+  const ties = Number(record?.ties ?? 0);
+  return { wins: isNaN(wins) ? 0 : wins, losses: isNaN(losses) ? 0 : losses, ties: isNaN(ties) ? 0 : ties };
+}
+
+// A tie counts as half a win for ranking — same convention as the admin site.
+function rankPoints(record: any) {
+  const { wins, ties } = getRecord(record);
+  return wins + 0.5 * ties;
 }
 
 function getPD(pd: any) {
@@ -41,8 +49,8 @@ function getPD(pd: any) {
 }
 
 function formatRecord(record: any) {
-  const { wins, losses } = getWinsLosses(record);
-  return `${wins}-${losses}`;
+  const { wins, losses, ties } = getRecord(record);
+  return ties > 0 ? `${wins}-${losses}-${ties}` : `${wins}-${losses}`;
 }
 
 export default function TeamScreen() {
@@ -54,15 +62,15 @@ export default function TeamScreen() {
     const divisionTeams = teams.filter(t => t.division === division);
 
     return [...divisionTeams].sort((a, b) => {
-      const { wins: winsA, losses: lossesA } = getWinsLosses(a.record);
-      const { wins: winsB, losses: lossesB } = getWinsLosses(b.record);
-
-      if (winsA !== winsB) return winsB - winsA; // wins desc
+      const pointsDiff = rankPoints(b.record) - rankPoints(a.record); // wins + 0.5*ties, desc
+      if (pointsDiff !== 0) return pointsDiff;
 
       const pdA = getPD(a.pointDifferential);
       const pdB = getPD(b.pointDifferential);
       if (pdA !== pdB) return pdB - pdA;         // PD desc
 
+      const { losses: lossesA } = getRecord(a.record);
+      const { losses: lossesB } = getRecord(b.record);
       if (lossesA !== lossesB) return lossesA - lossesB; // losses asc
 
       return (a.name || '').localeCompare(b.name || '');

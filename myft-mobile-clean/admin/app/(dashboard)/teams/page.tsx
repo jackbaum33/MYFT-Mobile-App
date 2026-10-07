@@ -26,7 +26,7 @@ export default async function TeamsPage() {
         </thead>
         <tbody>
           {list.map((t) => {
-            const { wins, losses } = parseRecord(t.record);
+            const { wins, losses, ties } = parseRecord(t.record);
             return (
               <tr key={t.id}>
                 <td className={td}>
@@ -47,6 +47,7 @@ export default async function TeamsPage() {
                 <td className={td}>{t.captain_name || t.captain || "—"}</td>
                 <td className={td}>
                   {wins}-{losses}
+                  {ties > 0 ? `-${ties}` : ""}
                 </td>
                 <td className={td}>{t.pointDifferential ?? 0}</td>
               </tr>

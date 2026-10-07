@@ -12,6 +12,7 @@ export type StandingsTeam = {
   division: string;
   wins: number;
   losses: number;
+  ties: number;
   pointDifferential: number;
 };
 
@@ -21,7 +22,7 @@ export async function getStandings(): Promise<StandingsTeam[]> {
   const snap = await db.collection("teams").get();
   return snap.docs.map((d) => {
     const data = d.data() as TeamDoc;
-    const { wins, losses } = parseRecord(data.record);
+    const { wins, losses, ties } = parseRecord(data.record);
     return {
       id: d.id,
       name: data.name ?? d.id,
@@ -29,6 +30,7 @@ export async function getStandings(): Promise<StandingsTeam[]> {
       division: (data.division ?? "boys").toLowerCase(),
       wins,
       losses,
+      ties,
       pointDifferential: data.pointDifferential ?? 0,
     };
   });

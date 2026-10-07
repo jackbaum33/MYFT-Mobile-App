@@ -80,7 +80,9 @@ export default function TeamDetailScreen() {
             Captain: <Text style={styles.metaStrong}>{team.captain}</Text>
           </Text>
           <Text style={styles.meta}>
-            Record: <Text style={styles.metaStrong}>{team.record.wins}-{team.record.losses}</Text>
+            Record: <Text style={styles.metaStrong}>
+              {team.record.wins}-{team.record.losses}{team.record.ties > 0 ? `-${team.record.ties}` : ''}
+            </Text>
           </Text>
         </View>
         <View style={styles.logoContainer}>
