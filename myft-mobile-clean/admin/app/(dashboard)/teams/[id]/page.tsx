@@ -123,6 +123,11 @@ export default async function TeamDetailPage({
             <input type="number" name="pointDifferential" defaultValue={team.pointDifferential ?? 0} className={input} />
           </div>
         </div>
+        <p className="text-xs text-text/60">
+          These four are recomputed automatically from this team&apos;s Final pool games whenever one is
+          marked Final (or its score is corrected) — edits here are a manual override that the next
+          relevant game write will replace. Bracket/playoff games never affect them.
+        </p>
         <div className="flex gap-2">
           <SubmitButton pendingText="Saving…">Save</SubmitButton>
         </div>
@@ -131,7 +136,8 @@ export default async function TeamDetailPage({
 
       <form action={boundRecompute} className={`${card} flex items-center justify-between`}>
         <p className="text-sm text-text/80">
-          Recompute wins/losses/ties/point differential from this team&apos;s Final pool games.
+          Force a recompute of wins/losses/ties/point differential from this team&apos;s Final pool games
+          right now (usually not needed — this already happens automatically).
         </p>
         <SubmitButton variant="secondary" pendingText="Recomputing…">Recompute from Games</SubmitButton>
         <SavedToast message="Recomputed" />

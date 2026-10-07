@@ -7,6 +7,7 @@ import { db } from "@/lib/firebaseAdmin";
 import { requireSession } from "@/lib/session";
 import { STAT_FIELDS, type GameDoc, type PlayerDoc } from "@/lib/types";
 import { parseDateTimeLocal } from "@/lib/utils";
+import { recomputeTeamRecord } from "../teams/actions";
 
 const STAT_INDEX: Record<string, number> = Object.fromEntries(STAT_FIELDS.map((f, i) => [f.key, i]));
 
@@ -32,6 +33,20 @@ function teamIdFromForm(formData: FormData, selectKey: string, placeholderKey: s
   return placeholder || String(formData.get(selectKey) ?? "").trim();
 }
 
+/**
+ * Keeps both teams' win/loss/tie/point-differential in sync with a pool game's result.
+ * Called wherever a game can end up Final (Mark Final, Save, or a historical backfill
+ * created as Final) — not a background trigger, just invoked directly from those actions,
+ * so it only ever runs as a direct result of an admin action. Bracket/playoff games
+ * (round !== undefined) never affect these — same convention as recomputeTeamRecord itself.
+ */
+async function syncTeamRecordsIfFinal(game: Pick<GameDoc, "round" | "status" | "team1ID" | "team2ID">): Promise<void> {
+  if (game.round !== undefined) return;
+  if ((game.status ?? "").toLowerCase() !== "final") return;
+  const teamIds = [game.team1ID, game.team2ID].filter((v): v is string => !!v);
+  await Promise.all(teamIds.map((id) => recomputeTeamRecord(id)));
+}
+
 export async function createGame(formData: FormData): Promise<void> {
   await requireSession();
 
@@ -55,6 +70,7 @@ export async function createGame(formData: FormData): Promise<void> {
   if (startTimeRaw) data.startTime = Timestamp.fromDate(parseDateTimeLocal(startTimeRaw));
 
   const ref = await db.collection("games").add(data);
+  await syncTeamRecordsIfFinal({ status, team1ID, team2ID }); // handles a backfilled game created as Final
   revalidatePath("/games");
   redirect(`/games/${ref.id}`);
 }
@@ -62,19 +78,23 @@ export async function createGame(formData: FormData): Promise<void> {
 export async function updateGame(gameId: string, formData: FormData): Promise<void> {
   await requireSession();
 
+  const team1ID = teamIdFromForm(formData, "team1ID", "team1Placeholder");
+  const team2ID = teamIdFromForm(formData, "team2ID", "team2Placeholder");
+  const status = String(formData.get("status") ?? "Scheduled");
   const startTimeRaw = String(formData.get("startTime") ?? "").trim();
   const isBye = formData.get("isBye") === "on";
+  const roundRaw = String(formData.get("round") ?? "").trim();
 
   const update: Record<string, unknown> = {
-    team1ID: teamIdFromForm(formData, "team1ID", "team1Placeholder"),
-    team2ID: teamIdFromForm(formData, "team2ID", "team2Placeholder"),
-    status: String(formData.get("status") ?? "Scheduled"),
+    team1ID,
+    team2ID,
+    status,
     team1score: Number(formData.get("team1score") ?? 0),
     team2score: Number(formData.get("team2score") ?? 0),
     field: strOrDelete(formData, "field"),
     startTime: startTimeRaw ? Timestamp.fromDate(parseDateTimeLocal(startTimeRaw)) : FieldValue.delete(),
     // Bracket / playoff fields — manual correction surface.
-    round: numOrDelete(formData, "round"),
+    round: roundRaw === "" ? FieldValue.delete() : Number(roundRaw),
     roundLabel: strOrDelete(formData, "roundLabel"),
     division: strOrDelete(formData, "division"),
     bracketSlot: numOrDelete(formData, "bracketSlot"),
@@ -84,13 +104,26 @@ export async function updateGame(gameId: string, formData: FormData): Promise<vo
   };
 
   await db.doc(`games/${gameId}`).update(update);
+  await syncTeamRecordsIfFinal({
+    round: roundRaw === "" ? undefined : Number(roundRaw),
+    status,
+    team1ID,
+    team2ID,
+  }); // covers both marking Final here and correcting a score on an already-Final game
+
   revalidatePath(`/games/${gameId}`);
   revalidatePath("/games");
 }
 
 export async function markFinal(gameId: string): Promise<void> {
   await requireSession();
-  await db.doc(`games/${gameId}`).update({ status: "Final" });
+  const ref = db.doc(`games/${gameId}`);
+  await ref.update({ status: "Final" });
+
+  const snap = await ref.get();
+  const game = snap.data() as GameDoc | undefined;
+  if (game) await syncTeamRecordsIfFinal(game);
+
   revalidatePath(`/games/${gameId}`);
   revalidatePath("/games");
 }
