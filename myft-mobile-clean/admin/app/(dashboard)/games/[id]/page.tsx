@@ -3,7 +3,7 @@ import { db } from "@/lib/firebaseAdmin";
 import type { GameDoc, PlayerDoc, TeamDoc, PlayLogEntryDoc } from "@/lib/types";
 import { STAT_FIELDS, statsFromArray } from "@/lib/types";
 import { toDateTimeLocalValue, teamOptionLabel, fmtDateTime } from "@/lib/utils";
-import { updateGame, deletePlayLogEntry, markFinal, deleteGame } from "../actions";
+import { updateGame, deletePlayLogEntry, deleteGame } from "../actions";
 import PlayLogForm from "./PlayLogForm";
 import ConfirmSubmitButton from "@/components/ConfirmSubmitButton";
 import SubmitButton from "@/components/SubmitButton";
@@ -50,7 +50,6 @@ export default async function GameDetailPage({
     .map((p) => ({ id: p.id, name: p.data.display_name ?? p.id, team: team2Name }));
 
   const boundUpdateGame = updateGame.bind(null, id);
-  const boundMarkFinal = markFinal.bind(null, id);
   const boundDelete = deleteGame.bind(null, id);
 
   const startTimeValue = game.startTime ? toDateTimeLocalValue(game.startTime.toDate()) : "";
@@ -59,17 +58,11 @@ export default async function GameDetailPage({
     <div className="max-w-4xl space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className={pageTitle}>Edit Game</h1>
-        <div className="flex gap-2">
-          <form action={boundMarkFinal} className="flex items-center gap-2">
-            <SubmitButton variant="secondary" pendingText="Marking…">Mark Final</SubmitButton>
-            <SavedToast message="Marked Final" />
-          </form>
-          <form action={boundDelete}>
-            <ConfirmSubmitButton confirmText="Delete this game permanently?" pendingText="Deleting…" className={btnDanger}>
-              Delete
-            </ConfirmSubmitButton>
-          </form>
-        </div>
+        <form action={boundDelete}>
+          <ConfirmSubmitButton confirmText="Delete this game permanently?" pendingText="Deleting…" className={btnDanger}>
+            Delete
+          </ConfirmSubmitButton>
+        </form>
       </div>
 
       <form action={boundUpdateGame} className={`${card} space-y-4`}>
@@ -188,7 +181,12 @@ export default async function GameDetailPage({
           Is Bye
         </label>
 
-        <SubmitButton pendingText="Saving…">Save Game Info</SubmitButton>
+        <div className="flex flex-wrap gap-2">
+          <SubmitButton name="intent" value="save" pendingText="Saving…">Save Game Info</SubmitButton>
+          <SubmitButton name="intent" value="final" variant="secondary" pendingText="Marking…">
+            Save &amp; Mark Final
+          </SubmitButton>
+        </div>
         <SavedToast message="Game info saved" />
       </form>
 

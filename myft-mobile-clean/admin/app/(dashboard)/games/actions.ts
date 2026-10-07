@@ -80,7 +80,10 @@ export async function updateGame(gameId: string, formData: FormData): Promise<vo
 
   const team1ID = teamIdFromForm(formData, "team1ID", "team1Placeholder");
   const team2ID = teamIdFromForm(formData, "team2ID", "team2Placeholder");
-  const status = String(formData.get("status") ?? "Scheduled");
+  // "Mark Final" submits this same form (so it always acts on whatever score/teams are
+  // currently in the fields, not stale data) and forces status to Final regardless of
+  // what the Status dropdown says — same shared-submit-button pattern as the bracket page.
+  const status = formData.get("intent") === "final" ? "Final" : String(formData.get("status") ?? "Scheduled");
   const startTimeRaw = String(formData.get("startTime") ?? "").trim();
   const isBye = formData.get("isBye") === "on";
   const roundRaw = String(formData.get("round") ?? "").trim();
@@ -110,19 +113,6 @@ export async function updateGame(gameId: string, formData: FormData): Promise<vo
     team1ID,
     team2ID,
   }); // covers both marking Final here and correcting a score on an already-Final game
-
-  revalidatePath(`/games/${gameId}`);
-  revalidatePath("/games");
-}
-
-export async function markFinal(gameId: string): Promise<void> {
-  await requireSession();
-  const ref = db.doc(`games/${gameId}`);
-  await ref.update({ status: "Final" });
-
-  const snap = await ref.get();
-  const game = snap.data() as GameDoc | undefined;
-  if (game) await syncTeamRecordsIfFinal(game);
 
   revalidatePath(`/games/${gameId}`);
   revalidatePath("/games");
