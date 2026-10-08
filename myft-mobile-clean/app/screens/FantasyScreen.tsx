@@ -114,7 +114,7 @@ const PlayerAvatar = React.memo(({ name }: { name: string }) => {
 PlayerAvatar.displayName = 'PlayerAvatar';
 
 export default function FantasyScreen() {
-  const { teams, userRoster, updateRoster, calculatePoints, loading: teamsLoading } = useTournament();
+  const { teams, userRoster, updateRoster, calculatePoints, loading: teamsLoading, refreshTrigger } = useTournament();
   const { user: signedIn } = useAuth();
 
   /** -------------------------
@@ -135,7 +135,7 @@ export default function FantasyScreen() {
       }
     })();
     return () => { mounted = false; };
-  }, []);
+  }, [refreshTrigger]);
 
   // Unlocked until an admin configures a lock date in config/tournament.
   const isLocked = useMemo(() => (lockDate ? new Date() >= lockDate : false), [lockDate]);

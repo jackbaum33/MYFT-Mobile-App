@@ -46,7 +46,7 @@ function getStatValue(player: any, key: string): number {
 
 export default function LeaderboardIndex() {
   const navigation = useNavigation<LeaderboardNavigationProp>();
-  const { teams, calculatePoints } = useTournament();
+  const { teams, calculatePoints, refreshTrigger } = useTournament();
   const { user: signedIn } = useAuth();
   const [mode, setMode] = useState<'players' | 'users'>('players');
 
@@ -97,7 +97,7 @@ export default function LeaderboardIndex() {
       }
     })();
     return () => { active = false; };
-  }, []);
+  }, [refreshTrigger]);
 
   const playersById = useMemo(() => mapPlayersById(allPlayers), [allPlayers]);
 

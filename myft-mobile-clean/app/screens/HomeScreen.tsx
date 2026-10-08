@@ -19,6 +19,7 @@ import {
 import { Ionicons, MaterialIcons, FontAwesome5 } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
 import { FONT_FAMILIES } from '../../fonts';
+import { useTournament } from '../../context/TournamentContext';
 
 // Colors
 const CARD = '#00417D';
@@ -133,6 +134,7 @@ const BoardGrid = React.memo(function BoardGrid({
 ========================================= */
 
 export default function HomeScreen() {
+  const { refreshTrigger } = useTournament();
   const [events, setEvents] = useState<ScheduleItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [members, setMembers] = useState<Member[]>([]);
@@ -161,11 +163,11 @@ export default function HomeScreen() {
     })();
 
     return () => { mounted = false; };
-  }, []);
+  }, [refreshTrigger]);
 
   useEffect(() => {
     let mounted = true;
-  
+
     (async () => {
       try {
         const docs = await getSchedule(); // <- helper returns raw docs
@@ -200,9 +202,9 @@ export default function HomeScreen() {
         if (mounted) setLoading(false);
       }
     })();
-  
+
     return () => { mounted = false; };
-  }, []);
+  }, [refreshTrigger]);
 
   // Build sections from `events` (was previously from SCHEDULE)
   const sections = useMemo(() => {

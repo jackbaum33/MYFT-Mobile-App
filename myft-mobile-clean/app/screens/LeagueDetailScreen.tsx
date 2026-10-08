@@ -32,7 +32,7 @@ export default function LeagueDetailScreen() {
   const route = useRoute<RouteProp_>();
   const { id: leagueId } = route.params;
   const { user } = useAuth();
-  const { teams, calculatePoints } = useTournament();
+  const { teams, calculatePoints, refreshTrigger } = useTournament();
 
   const [league, setLeague] = useState<LeagueWithId | null>(null);
   const [loading, setLoading] = useState(true);
@@ -57,7 +57,7 @@ export default function LeagueDetailScreen() {
 
   useEffect(() => {
     listUsers().then(setUsers).catch((e) => console.warn('[LeagueDetail] listUsers failed:', e));
-  }, []);
+  }, [refreshTrigger]);
 
   // Tick every 30s so the Start Draft gate re-evaluates without a manual refresh.
   useEffect(() => {
@@ -193,7 +193,17 @@ export default function LeagueDetailScreen() {
             </View>
           )}
 
-          {league.status === 'complete' && <Text style={styles.sectionLabel}>Final Standings</Text>}
+          {league.status === 'complete' && (
+            <>
+              <TouchableOpacity
+                style={[styles.actionBtn, { marginBottom: 12 }]}
+                onPress={() => navigation.navigate('DraftRoom', { id: leagueId })}
+              >
+                <Text style={styles.actionBtnText}>View Draft Board</Text>
+              </TouchableOpacity>
+              <Text style={styles.sectionLabel}>Final Standings</Text>
+            </>
+          )}
 
           {isOwner && (
             <TouchableOpacity

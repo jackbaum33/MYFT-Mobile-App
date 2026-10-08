@@ -30,6 +30,10 @@ export default function TeamDetailScreen() {
   const team = useMemo(() => teams.find(t => t.id === id), [teams, id]);
   const players = team?.players ?? [];
   const logoSrc = getTeamLogo(team?.id);
+  const totalPoints = useMemo(
+    () => players.reduce((sum, p) => sum + calculatePoints(p), 0),
+    [players, calculatePoints]
+  );
 
   // Set header title when team loads
   useLayoutEffect(() => {
@@ -90,6 +94,11 @@ export default function TeamDetailScreen() {
         </View>
       </View>
 
+      <View style={styles.totalPointsBanner}>
+        <Text style={styles.totalPointsLabel}>Total Points</Text>
+        <Text style={styles.totalPointsValue}>{totalPoints}</Text>
+      </View>
+
       <FlatList
         style={{ marginTop: 12 }}
         data={players}
@@ -147,6 +156,19 @@ const styles = StyleSheet.create({
     width: 75,
     height: 75,
   },
+
+  totalPointsBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: CARD,
+    borderRadius: 10,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    marginTop: 14,
+  },
+  totalPointsLabel: { color: TEXT, fontWeight: '700', fontSize: 14, fontFamily: FONT_FAMILIES.archivoBlack },
+  totalPointsValue: { color: YELLOW, fontWeight: '900', fontSize: 20, fontFamily: FONT_FAMILIES.archivoBlack },
   logoContainer: {
     width: 32,
     height: 32,

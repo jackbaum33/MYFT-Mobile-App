@@ -62,7 +62,7 @@ export default function GameDetail() {
   const navigation = useNavigation<ScheduleDetailNavigationProp>();
   const { id } = route.params;
   
-  const { teams, calculatePoints } = useTournament();
+  const { teams, calculatePoints, refreshTrigger } = useTournament();
 
   const [game, setGame] = useState<FSGame | null>(null);
   const [loading, setLoading] = useState(true);
@@ -113,7 +113,7 @@ export default function GameDetail() {
       }
     })();
     return () => { active = false; };
-  }, [id]);
+  }, [id, refreshTrigger]);
 
   useEffect(() => {
     let active = true;
@@ -130,7 +130,7 @@ export default function GameDetail() {
       }
     })();
     return () => { active = false; };
-  }, [id]);
+  }, [id, refreshTrigger]);
 
   const timeStr = useMemo(() => {
     const ts = game?.startTime;

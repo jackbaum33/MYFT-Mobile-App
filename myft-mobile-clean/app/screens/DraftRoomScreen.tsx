@@ -196,19 +196,26 @@ function DraftBoard({
 
   if (n === 0) return null;
 
+  // Vertical ScrollView on the outside (flex:1, sized by the plain flex:1 View this component
+  // is mounted in — not nested inside another ScrollView, so flex:1 resolves correctly) with
+  // a horizontal ScrollView inside it wrapping ALL rows (header + every round) as siblings of
+  // one shared width per column. That's what keeps the header names lined up with the cells
+  // below them — they scroll horizontally together and use the exact same column width — and
+  // it means there's no fixed/guessed vertical height to run out of room at 10 rounds; this
+  // scrolls exactly as far as the content needs.
   return (
-    <ScrollView horizontal showsHorizontalScrollIndicator style={{ flex: 1 }}>
-      <View>
-        <View style={styles.boardHeaderRow}>
-          {draftOrder.map((uid) => (
-            <View key={uid} style={[styles.boardHeaderCell, { width: BOARD_CELL_W }]}>
-              <Text style={styles.boardHeaderText} numberOfLines={1}>
-                {usersByUid.get(uid)?.displayName ?? uid}
-              </Text>
-            </View>
-          ))}
-        </View>
-        <ScrollView style={{ maxHeight: BOARD_HEIGHT }} showsVerticalScrollIndicator={false}>
+    <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: SHEET_PEEK + 16 }}>
+      <ScrollView horizontal showsHorizontalScrollIndicator>
+        <View>
+          <View style={styles.boardHeaderRow}>
+            {draftOrder.map((uid) => (
+              <View key={uid} style={[styles.boardHeaderCell, { width: BOARD_CELL_W }]}>
+                <Text style={styles.boardHeaderText} numberOfLines={1}>
+                  {usersByUid.get(uid)?.displayName ?? uid}
+                </Text>
+              </View>
+            ))}
+          </View>
           {Array.from({ length: totalRounds }).map((_, r) => (
             <View key={r} style={styles.boardRow}>
               {draftOrder.map((uid) => {
@@ -245,8 +252,8 @@ function DraftBoard({
               })}
             </View>
           ))}
-        </ScrollView>
-      </View>
+        </View>
+      </ScrollView>
     </ScrollView>
   );
 }
@@ -344,7 +351,7 @@ export default function DraftRoomScreen() {
   const route = useRoute<RouteProp_>();
   const { id: leagueId } = route.params;
   const { user } = useAuth();
-  const { teams, calculatePoints } = useTournament();
+  const { teams, calculatePoints, refreshTrigger } = useTournament();
 
   const [league, setLeague] = useState<LeagueWithId | null>(null);
   const [picks, setPicks] = useState<DraftPickWithId[]>([]);
@@ -361,7 +368,7 @@ export default function DraftRoomScreen() {
   useEffect(() => subscribeToPicks(leagueId, setPicks), [leagueId]);
   useEffect(() => {
     listUsers().then(setUsers).catch((e) => console.warn('[DraftRoom] listUsers failed:', e));
-  }, []);
+  }, [refreshTrigger]);
 
   const usersByUid = useMemo(() => new Map(users.map((u) => [u.uid, u])), [users]);
   const nameFor = (uid: string) => usersByUid.get(uid)?.displayName ?? uid;
@@ -408,14 +415,20 @@ export default function DraftRoomScreen() {
   const onTheClockUid = league ? pickerForNumber(league, league.currentPickNumber ?? 0) : undefined;
   const isMyTurn = !!user?.uid && onTheClockUid === user.uid;
 
+  // Based on the VIEWER's own roster, not whoever's currently on the clock — otherwise
+  // the whole room's available-players list would be filtered to only what the current
+  // picker still needs, hiding e.g. boys for everyone else the moment the picker's boys
+  // roster fills up, even while waiting for their own turn. The actual pick is still only
+  // enforced for real via isMyTurn (button) and the server-side cap check in submitPick,
+  // so showing the viewer their own eligible divisions here is just a browsing aid.
   const eligibleDivisions = useMemo((): Division[] => {
-    if (!league || !onTheClockUid) return [];
-    const counts = rosterCountsByUid.get(onTheClockUid) ?? { boys: 0, girls: 0 };
+    if (!league || !user?.uid) return [];
+    const counts = rosterCountsByUid.get(user.uid) ?? { boys: 0, girls: 0 };
     const out: Division[] = [];
     if (counts.boys < league.boysPerTeam) out.push('boys');
     if (counts.girls < league.girlsPerTeam) out.push('girls');
     return out;
-  }, [league, onTheClockUid, rosterCountsByUid]);
+  }, [league, user?.uid, rosterCountsByUid]);
 
   const availablePlayers = useMemo(() => {
     let arr = allPlayers.filter((p) => !draftedIds.has(p.id) && eligibleDivisions.includes(p.division));
@@ -481,18 +494,51 @@ export default function DraftRoomScreen() {
     );
   }
 
+  const draftOrder = league.draftOrder && league.draftOrder.length > 0 ? league.draftOrder : league.memberUids;
+
   if (league.status === 'complete') {
     return (
-      <View style={styles.center}>
-        <Ionicons name="trophy" size={64} color={YELLOW} />
-        <Text style={styles.completeTitle}>Draft Complete!</Text>
-        <Text style={styles.helperText}>Check the league page for final standings.</Text>
+      <View style={styles.container}>
+        <View style={styles.banner}>
+          <Ionicons name="trophy" size={28} color={YELLOW} style={{ alignSelf: 'center', marginBottom: 6 }} />
+          <Text style={[styles.bannerText, { textAlign: 'center' }]}>Draft Complete!</Text>
+          <Text style={[styles.bannerSub, { textAlign: 'center' }]}>Browsing the final draft board below.</Text>
+        </View>
+
+        <View style={styles.toggleRow}>
+          <TouchableOpacity onPress={() => setView('board')} style={[styles.toggleBtn, view === 'board' && styles.toggleActive]}>
+            <Text style={[styles.toggleText, view === 'board' && styles.toggleTextActive]}>Board</Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => setView('team')} style={[styles.toggleBtn, view === 'team' && styles.toggleActive]}>
+            <Text style={[styles.toggleText, view === 'team' && styles.toggleTextActive]}>Team</Text>
+          </TouchableOpacity>
+        </View>
+
+        <View style={{ flex: 1 }}>
+          {view === 'board' ? (
+            <DraftBoard
+              league={league}
+              draftOrder={draftOrder}
+              playersById={playersById}
+              pickByNumber={pickByNumber}
+              usersByUid={usersByUid}
+            />
+          ) : (
+            <TeamView
+              league={league}
+              picks={picks}
+              draftOrder={draftOrder}
+              usersByUid={usersByUid}
+              myUid={user?.uid}
+              playersById={playersById}
+            />
+          )}
+        </View>
       </View>
     );
   }
 
   const round = Math.floor((league.currentPickNumber ?? 0) / league.memberUids.length);
-  const draftOrder = league.draftOrder && league.draftOrder.length > 0 ? league.draftOrder : league.memberUids;
 
   return (
     <View style={styles.container}>
@@ -711,15 +757,18 @@ const styles = StyleSheet.create({
   toggleText: { color: TEXT, fontWeight: '800', fontFamily: FONT_FAMILIES.archivoBlack },
   toggleTextActive: { color: YELLOW, fontFamily: FONT_FAMILIES.archivoBlack },
 
-  boardHeaderRow: { flexDirection: 'row', paddingHorizontal: 12 },
+  // boardHeaderRow/boardRow share the same gap so header cells and their columns below stay
+  // aligned however far you scroll right — a per-cell margin here (rather than row-level gap)
+  // would only apply to one of the two rows and drift the columns apart over many members.
+  boardHeaderRow: { flexDirection: 'row', paddingHorizontal: 12, gap: 4, marginBottom: 4 },
   boardHeaderCell: { paddingVertical: 8, paddingHorizontal: 6 },
   boardHeaderText: { color: YELLOW, fontWeight: '800', fontSize: 12, fontFamily: FONT_FAMILIES.archivoBlack },
-  boardRow: { flexDirection: 'row', paddingHorizontal: 12 },
+  boardRow: { flexDirection: 'row', paddingHorizontal: 12, gap: 4 },
   boardCell: {
     borderWidth: 1,
     borderColor: LINE,
     borderRadius: 6,
-    margin: 2,
+    marginVertical: 2,
     padding: 6,
     justifyContent: 'center',
   },

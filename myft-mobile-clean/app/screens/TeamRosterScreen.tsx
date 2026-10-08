@@ -25,7 +25,7 @@ export default function TeamRosterScreen() {
   const navigation = useNavigation<NavProp>();
   const route = useRoute<RouteProp_>();
   const { id: leagueId, uid } = route.params;
-  const { teams, calculatePoints } = useTournament();
+  const { teams, calculatePoints, refreshTrigger } = useTournament();
 
   const [league, setLeague] = useState<LeagueWithId | null>(null);
   const [roster, setRoster] = useState<LeagueRoster | null>(null);
@@ -44,7 +44,7 @@ export default function TeamRosterScreen() {
     return () => {
       active = false;
     };
-  }, [leagueId, uid]);
+  }, [leagueId, uid, refreshTrigger]);
 
   useEffect(() => {
     listUsers().then(setUsers).catch((e) => console.warn('[TeamRoster] listUsers failed:', e));
@@ -67,6 +67,15 @@ export default function TeamRosterScreen() {
     return out;
   }, [league, roster]);
 
+  const totalPoints = useMemo(
+    () =>
+      slots.reduce((sum, slot) => {
+        const player = slot.playerId ? playersById.get(slot.playerId) : undefined;
+        return sum + (player ? calculatePoints(player) : 0);
+      }, 0),
+    [slots, playersById, calculatePoints]
+  );
+
   if (loading || !league) {
     return (
       <View style={styles.center}>
@@ -81,6 +90,12 @@ export default function TeamRosterScreen() {
       contentContainerStyle={{ padding: 12, paddingBottom: 40 }}
       data={slots}
       keyExtractor={(s, i) => `${s.division}-${i}`}
+      ListHeaderComponent={
+        <View style={styles.totalCard}>
+          <Text style={styles.totalLabel}>Total Points</Text>
+          <Text style={styles.totalValue}>{totalPoints}</Text>
+        </View>
+      }
       renderItem={({ item }) => {
         const player = item.playerId ? playersById.get(item.playerId) : undefined;
         if (!player) {
@@ -129,6 +144,20 @@ export default function TeamRosterScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: NAVY },
   center: { flex: 1, backgroundColor: NAVY, alignItems: 'center', justifyContent: 'center' },
+
+  totalCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: CARD,
+    borderRadius: 12,
+    padding: 14,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: LINE,
+  },
+  totalLabel: { color: TEXT, fontWeight: '700', fontSize: 14, fontFamily: FONT_FAMILIES.archivoBlack },
+  totalValue: { color: YELLOW, fontWeight: '900', fontSize: 20, fontFamily: FONT_FAMILIES.archivoBlack },
 
   row: {
     flexDirection: 'row',
