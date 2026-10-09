@@ -14,6 +14,7 @@ import ConfirmSubmitButton from "@/components/ConfirmSubmitButton";
 import SubmitButton from "@/components/SubmitButton";
 import SavedToast from "@/components/SavedToast";
 import ColorInput from "@/components/ColorInput";
+import AutoRefresh from "@/components/AutoRefresh";
 import {
   card,
   input,
@@ -58,6 +59,7 @@ export default async function TeamDetailPage({
 
   return (
     <div className="max-w-3xl space-y-6">
+      <AutoRefresh />
       <h1 className={pageTitle}>{team.name}</h1>
 
       <form action={boundUpdateMeta} encType="multipart/form-data" className={`${card} space-y-4`}>

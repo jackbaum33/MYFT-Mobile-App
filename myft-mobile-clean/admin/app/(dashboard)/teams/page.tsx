@@ -4,6 +4,7 @@ import type { TeamDoc } from "@/lib/types";
 import { parseRecord, teamLogoUrl } from "@/lib/utils";
 import { pageTitle, btnPrimary, tableWrap, table, th, td, sectionTitle } from "@/lib/ui";
 import StandingsModal from "@/components/StandingsModal";
+import AutoRefresh from "@/components/AutoRefresh";
 
 export default async function TeamsPage() {
   const snap = await db.collection("teams").orderBy("name").get();
@@ -67,6 +68,7 @@ export default async function TeamsPage() {
 
   return (
     <div>
+      <AutoRefresh />
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <h1 className={pageTitle}>Teams</h1>
         <div className="flex gap-2">
