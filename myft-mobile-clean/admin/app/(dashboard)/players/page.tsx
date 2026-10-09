@@ -27,7 +27,8 @@ export default async function PlayersPage({
     players = players.filter(
       (p) =>
         (p.display_name ?? p.id).toLowerCase().includes(needle) ||
-        (teamName.get(p.team_id ?? "") ?? "").toLowerCase().includes(needle)
+        (teamName.get(p.team_id ?? "") ?? "").toLowerCase().includes(needle) ||
+        (p.jerseyNumber !== undefined && String(p.jerseyNumber).includes(needle))
     );
   }
 
@@ -48,7 +49,13 @@ export default async function PlayersPage({
       </div>
 
       <form className="mb-4 flex gap-2" method="get">
-        <input type="text" name="q" defaultValue={q ?? ""} placeholder="Search by name or team…" className={`${input} max-w-sm`} />
+        <input
+          type="text"
+          name="q"
+          defaultValue={q ?? ""}
+          placeholder="Search by name, team, or jersey #…"
+          className={`${input} max-w-sm`}
+        />
         <button className={btnSecondary}>Search</button>
       </form>
 
@@ -58,6 +65,7 @@ export default async function PlayersPage({
             <tr>
               <th className={th}></th>
               <th className={th}>Player</th>
+              <th className={th}>#</th>
               <th className={th}>Team</th>
             </tr>
           </thead>
@@ -78,12 +86,13 @@ export default async function PlayersPage({
                     {p.display_name ?? p.id}
                   </Link>
                 </td>
+                <td className={td}>{p.jerseyNumber ?? "—"}</td>
                 <td className={td}>{p.team_id ? teamName.get(p.team_id) ?? p.team_id : "— Free Agent —"}</td>
               </tr>
             ))}
             {players.length === 0 && (
               <tr>
-                <td className={td} colSpan={3}>
+                <td className={td} colSpan={4}>
                   No players found.
                 </td>
               </tr>

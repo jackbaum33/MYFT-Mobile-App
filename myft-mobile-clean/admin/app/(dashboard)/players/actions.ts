@@ -27,11 +27,14 @@ export async function createPlayer(formData: FormData): Promise<void> {
     n++;
   }
 
+  const jerseyNumberRaw = String(formData.get("jerseyNumber") ?? "").trim();
+
   const data: Record<string, unknown> = {
     display_name: name,
     seasonTotals: Array(11).fill(0),
   };
   if (teamId) data.team_id = teamId;
+  if (jerseyNumberRaw !== "") data.jerseyNumber = Number(jerseyNumberRaw);
 
   await db.doc(`players/${id}`).set(data);
 
@@ -53,11 +56,13 @@ export async function updatePlayer(playerId: string, formData: FormData): Promis
   await requireSession();
 
   const teamId = String(formData.get("teamId") ?? "").trim();
+  const jerseyNumberRaw = String(formData.get("jerseyNumber") ?? "").trim();
   const photo = formData.get("photo");
 
   const update: Record<string, unknown> = {
     display_name: String(formData.get("name") ?? "").trim(),
     team_id: teamId || FieldValue.delete(),
+    jerseyNumber: jerseyNumberRaw === "" ? FieldValue.delete() : Number(jerseyNumberRaw),
   };
 
   const seasonTotals: number[] = [];

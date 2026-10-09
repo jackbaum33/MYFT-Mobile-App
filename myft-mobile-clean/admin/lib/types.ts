@@ -53,6 +53,7 @@ export type TeamDoc = {
 export type PlayerDoc = {
   display_name?: string;
   team_id?: string;
+  jerseyNumber?: number;
   seasonTotals?: number[];
   photoVersion?: number;
   selfUploadedPhotoAt?: Timestamp;

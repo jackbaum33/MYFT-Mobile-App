@@ -44,10 +44,10 @@ export default async function GameDetailPage({
   const team2Placeholder = game.team2ID && !teams.some((t) => t.id === game.team2ID) ? game.team2ID : "";
   const team1Roster = players
     .filter((p) => p.data.team_id === game.team1ID)
-    .map((p) => ({ id: p.id, name: p.data.display_name ?? p.id, team: team1Name }));
+    .map((p) => ({ id: p.id, name: p.data.display_name ?? p.id, team: team1Name, jerseyNumber: p.data.jerseyNumber }));
   const team2Roster = players
     .filter((p) => p.data.team_id === game.team2ID)
-    .map((p) => ({ id: p.id, name: p.data.display_name ?? p.id, team: team2Name }));
+    .map((p) => ({ id: p.id, name: p.data.display_name ?? p.id, team: team2Name, jerseyNumber: p.data.jerseyNumber }));
 
   const boundUpdateGame = updateGame.bind(null, id);
   const boundDelete = deleteGame.bind(null, id);

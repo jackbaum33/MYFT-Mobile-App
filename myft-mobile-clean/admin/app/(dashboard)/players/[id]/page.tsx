@@ -60,6 +60,17 @@ export default async function PlayerDetailPage({
           </select>
         </div>
         <div>
+          <label className={label}>Jersey Number</label>
+          <input
+            type="number"
+            name="jerseyNumber"
+            min={0}
+            max={999}
+            defaultValue={player.jerseyNumber ?? ""}
+            className={input}
+          />
+        </div>
+        <div>
           <label className={label}>Photo</label>
           <input type="file" name="photo" accept="image/*" className={input} />
         </div>
