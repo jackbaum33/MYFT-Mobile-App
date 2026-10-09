@@ -90,6 +90,13 @@ export async function updateTeamMeta(teamId: string, formData: FormData): Promis
 export async function recomputeTeamRecord(teamId: string): Promise<void> {
   await requireSession();
 
+  // team1ID/team2ID can be a free-typed placeholder label (e.g. "Boys 16 Seed") instead of
+  // a real team doc ID — see teamIdFromForm in games/actions.ts. If a game carrying one of
+  // those is saved as Final, this gets called with the placeholder text as `teamId`; there's
+  // no such team doc, so just skip it instead of throwing on the update below.
+  const teamSnap = await db.doc(`teams/${teamId}`).get();
+  if (!teamSnap.exists) return;
+
   const gamesSnap = await db.collection("games").get();
   let wins = 0;
   let losses = 0;
